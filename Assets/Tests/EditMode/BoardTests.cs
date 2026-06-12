@@ -131,7 +131,9 @@ namespace Match3.Tests
             for (int i = 0; i < 100; i++)
             {
                 var tile = factory.CreateExcluding(excluded);
-                Assert.That(excluded, Does.Not.Contain(tile.ColorIndex));
+                // Has.No.Member instead of Does.Not.Contain: Unity ships NUnit 3.5,
+                // where the Contain overload on a negated expression is string-only.
+                Assert.That(excluded, Has.No.Member(tile.ColorIndex));
             }
         }
 
