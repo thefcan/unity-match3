@@ -123,12 +123,83 @@ namespace Match3.Core
         }
 
         /// <summary>
-        /// Finds every cell that is part of a horizontal or vertical run of 3+ same-coloured
-        /// tiles. Returns a set so overlapping runs (L / T shapes) count each cell once.
+        /// The first swap (as its two cells) that would create a match, or null if the
+        /// board is dead. Powers both the idle hint and the no-moves shuffle. Testing
+        /// each cell against only its right and upper neighbour covers every adjacent
+        /// pair exactly once.
         /// </summary>
-        public HashSet<GridPosition> FindMatches()
+        public (GridPosition, GridPosition)? FindPossibleMove()
         {
-            var matched = new HashSet<GridPosition>();
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    var here = new GridPosition(x, y);
+
+                    if (x + 1 < Width)
+                    {
+                        var right = new GridPosition(x + 1, y);
+                        if (WouldSwapMatch(here, right)) return (here, right);
+                    }
+                    if (y + 1 < Height)
+                    {
+                        var up = new GridPosition(x, y + 1);
+                        if (WouldSwapMatch(here, up)) return (here, up);
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>True when at least one legal swap would create a match.</summary>
+        public bool HasPossibleMove() => FindPossibleMove().HasValue;
+
+        /// <summary>
+        /// Rearranges the EXISTING tiles (same colours, new cells) into a layout with no
+        /// immediate matches and at least one possible move — the classic "no moves left,
+        /// shuffle the board" recovery. Retries random permutations until both hold, with
+        /// a safety cap for a degenerate colour mix. Randomness is injected so tests are
+        /// deterministic.
+        /// </summary>
+        public void Shuffle(IRandom random)
+        {
+            if (random == null) throw new ArgumentNullException(nameof(random));
+
+            var tiles = new List<Tile>(Width * Height);
+            foreach (Tile? cell in _tiles)
+                if (cell.HasValue)
+                    tiles.Add(cell.Value);
+
+            const int maxAttempts = 100;
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                // Fisher–Yates, driven by the injected IRandom.
+                for (int i = tiles.Count - 1; i > 0; i--)
+                {
+                    int j = random.Next(i + 1);
+                    (tiles[i], tiles[j]) = (tiles[j], tiles[i]);
+                }
+
+                int index = 0;
+                for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < Height; y++)
+                        _tiles[x, y] = tiles[index++];
+
+                if (FindMatches().Count == 0 && HasPossibleMove())
+                    return;
+            }
+            // Degenerate fallback (e.g. far too few colours): accept the last permutation.
+        }
+
+        /// <summary>
+        /// Finds every maximal straight run of 3+ same-coloured tiles, each reported
+        /// separately with its length. An L / T shape is two overlapping runs (they
+        /// share a cell). Knowing per-run lengths is what lets the game reward a
+        /// "4-match" with bonus time, which a flattened position set can't express.
+        /// </summary>
+        public List<MatchRun> FindMatchRuns()
+        {
+            var runs = new List<MatchRun>();
 
             // Horizontal runs: walk each row, closing a run whenever the colour changes.
             for (int y = 0; y < Height; y++)
@@ -141,8 +212,10 @@ namespace Match3.Core
 
                     if (x - runStart >= MinMatchLength && _tiles[runStart, y].HasValue)
                     {
+                        var positions = new List<GridPosition>(x - runStart);
                         for (int i = runStart; i < x; i++)
-                            matched.Add(new GridPosition(i, y));
+                            positions.Add(new GridPosition(i, y));
+                        runs.Add(new MatchRun(positions));
                     }
                     runStart = x;
                 }
@@ -159,13 +232,29 @@ namespace Match3.Core
 
                     if (y - runStart >= MinMatchLength && _tiles[x, runStart].HasValue)
                     {
+                        var positions = new List<GridPosition>(y - runStart);
                         for (int i = runStart; i < y; i++)
-                            matched.Add(new GridPosition(x, i));
+                            positions.Add(new GridPosition(x, i));
+                        runs.Add(new MatchRun(positions));
                     }
                     runStart = y;
                 }
             }
 
+            return runs;
+        }
+
+        /// <summary>
+        /// Every cell that is part of a match, de-duplicated (an L / T shape's shared
+        /// corner appears once). Built on <see cref="FindMatchRuns"/> so the two can
+        /// never disagree.
+        /// </summary>
+        public HashSet<GridPosition> FindMatches()
+        {
+            var matched = new HashSet<GridPosition>();
+            foreach (MatchRun run in FindMatchRuns())
+                foreach (GridPosition pos in run.Positions)
+                    matched.Add(pos);
             return matched;
         }
 

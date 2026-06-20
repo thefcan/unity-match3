@@ -30,24 +30,34 @@ namespace Match3.Core
 
             while (true)
             {
-                HashSet<GridPosition> matches = board.FindMatches();
-                if (matches.Count == 0)
+                List<MatchRun> runs = board.FindMatchRuns();
+                if (runs.Count == 0)
                     break;
+
+                // Union the runs into the set of cells to clear; an L / T shape's shared
+                // corner collapses to one cell, so it's cleared and scored only once.
+                var matched = new HashSet<GridPosition>();
+                foreach (MatchRun run in runs)
+                    foreach (GridPosition pos in run.Positions)
+                        matched.Add(pos);
 
                 // Snapshot the matched tiles before clearing — the view needs to know
                 // WHICH tile popped where. board[pos].Value is safe: a matched cell
                 // is by definition non-empty.
-                List<ClearedTile> cleared = matches
+                List<ClearedTile> cleared = matched
                     .Select(pos => new ClearedTile(board[pos].Value, pos))
                     .ToList();
 
+                // Per-run lengths travel with the step so the game can reward big
+                // matches (e.g. +time for any 4+ run) without re-scanning the board.
+                List<int> runLengths = runs.Select(run => run.Length).ToList();
                 int points = _scoreConfig.PointsFor(cleared.Count, cascadeIndex);
 
-                board.ClearTiles(matches);
+                board.ClearTiles(matched);
                 List<TileFall> falls = board.ApplyGravity();
                 List<TileSpawn> spawns = board.Refill();
 
-                steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points));
+                steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths));
                 cascadeIndex++;
             }
 

@@ -9,6 +9,21 @@ namespace Match3.Core
     // wave); the view then just plays the recording back with animations. This one-way
     // data flow is what keeps logic and presentation decoupled.
 
+    /// <summary>
+    /// One maximal straight line of 3+ same-coloured tiles. <see cref="Length"/> is
+    /// what the game reads to decide bonuses (e.g. a run of 4+ is a "big match").
+    /// </summary>
+    public readonly struct MatchRun
+    {
+        public IReadOnlyList<GridPosition> Positions { get; }
+        public int Length => Positions.Count;
+
+        public MatchRun(IReadOnlyList<GridPosition> positions)
+        {
+            Positions = positions ?? throw new ArgumentNullException(nameof(positions));
+        }
+    }
+
     /// <summary>A tile that was cleared, and where it stood when it cleared.</summary>
     public readonly struct ClearedTile
     {
@@ -70,19 +85,27 @@ namespace Match3.Core
         public IReadOnlyList<TileSpawn> Spawns { get; }
         public int Points { get; }
 
+        /// <summary>Length of each individual match run cleared in this wave, e.g. [3, 4].</summary>
+        public IReadOnlyList<int> RunLengths { get; }
+
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
             IReadOnlyList<TileFall> falls,
             IReadOnlyList<TileSpawn> spawns,
-            int points)
+            int points,
+            IReadOnlyList<int> runLengths)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
             Falls = falls ?? throw new ArgumentNullException(nameof(falls));
             Spawns = spawns ?? throw new ArgumentNullException(nameof(spawns));
             Points = points;
+            RunLengths = runLengths ?? throw new ArgumentNullException(nameof(runLengths));
         }
+
+        /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
+        public int BigMatchCount(int minLength) => RunLengths.Count(length => length >= minLength);
     }
 
     /// <summary>Everything that happened after one committed swap, in playback order.</summary>
