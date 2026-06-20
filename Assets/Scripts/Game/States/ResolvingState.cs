@@ -5,9 +5,10 @@ namespace Match3.Game
 {
     /// <summary>
     /// Owns the full life of one move: commit the swap, bounce it back if it matched
-    /// nothing, otherwise play every cascade wave and then decide where to go next
-    /// (back to Playing, or to GameOver). Player input is implicitly ignored for the
-    /// whole duration — this state simply doesn't handle it.
+    /// nothing, otherwise play every cascade wave (scoring and awarding bonus time as
+    /// it goes) and then decide where to go next — advance a level, end the run, or
+    /// hand control back to the player. Player input is implicitly ignored for the
+    /// whole duration: this state simply doesn't handle it.
     ///
     /// C# note for Java readers: a method returning IEnumerator + "yield return" is a
     /// generator (like a Java Iterator built by the compiler). Unity's coroutine
@@ -43,31 +44,49 @@ namespace Match3.Game
             if (Game.Board.FindMatches().Count == 0)
             {
                 // Useless swap: revert the logic and animate the bounce-back.
-                // No move is consumed — matching Toon Blast-style forgiveness.
+                // In time-attack mode a swap costs only the clock, so nothing else
+                // happens — Toon Blast-style forgiveness.
                 Game.Board.Swap(_from, _to);
                 yield return Game.BoardView.AnimateSwap(_from, _to);
                 Game.SetState(new PlayingState(Game));
                 yield break;
             }
 
-            Game.ConsumeMove();
-
             // The resolver computes ALL cascade waves up front and mutates the board
-            // to its final state; we then animate the recording wave by wave,
-            // scoring each one as its animation lands (the score ticks up mid-combo).
+            // to its final state; we then animate the recording wave by wave, scoring
+            // each one as its animation lands and topping up the clock for big matches.
             ResolutionResult result = Game.Resolver.Resolve(Game.Board);
             foreach (CascadeStep step in result.Steps)
             {
                 yield return Game.BoardView.PlayStep(step);
                 Game.AddScore(step.Points);
+
+                int bigMatches = step.BigMatchCount(Game.Config.bonusMatchSize);
+                if (bigMatches > 0)
+                    Game.AddTime(bigMatches * Game.Config.bonusSeconds);
             }
 
-            if (Game.Score >= Game.Level.targetScore)
-                Game.SetState(new GameOverState(Game, won: true));
-            else if (Game.MovesLeft <= 0)
-                Game.SetState(new GameOverState(Game, won: false));
+            // Reaching the target clears the level and loops on (endless). A clutch
+            // cascade can carry you over even if the clock hit 0 mid-resolve, so the
+            // level check comes first; only then do we honour a dead clock. The actual
+            // level bump happens after the celebration beat in LevelCompleteState.
+            if (Game.Score >= Game.CurrentTarget)
+            {
+                Game.SetState(new LevelCompleteState(Game));
+            }
+            else if (Game.TimeLeft <= 0f)
+            {
+                Game.SetState(new GameOverState(Game));
+            }
+            else if (!Game.Board.HasPossibleMove())
+            {
+                // Dead board — recover before handing control back.
+                Game.SetState(new ShuffleState(Game));
+            }
             else
+            {
                 Game.SetState(new PlayingState(Game));
+            }
         }
     }
 }

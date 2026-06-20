@@ -37,10 +37,12 @@ namespace Match3.UI
             panelRoot.SetActive(false);
         }
 
-        private void HandleGameEnded(bool won)
+        private void HandleGameEnded()
         {
-            titleText.text = won ? "You Win!" : "Out of Moves";
-            summaryText.text = $"Score: {gameManager.Score}";
+            // Endless time-attack: the run always ends because the clock ran out.
+            // How far you got IS the score, so we lead with the level reached.
+            titleText.text = "Time's Up!";
+            summaryText.text = $"Reached Level {gameManager.Level}\nScore {gameManager.Score}";
             panelRoot.SetActive(true);
         }
 

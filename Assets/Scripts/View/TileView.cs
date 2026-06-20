@@ -17,6 +17,7 @@ namespace Match3.View
         public int TileId { get; private set; }
 
         private Vector3 _baseScale;
+        private Coroutine _hintRoutine;
 
         private void Awake()
         {
@@ -37,7 +38,72 @@ namespace Match3.View
         public void ResetForPool()
         {
             StopAllCoroutines();
+            _hintRoutine = null;
             transform.localScale = _baseScale;
+        }
+
+        /// <summary>Vanish (shrink to nothing) — used for the level-transition wipe.</summary>
+        public IEnumerator ShrinkOut(float duration)
+        {
+            yield return ScaleTo(Vector3.zero, duration);
+        }
+
+        /// <summary>Pop back in (grow from nothing) — the level-transition reveal.</summary>
+        public IEnumerator GrowIn(float duration)
+        {
+            transform.localScale = Vector3.zero;
+            yield return ScaleTo(_baseScale, duration);
+        }
+
+        /// <summary>
+        /// Gently pulses the tile's scale to draw the eye, looping until stopped.
+        /// Used by the idle hint to highlight a still-available move.
+        /// </summary>
+        public void StartHintPulse()
+        {
+            StopHintPulse();
+            _hintRoutine = StartCoroutine(HintPulse());
+        }
+
+        public void StopHintPulse()
+        {
+            if (_hintRoutine != null)
+            {
+                StopCoroutine(_hintRoutine);
+                _hintRoutine = null;
+            }
+            transform.localScale = _baseScale;
+        }
+
+        private IEnumerator HintPulse()
+        {
+            const float speed = 4f;
+            const float amplitude = 0.18f;
+            float phase = 0f;
+            while (true)
+            {
+                phase += Time.deltaTime * speed;
+                float pulse = 1f + amplitude * (0.5f + 0.5f * Mathf.Sin(phase));
+                transform.localScale = _baseScale * pulse;
+                yield return null;
+            }
+        }
+
+        private IEnumerator ScaleTo(Vector3 target, float duration)
+        {
+            if (duration <= 0f)
+            {
+                transform.localScale = target;
+                yield break;
+            }
+
+            Vector3 start = transform.localScale;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                transform.localScale = Vector3.Lerp(start, target, Mathf.SmoothStep(0f, 1f, t));
+                yield return null;
+            }
+            transform.localScale = target;
         }
 
         /// <summary>Eased move — a hand-rolled tween (SmoothStep ≈ DOTween's ease in/out) to stay dependency-free.</summary>

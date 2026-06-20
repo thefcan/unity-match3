@@ -7,6 +7,8 @@ namespace Match3.Game
         Init,
         Playing,
         Resolving,
+        LevelComplete,
+        Shuffling,
         GameOver,
     }
 

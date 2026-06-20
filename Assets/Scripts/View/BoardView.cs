@@ -28,10 +28,15 @@ namespace Match3.View
         [SerializeField] private float popDuration = 0.25f;
         [SerializeField] private float fallDurationPerCell = 0.08f;
         [SerializeField] private float minFallDuration = 0.12f;
+        [SerializeField] private float vanishDuration = 0.22f;
+        [SerializeField] private float appearDuration = 0.28f;
+        [SerializeField] private float reshuffleDuration = 0.35f;
 
         private readonly Dictionary<int, TileView> _viewsById = new Dictionary<int, TileView>();
         private Board _board;
         private LevelConfig _config;
+        private TileView _hintA;
+        private TileView _hintB;
 
         /// <summary>Spawns a view for every tile. Safe to call again on restart — old views return to the pool.</summary>
         public void Initialize(Board board, LevelConfig config)
@@ -52,6 +57,63 @@ namespace Match3.View
                         SpawnView(tile, GridToWorld(pos));
                 }
             }
+        }
+
+        /// <summary>
+        /// Shrinks every tile away (the level-transition wipe). Positions are untouched,
+        /// so <see cref="AnimateShowTiles"/> brings the exact same arrangement back.
+        /// </summary>
+        public IEnumerator AnimateHideTiles()
+        {
+            yield return RunAll(_viewsById.Values.Select(v => v.ShrinkOut(vanishDuration)).ToList());
+        }
+
+        /// <summary>Pops every tile back in after the wipe.</summary>
+        public IEnumerator AnimateShowTiles()
+        {
+            yield return RunAll(_viewsById.Values.Select(v => v.GrowIn(appearDuration)).ToList());
+        }
+
+        /// <summary>
+        /// Glides every tile to its CURRENT board cell — call right after Board.Shuffle
+        /// so the views animate from their old spots to the reshuffled layout.
+        /// </summary>
+        public IEnumerator AnimateReshuffle()
+        {
+            var moves = new List<IEnumerator>();
+            for (int x = 0; x < _board.Width; x++)
+            {
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+                        moves.Add(view.MoveTo(GridToWorld(pos), reshuffleDuration));
+                }
+            }
+            yield return RunAll(moves);
+        }
+
+        /// <summary>Pulses the two tiles of a suggested move until <see cref="HideHint"/>.</summary>
+        public void ShowHint(GridPosition a, GridPosition b)
+        {
+            HideHint();
+            _hintA = ViewAt(a);
+            _hintB = ViewAt(b);
+            _hintA?.StartHintPulse();
+            _hintB?.StartHintPulse();
+        }
+
+        public void HideHint()
+        {
+            _hintA?.StopHintPulse();
+            _hintB?.StopHintPulse();
+            _hintA = null;
+            _hintB = null;
+        }
+
+        private TileView ViewAt(GridPosition pos)
+        {
+            return _board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view) ? view : null;
         }
 
         // ---- Grid <-> world mapping -------------------------------------------------
