@@ -57,8 +57,9 @@ because it's the standard mobile production setup.)*
 
 1. Project panel → right-click `Assets/ScriptableObjects` →
    **Create → Match3 → Level Config**. Name it `Level1`. Click it once and look at
-   the Inspector: 8×8 board, 20 moves, target 2000, five colours — all editable. This
-   asset IS the level; make a `Level2` later by duplicating and tweaking.
+   the Inspector — every gameplay number lives here: 8×8 board, **45s** time limit,
+   target **120** (+40 each level), **+5s** per 4-match, hint after 4s idle, five
+   colours. Tune these any time, even while playing, to rebalance the game.
 2. Right-click `Assets/Sprites` → **Create → 2D → Sprites → Circle** (or Square for a
    blockier look). Name it `TileSprite`.
 
@@ -100,23 +101,29 @@ LevelConfig → `Level1`. Also set the camera's **Background** color to somethin
    - **Canvas Scaler** component → UI Scale Mode: **Scale With Screen Size**,
      Reference Resolution **1080 × 1920**, Match: **0.5**.
 2. Right-click the Canvas → **UI → Text - TextMeshPro** (import TMP Essentials if
-   prompted). Make three of them:
+   prompted — assign **LiberationSans SDF** as the Font Asset). Make five of them.
+   The first four are the readouts; `MessageText` is a big centre banner that stays
+   empty until a "Level Complete!" / "Shuffling…" moment fills it:
 
-   | Name | Anchor (use the Anchor Presets box, hold Alt+Shift while clicking) | Text | Font size |
+   | Name | Anchor (Anchor Presets box, hold Alt+Shift while clicking) | Text | Font size |
    |---|---|---|---|
-   | `ScoreText` | top-left | `0` | 72 |
-   | `MovesText` | top-right | `Moves: 20` | 48 |
-   | `TargetText` | top-center | `Target: 2000` | 48 |
+   | `ScoreText` | top-center | `0` | 80 |
+   | `TimeText` | top-left | `45.0s` | 64 |
+   | `LevelText` | top-right | `Level 1` | 48 |
+   | `TargetText` | top-center (below score) | `Target 120` | 40 |
+   | `MessageText` | middle-center | *(leave empty)* | 72 |
 
-   Nudge them inwards so they don't touch the screen edge (e.g. ±40 px).
+   Nudge the readouts inwards so they don't touch the screen edge.
 3. Add the HUD script: select the **Canvas** → **Add Component → Hud View** → wire
-   GameManager → `Game`, and the three text fields to the three labels.
+   GameManager → `Game`, then Score/Time/Target/Level Text → their labels, and
+   **Message Text → `MessageText`** (this last one is optional — without it the pause
+   still happens, just no banner). Leave the colour / threshold fields at defaults.
 4. Game-over overlay, as a child of the Canvas:
    - Right-click Canvas → **UI → Panel**, name it `GameOverPanel`. Set its Image
      color to black with ~200 alpha (the dim background).
-   - Inside it: a **Text - TextMeshPro** named `TitleText` (`You Win!`, size 96,
+   - Inside it: a **Text - TextMeshPro** named `TitleText` (`Time's Up!`, size 96,
      centered, anchored center, pos Y ≈ +150), another named `SummaryText`
-     (`Score: 0`, size 56, pos Y ≈ 0), and a **UI → Button - TextMeshPro** named
+     (`Reached Level 1`, size 56, pos Y ≈ 0), and a **UI → Button - TextMeshPro** named
      `RestartButton` (label `Play Again`, pos Y ≈ -200, width ≈ 420, height ≈ 110).
    - Select the **Canvas** again → **Add Component → Game Over Panel** → wire:
      GameManager → `Game`, PanelRoot → the `GameOverPanel` object, TitleText,
@@ -139,8 +146,11 @@ in an engine-free assembly.
 ## 8. Play
 
 Press **Play**. Swap adjacent tiles by pressing on a tile and dragging towards its
-neighbour. Useless swaps bounce back without costing a move. Reach 2000 points within
-20 moves.
+neighbour (useless swaps bounce back for free). Reach the **target score before the
+clock hits zero**; a 4-in-a-line match adds bonus seconds (timer flashes green). Clear
+the target → a "Level Complete!" beat → the next level with a higher target. Sit idle
+and a hint pulses; if the board ever has no moves it auto-shuffles. None of these
+extras need wiring — they're pure code driven off the data in `Level1`.
 
 ## 9. First commit
 
