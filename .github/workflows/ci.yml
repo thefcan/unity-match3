@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  # Gate the Unity job on the license secret so the pipeline stays green — the
+  # test job is *skipped*, not failed — until a UNITY_LICENSE secret is added.
+  config:
+    name: check Unity license secret
+    runs-on: ubuntu-latest
+    outputs:
+      has-license: ${{ steps.check.outputs.has-license }}
+    steps:
+      - id: check
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -n "${UNITY_LICENSE:-}" ]; then
+            echo "has-license=true" >> "$GITHUB_OUTPUT"
+            echo "UNITY_LICENSE is configured — EditMode tests will run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has-license=false" >> "$GITHUB_OUTPUT"
+            echo "No UNITY_LICENSE secret set — skipping EditMode tests." >> "$GITHUB_STEP_SUMMARY"
+            echo "Add a Unity Personal license as the UNITY_LICENSE repo secret to enable them." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  editmode-tests:
+    name: EditMode tests (Unity 2022.3)
+    needs: config
+    if: needs.config.outputs.has-license == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Cache the imported Library so re-runs don't re-import the whole project.
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          testMode: editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          artifactsPath: test-results
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editmode-test-results
+          path: test-results
