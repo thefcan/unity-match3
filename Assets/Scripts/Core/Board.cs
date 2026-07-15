@@ -139,20 +139,28 @@ namespace Match3.Core
                     if (x + 1 < Width)
                     {
                         var right = new GridPosition(x + 1, y);
-                        if (WouldSwapMatch(here, right)) return (here, right);
+                        if (WouldSwapMatch(here, right) || IsActivationSwap(here, right)) return (here, right);
                     }
                     if (y + 1 < Height)
                     {
                         var up = new GridPosition(x, y + 1);
-                        if (WouldSwapMatch(here, up)) return (here, up);
+                        if (WouldSwapMatch(here, up) || IsActivationSwap(here, up)) return (here, up);
                     }
                 }
             }
             return null;
         }
 
-        /// <summary>True when at least one legal swap would create a match.</summary>
+        /// <summary>True when at least one legal swap would create a match or fire a special combo.</summary>
         public bool HasPossibleMove() => FindPossibleMove().HasValue;
+
+        /// <summary>
+        /// True when swapping these two cells fires a special+special / bomb combo —
+        /// always a legal move even with no colour match, so a board holding a colour
+        /// bomb is never "dead".
+        /// </summary>
+        private bool IsActivationSwap(GridPosition a, GridPosition b) =>
+            this[a] is { } tileA && this[b] is { } tileB && SwapRules.IsActivationSwap(tileA, tileB);
 
         /// <summary>
         /// Rearranges the EXISTING tiles (same colours, new cells) into a layout with no
@@ -258,6 +266,17 @@ namespace Match3.Core
             return matched;
         }
 
+        /// <summary>
+        /// Places a tile directly into a cell, replacing whatever was there. Used by
+        /// the resolver to morph a matched tile into a freshly minted special candy.
+        /// </summary>
+        public void SetTile(GridPosition pos, Tile tile)
+        {
+            if (!IsInside(pos))
+                throw new ArgumentOutOfRangeException(nameof(pos), $"{pos} is outside the {Width}x{Height} board.");
+            _tiles[pos.X, pos.Y] = tile;
+        }
+
         /// <summary>Removes the tiles at the given positions, leaving empty (null) cells.</summary>
         public void ClearTiles(IEnumerable<GridPosition> positions)
         {
@@ -331,7 +350,10 @@ namespace Match3.Core
         {
             Tile? a = _tiles[x1, y1];
             Tile? b = _tiles[x2, y2];
-            return a.HasValue && b.HasValue && a.Value.ColorIndex == b.Value.ColorIndex;
+            // ColorIndex >= 0 excludes colour bombs (NoColor): two adjacent bombs
+            // must never count as a colour match.
+            return a.HasValue && b.HasValue &&
+                   a.Value.ColorIndex >= 0 && a.Value.ColorIndex == b.Value.ColorIndex;
         }
 
         /// <summary>

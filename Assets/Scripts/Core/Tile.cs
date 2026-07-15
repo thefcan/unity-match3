@@ -16,22 +16,37 @@ namespace Match3.Core
     /// </summary>
     public readonly struct Tile : IEquatable<Tile>
     {
+        /// <summary>ColorIndex of a tile that has no colour (only the colour bomb).</summary>
+        public const int NoColor = -1;
+
         public int Id { get; }
         public int ColorIndex { get; }
+        public TileKind Kind { get; }
 
         public Tile(int id, int colorIndex)
+            : this(id, colorIndex, TileKind.Normal)
+        {
+        }
+
+        public Tile(int id, int colorIndex, TileKind kind)
         {
             Id = id;
             ColorIndex = colorIndex;
+            Kind = kind;
         }
 
-        // Identity is the Id alone — a tile never changes colour during its lifetime.
+        public bool IsSpecial => Kind != TileKind.Normal;
+        public bool IsColorBomb => Kind == TileKind.ColorBomb;
+        public bool IsStriped => Kind == TileKind.StripedH || Kind == TileKind.StripedV;
+
+        // Identity is the Id alone — a tile never changes colour or kind during its
+        // lifetime (a "morphed" tile is a NEW tile minted by the factory).
         public bool Equals(Tile other) => Id == other.Id;
 
         public override bool Equals(object obj) => obj is Tile other && Equals(other);
 
         public override int GetHashCode() => Id;
 
-        public override string ToString() => $"Tile#{Id}(color {ColorIndex})";
+        public override string ToString() => $"Tile#{Id}({Kind}, color {ColorIndex})";
     }
 }

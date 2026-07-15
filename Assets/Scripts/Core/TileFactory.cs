@@ -41,6 +41,25 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// Creates a special candy of the given kind and colour. The colour bomb is
+        /// the one kind with no colour — <paramref name="colorIndex"/> is ignored for it.
+        /// </summary>
+        public Tile CreateSpecial(int colorIndex, TileKind kind)
+        {
+            if (kind == TileKind.ColorBomb)
+                return CreateColorBomb();
+            if (kind == TileKind.Normal)
+                return Create(colorIndex);
+            if (colorIndex < 0 || colorIndex >= ColorCount)
+                throw new ArgumentOutOfRangeException(nameof(colorIndex));
+
+            return new Tile(_nextId++, colorIndex, kind);
+        }
+
+        /// <summary>Creates a colour bomb — the only tile without a colour of its own.</summary>
+        public Tile CreateColorBomb() => new Tile(_nextId++, Tile.NoColor, TileKind.ColorBomb);
+
+        /// <summary>
         /// Creates a tile whose colour is NOT in <paramref name="excludedColors"/>.
         /// Used by the initial board fill to avoid starting with ready-made matches.
         /// We build the allowed list and pick once instead of re-rolling in a loop,

@@ -41,7 +41,14 @@ namespace Match3.Game
             Game.Board.Swap(_from, _to);
             yield return Game.BoardView.AnimateSwap(_from, _to);
 
-            if (Game.Board.FindMatches().Count == 0)
+            // The resolver computes ALL cascade waves up front (including special-candy
+            // combos the swap may have fired) and mutates the board to its final state.
+            // A swap that achieves nothing returns an empty result WITHOUT mutating,
+            // so reverting below is safe. Activation swaps (bomb + anything,
+            // special + special) always produce steps — they never bounce.
+            ResolutionResult result = Game.Resolver.ResolveSwap(Game.Board, _from, _to);
+
+            if (!result.HadMatches)
             {
                 // Useless swap: revert the logic and animate the bounce-back.
                 // In time-attack mode a swap costs only the clock, so nothing else
@@ -52,10 +59,8 @@ namespace Match3.Game
                 yield break;
             }
 
-            // The resolver computes ALL cascade waves up front and mutates the board
-            // to its final state; we then animate the recording wave by wave, scoring
-            // each one as its animation lands and topping up the clock for big matches.
-            ResolutionResult result = Game.Resolver.Resolve(Game.Board);
+            // Animate the recording wave by wave, scoring each one as its animation
+            // lands and topping up the clock for big matches.
             foreach (CascadeStep step in result.Steps)
             {
                 yield return Game.BoardView.PlayStep(step);

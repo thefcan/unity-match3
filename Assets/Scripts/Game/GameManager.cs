@@ -168,7 +168,9 @@ namespace Match3.Game
             _random = new SystemRandom();
             var factory = new TileFactory(levelConfig.ColorCount, _random);
             Board = new Board(levelConfig.width, levelConfig.height, factory);
-            Resolver = new CascadeResolver(levelConfig.ToScoreConfig());
+            // Factory + random unlock the resolver's special-candy mode: match shapes
+            // mint striped/wrapped/colour-bomb tiles and combos detonate.
+            Resolver = new CascadeResolver(levelConfig.ToScoreConfig(), factory, _random);
 
             Level = 1;
             Score = 0;

@@ -72,6 +72,66 @@ namespace Match3.Core
     }
 
     /// <summary>
+    /// A tile that MORPHED into a special candy this wave instead of clearing.
+    /// <see cref="Replaced"/> is the tile that stood in the cell (the view rebinds its
+    /// visual to <see cref="Created"/>); <see cref="SourcePositions"/> are the match
+    /// cells that funded the special, for a converge-into-the-morph animation.
+    /// When a creation's cell also appears in <see cref="CascadeStep.Cleared"/>, the
+    /// special was consumed in the same wave (bomb+striped conversions) — the view
+    /// shows a flash, not a persistent tile.
+    /// </summary>
+    public readonly struct SpecialCreation
+    {
+        public Tile Created { get; }
+        public Tile Replaced { get; }
+        public GridPosition Position { get; }
+        public IReadOnlyList<GridPosition> SourcePositions { get; }
+
+        public SpecialCreation(Tile created, Tile replaced, GridPosition position, IReadOnlyList<GridPosition> sourcePositions)
+        {
+            Created = created;
+            Replaced = replaced;
+            Position = position;
+            SourcePositions = sourcePositions ?? throw new ArgumentNullException(nameof(sourcePositions));
+        }
+    }
+
+    /// <summary>The shape of a detonation — the view picks its VFX purely from this.</summary>
+    public enum DetonationKind
+    {
+        Row,
+        Column,
+        Blast3x3,
+        /// <summary>Striped+striped combo: full row + column cross.</summary>
+        Cross,
+        /// <summary>Striped+wrapped combo: three rows + three columns.</summary>
+        TripleCross,
+        /// <summary>Wrapped+wrapped combo blast.</summary>
+        Blast5x5,
+        /// <summary>Colour bomb: every tile of one colour.</summary>
+        ColorClear,
+        /// <summary>Bomb+bomb: the full wipe.</summary>
+        BoardClear,
+    }
+
+    /// <summary>One special going off: which tile, from where, what shape, which cells it hit.</summary>
+    public readonly struct Detonation
+    {
+        public Tile Source { get; }
+        public GridPosition Origin { get; }
+        public DetonationKind Kind { get; }
+        public IReadOnlyList<GridPosition> Area { get; }
+
+        public Detonation(Tile source, GridPosition origin, DetonationKind kind, IReadOnlyList<GridPosition> area)
+        {
+            Source = source;
+            Origin = origin;
+            Kind = kind;
+            Area = area ?? throw new ArgumentNullException(nameof(area));
+        }
+    }
+
+    /// <summary>
     /// One wave of a cascade: the tiles that matched, the falls and spawns that
     /// followed, and the points it scored (multiplier already applied).
     /// </summary>
@@ -85,8 +145,14 @@ namespace Match3.Core
         public IReadOnlyList<TileSpawn> Spawns { get; }
         public int Points { get; }
 
-        /// <summary>Length of each individual match run cleared in this wave, e.g. [3, 4].</summary>
+        /// <summary>Length of each individual match run cleared in this wave, e.g. [3, 4]. Empty for combo waves.</summary>
         public IReadOnlyList<int> RunLengths { get; }
+
+        /// <summary>Special candies created (morphed into place) this wave.</summary>
+        public IReadOnlyList<SpecialCreation> Creations { get; }
+
+        /// <summary>Specials that went off this wave, in trigger order (chains preserved).</summary>
+        public IReadOnlyList<Detonation> Detonations { get; }
 
         public CascadeStep(
             int cascadeIndex,
@@ -95,6 +161,20 @@ namespace Match3.Core
             IReadOnlyList<TileSpawn> spawns,
             int points,
             IReadOnlyList<int> runLengths)
+            : this(cascadeIndex, cleared, falls, spawns, points, runLengths,
+                   Array.Empty<SpecialCreation>(), Array.Empty<Detonation>())
+        {
+        }
+
+        public CascadeStep(
+            int cascadeIndex,
+            IReadOnlyList<ClearedTile> cleared,
+            IReadOnlyList<TileFall> falls,
+            IReadOnlyList<TileSpawn> spawns,
+            int points,
+            IReadOnlyList<int> runLengths,
+            IReadOnlyList<SpecialCreation> creations,
+            IReadOnlyList<Detonation> detonations)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -102,6 +182,8 @@ namespace Match3.Core
             Spawns = spawns ?? throw new ArgumentNullException(nameof(spawns));
             Points = points;
             RunLengths = runLengths ?? throw new ArgumentNullException(nameof(runLengths));
+            Creations = creations ?? throw new ArgumentNullException(nameof(creations));
+            Detonations = detonations ?? throw new ArgumentNullException(nameof(detonations));
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>

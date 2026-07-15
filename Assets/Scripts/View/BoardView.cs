@@ -168,11 +168,28 @@ namespace Match3.View
         }
 
         /// <summary>
-        /// Plays one cascade wave: pop the cleared tiles, then animate falls and
-        /// newly spawned tiles dropping in together.
+        /// Plays one cascade wave: morph tiles that became special candies, pop the
+        /// cleared tiles, then animate falls and newly spawned tiles dropping in.
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
+            // A creation re-purposes the view of the tile it replaced: same GameObject,
+            // new logical identity. Creations whose replaced tile is ALSO in Cleared
+            // were consumed within the wave (bomb+striped conversions) — the pop below
+            // already covers them, so no rebind.
+            foreach (SpecialCreation creation in step.Creations)
+            {
+                if (IsCleared(step, creation.Replaced.Id))
+                    continue;
+
+                if (_viewsById.TryGetValue(creation.Replaced.Id, out TileView view))
+                {
+                    _viewsById.Remove(creation.Replaced.Id);
+                    view.Bind(creation.Created, TintFor(creation.Created));
+                    _viewsById[creation.Created.Id] = view;
+                }
+            }
+
             yield return RunAll(step.Cleared.Select(PopAndRelease).ToList());
 
             List<IEnumerator> moves = step.Falls.Select(AnimateFall)
@@ -180,6 +197,9 @@ namespace Match3.View
                 .ToList();
             yield return RunAll(moves);
         }
+
+        private static bool IsCleared(CascadeStep step, int tileId) =>
+            step.Cleared.Any(cleared => cleared.Tile.Id == tileId);
 
         private IEnumerator PopAndRelease(ClearedTile cleared)
         {
@@ -216,9 +236,32 @@ namespace Match3.View
         {
             TileView view = tilePool.Get();
             view.transform.position = worldPosition;
-            view.Bind(tile, _config.tileColors[tile.ColorIndex]);
+            view.Bind(tile, TintFor(tile));
             _viewsById[tile.Id] = view;
             return view;
+        }
+
+        /// <summary>
+        /// Interim special-candy tinting until dedicated sprites arrive: the colour
+        /// bomb has NO palette colour (ColorIndex is -1 — indexing would throw), and
+        /// striped/wrapped get a shifted tone so they read as different at a glance.
+        /// </summary>
+        private Color TintFor(Tile tile)
+        {
+            if (tile.IsColorBomb)
+                return new Color(0.25f, 0.2f, 0.3f);
+
+            Color baseColor = _config.tileColors[tile.ColorIndex];
+            switch (tile.Kind)
+            {
+                case TileKind.StripedH:
+                case TileKind.StripedV:
+                    return Color.Lerp(baseColor, Color.white, 0.45f);
+                case TileKind.Wrapped:
+                    return Color.Lerp(baseColor, Color.black, 0.35f);
+                default:
+                    return baseColor;
+            }
         }
 
         private float FallDuration(int cellsFallen) =>
