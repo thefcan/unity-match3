@@ -17,22 +17,49 @@ namespace Match3.View
         public int TileId { get; private set; }
 
         private Vector3 _baseScale;
+        private Sprite _defaultSprite;
         private Coroutine _hintRoutine;
 
         private void Awake()
         {
             // Remember the prefab's authored scale (e.g. 0.9 for grid gaps) so pop
-            // animations and pool reuse can always restore it.
+            // animations and pool reuse can always restore it — and the authored
+            // sprite, so tint-only binds can undo a previous candy-sprite bind.
             _baseScale = transform.localScale;
+            _defaultSprite = spriteRenderer.sprite;
+        }
+
+        /// <summary>Tint-only bind (fallback when no candy sprite exists for the tile).</summary>
+        public void Bind(Tile tile, Color color)
+        {
+            Bind(tile, null, color);
         }
 
         /// <summary>Re-purposes this (possibly pooled) view for a new logical tile.</summary>
-        public void Bind(Tile tile, Color color)
+        public void Bind(Tile tile, Sprite sprite, Color color)
         {
             TileId = tile.Id;
+            spriteRenderer.sprite = sprite != null ? sprite : _defaultSprite;
             spriteRenderer.color = color;
             transform.localScale = _baseScale;
             name = $"Tile_{tile.Id}";
+        }
+
+        /// <summary>
+        /// Squash-swap-stretch: shrink, take on the new tile's identity and look mid-
+        /// squash, then overshoot back — the "a special candy is born" beat.
+        /// </summary>
+        public IEnumerator MorphTo(Tile tile, Sprite sprite, Color color, float duration)
+        {
+            yield return ScaleTo(_baseScale * 0.35f, duration * 0.35f);
+
+            TileId = tile.Id;
+            if (sprite != null) spriteRenderer.sprite = sprite;
+            spriteRenderer.color = color;
+            name = $"Tile_{tile.Id}";
+
+            yield return ScaleTo(_baseScale * 1.25f, duration * 0.4f);
+            yield return ScaleTo(_baseScale, duration * 0.25f);
         }
 
         public void ResetForPool()

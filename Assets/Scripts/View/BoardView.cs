@@ -19,6 +19,8 @@ namespace Match3.View
     public sealed class BoardView : MonoBehaviour
     {
         [SerializeField] private TilePool tilePool;
+        [Tooltip("Candy sprite lookup. Left empty, Resources/CandySpriteLibrary is loaded automatically.")]
+        [SerializeField] private CandySpriteLibrary spriteLibrary;
 
         [Header("Layout")]
         [SerializeField] private float cellSize = 1f;
@@ -32,6 +34,13 @@ namespace Match3.View
         [SerializeField] private float appearDuration = 0.28f;
         [SerializeField] private float reshuffleDuration = 0.35f;
 
+        [Header("Special candy timings (seconds)")]
+        [Tooltip("Extra pop delay per cell of distance from a detonation's origin — blasts read as travelling outward.")]
+        [SerializeField] private float detonationStagger = 0.035f;
+        [SerializeField] private float maxDetonationDelay = 0.35f;
+        [SerializeField] private float convergeDuration = 0.16f;
+        [SerializeField] private float morphDuration = 0.3f;
+
         private readonly Dictionary<int, TileView> _viewsById = new Dictionary<int, TileView>();
         private Board _board;
         private LevelConfig _config;
@@ -43,6 +52,9 @@ namespace Match3.View
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
             _config = config != null ? config : throw new ArgumentNullException(nameof(config));
+
+            if (spriteLibrary == null)
+                spriteLibrary = Resources.Load<CandySpriteLibrary>("CandySpriteLibrary");
 
             foreach (TileView view in _viewsById.Values)
                 tilePool.Release(view);
@@ -168,29 +180,51 @@ namespace Match3.View
         }
 
         /// <summary>
-        /// Plays one cascade wave: morph tiles that became special candies, pop the
-        /// cleared tiles, then animate falls and newly spawned tiles dropping in.
+        /// Plays one cascade wave: clear the popped tiles (staggered outward from any
+        /// detonation origin; match tiles that fund a special converge into its cell),
+        /// morph the newly created specials, then animate falls and spawns together.
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
-            // A creation re-purposes the view of the tile it replaced: same GameObject,
-            // new logical identity. Creations whose replaced tile is ALSO in Cleared
-            // were consumed within the wave (bomb+striped conversions) — the pop below
-            // already covers them, so no rebind.
+            Dictionary<GridPosition, float> delays = BuildDetonationDelays(step);
+
+            // Cells that fund a SURVIVING creation fly into the morph point instead of
+            // popping in place. (Creations whose replaced tile is also in Cleared were
+            // consumed within the wave — bomb+striped conversions — and just pop.)
+            var convergeTargets = new Dictionary<GridPosition, Vector3>();
             foreach (SpecialCreation creation in step.Creations)
             {
-                if (IsCleared(step, creation.Replaced.Id))
-                    continue;
+                if (IsCleared(step, creation.Replaced.Id)) continue;
+                foreach (GridPosition source in creation.SourcePositions)
+                    if (source != creation.Position)
+                        convergeTargets[source] = GridToWorld(creation.Position);
+            }
 
+            var clears = new List<IEnumerator>();
+            foreach (ClearedTile cleared in step.Cleared)
+            {
+                clears.Add(convergeTargets.TryGetValue(cleared.Position, out Vector3 target)
+                    ? ConvergeAndRelease(cleared, target)
+                    : PopAndRelease(cleared, delays.TryGetValue(cleared.Position, out float delay) ? delay : 0f));
+            }
+            yield return RunAll(clears);
+
+            // Morphs rebind the replaced tile's view to the created special — this must
+            // land before falls, which reference the created tile's Id.
+            var morphs = new List<IEnumerator>();
+            foreach (SpecialCreation creation in step.Creations)
+            {
+                if (IsCleared(step, creation.Replaced.Id)) continue;
                 if (_viewsById.TryGetValue(creation.Replaced.Id, out TileView view))
                 {
                     _viewsById.Remove(creation.Replaced.Id);
-                    view.Bind(creation.Created, TintFor(creation.Created));
                     _viewsById[creation.Created.Id] = view;
+                    (Sprite sprite, Color color) = VisualFor(creation.Created);
+                    morphs.Add(view.MorphTo(creation.Created, sprite, color, morphDuration));
                 }
             }
-
-            yield return RunAll(step.Cleared.Select(PopAndRelease).ToList());
+            if (morphs.Count > 0)
+                yield return RunAll(morphs);
 
             List<IEnumerator> moves = step.Falls.Select(AnimateFall)
                 .Concat(step.Spawns.Select(AnimateSpawn))
@@ -201,12 +235,46 @@ namespace Match3.View
         private static bool IsCleared(CascadeStep step, int tileId) =>
             step.Cleared.Any(cleared => cleared.Tile.Id == tileId);
 
-        private IEnumerator PopAndRelease(ClearedTile cleared)
+        /// <summary>
+        /// Per-cell pop delays so a lane or blast reads as travelling outward from its
+        /// origin. Overlapping detonations keep the SMALLEST delay (first hit wins).
+        /// </summary>
+        private Dictionary<GridPosition, float> BuildDetonationDelays(CascadeStep step)
+        {
+            var delays = new Dictionary<GridPosition, float>();
+            foreach (Detonation detonation in step.Detonations)
+            {
+                foreach (GridPosition cell in detonation.Area)
+                {
+                    int distance = Mathf.Abs(cell.X - detonation.Origin.X) + Mathf.Abs(cell.Y - detonation.Origin.Y);
+                    float delay = Mathf.Min(distance * detonationStagger, maxDetonationDelay);
+                    if (!delays.TryGetValue(cell, out float existing) || delay < existing)
+                        delays[cell] = delay;
+                }
+            }
+            return delays;
+        }
+
+        private IEnumerator PopAndRelease(ClearedTile cleared, float delay)
         {
             if (!_viewsById.TryGetValue(cleared.Tile.Id, out TileView view))
                 yield break;
 
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
             yield return view.Pop(popDuration);
+
+            _viewsById.Remove(cleared.Tile.Id);
+            tilePool.Release(view);
+        }
+
+        private IEnumerator ConvergeAndRelease(ClearedTile cleared, Vector3 target)
+        {
+            if (!_viewsById.TryGetValue(cleared.Tile.Id, out TileView view))
+                yield break;
+
+            yield return view.MoveTo(target, convergeDuration);
 
             _viewsById.Remove(cleared.Tile.Id);
             tilePool.Release(view);
@@ -236,15 +304,26 @@ namespace Match3.View
         {
             TileView view = tilePool.Get();
             view.transform.position = worldPosition;
-            view.Bind(tile, TintFor(tile));
+            (Sprite sprite, Color color) = VisualFor(tile);
+            view.Bind(tile, sprite, color);
             _viewsById[tile.Id] = view;
             return view;
         }
 
         /// <summary>
-        /// Interim special-candy tinting until dedicated sprites arrive: the colour
-        /// bomb has NO palette colour (ColorIndex is -1 — indexing would throw), and
-        /// striped/wrapped get a shifted tone so they read as different at a glance.
+        /// Candy sprite (drawn untinted) when the library has one; otherwise the
+        /// prefab's default sprite with a kind-aware tint as a fallback.
+        /// </summary>
+        private (Sprite sprite, Color color) VisualFor(Tile tile)
+        {
+            Sprite sprite = spriteLibrary != null ? spriteLibrary.For(tile.ColorIndex, tile.Kind) : null;
+            return sprite != null ? (sprite, Color.white) : (null, TintFor(tile));
+        }
+
+        /// <summary>
+        /// Fallback tinting when no candy sprite exists: the colour bomb has NO palette
+        /// colour (ColorIndex is -1 — indexing would throw), and striped/wrapped get a
+        /// shifted tone so they read as different at a glance.
         /// </summary>
         private Color TintFor(Tile tile)
         {

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 109aebb75ac7fb48f2afcddb6ceeb102, type: 3}
+  m_Name: CandySpriteLibrary
+  m_EditorClassIdentifier: 
+  colors:
+  - normal: {fileID: 21300000, guid: 588b3266614978fb3f49c5b98ea2efe7, type: 3}
+    stripedH: {fileID: 21300000, guid: 6709251842a9660e73ea260544785c78, type: 3}
+    stripedV: {fileID: 21300000, guid: 58b15617c0fc8ea68918a607661ffa51, type: 3}
+    wrapped: {fileID: 21300000, guid: dfb8ce5750fa0dd47653a5a355da6dd2, type: 3}
+  - normal: {fileID: 21300000, guid: 770c57606128f51e48626f6671e3edc1, type: 3}
+    stripedH: {fileID: 21300000, guid: 4d909fd0d1c47a1b65ffd3b1fa40294e, type: 3}
+    stripedV: {fileID: 21300000, guid: 4e09af090cd3b7c04ef4639deefb1478, type: 3}
+    wrapped: {fileID: 21300000, guid: df09d4b3f5560d9483b08f025bf74a0d, type: 3}
+  - normal: {fileID: 21300000, guid: 3cacea31e553d4b82fdd16f9d7ac7e63, type: 3}
+    stripedH: {fileID: 21300000, guid: 3558df941f74ed8e4724589679481e60, type: 3}
+    stripedV: {fileID: 21300000, guid: a56425af38f8bd71079fec229ea4ade1, type: 3}
+    wrapped: {fileID: 21300000, guid: 80a5b6acee124faf58fcd8c8c1843d86, type: 3}
+  - normal: {fileID: 21300000, guid: c38403d1bef602b4dc0ae5f8c015c24c, type: 3}
+    stripedH: {fileID: 21300000, guid: 8d783b7e4c49d01ac07905b66ff0b965, type: 3}
+    stripedV: {fileID: 21300000, guid: 33050008999bbd36d20eb1ebaac12ec0, type: 3}
+    wrapped: {fileID: 21300000, guid: 8c71a14d03c5b66db398c39598881390, type: 3}
+  - normal: {fileID: 21300000, guid: 662d1f52afedc2d8a0395f2ed5e9b1af, type: 3}
+    stripedH: {fileID: 21300000, guid: 4b19d5c5dcf8706fcabe894eb53aa063, type: 3}
+    stripedV: {fileID: 21300000, guid: 05409d03f7cc800ec816820122590ad1, type: 3}
+    wrapped: {fileID: 21300000, guid: 332d7909a29df111ab68e0558c51735e, type: 3}
+  colorBomb: {fileID: 21300000, guid: 27a05357a3e704063904f7c66f4ed24e, type: 3}
