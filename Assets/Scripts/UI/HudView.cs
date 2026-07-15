@@ -34,6 +34,8 @@ namespace Match3.UI
         [SerializeField] private float lowTimeThreshold = 10f;
         [SerializeField] private float bonusFlashDuration = 0.5f;
 
+        private static readonly string[] ColorNames = { "Red", "Green", "Blue", "Yellow", "Purple" };
+
         private int _displayedScore;
         private Coroutine _scoreTween;
         private float _bonusFlashUntil;
@@ -46,6 +48,8 @@ namespace Match3.UI
             gameManager.LevelCompleted += HandleLevelCompleted;
             gameManager.ShuffleStarted += HandleShuffleStarted;
             gameManager.PhaseChanged += HandlePhaseChanged;
+            gameManager.MovesChanged += HandleMovesChanged;
+            gameManager.ObjectivesChanged += HandleObjectivesChanged;
         }
 
         private void OnDisable()
@@ -56,10 +60,17 @@ namespace Match3.UI
             gameManager.LevelCompleted -= HandleLevelCompleted;
             gameManager.ShuffleStarted -= HandleShuffleStarted;
             gameManager.PhaseChanged -= HandlePhaseChanged;
+            gameManager.MovesChanged -= HandleMovesChanged;
+            gameManager.ObjectivesChanged -= HandleObjectivesChanged;
         }
 
         private void Update()
         {
+            // The clock label doubles as the MOVES counter in moves mode (no scene
+            // change needed) — moves update via events, so Update leaves it alone.
+            if (gameManager.Mode == GameMode.Moves)
+                return;
+
             // The clock changes every frame, so the HUD polls it instead of making the
             // GameManager fire 60 events a second. Discrete values come via events.
             float seconds = Mathf.Max(0f, gameManager.TimeLeft);
@@ -71,10 +82,47 @@ namespace Match3.UI
                 timeText.color = seconds <= lowTimeThreshold ? lowTimeColor : normalTimeColor;
         }
 
+        private void HandleMovesChanged(int movesLeft)
+        {
+            if (gameManager.Mode != GameMode.Moves)
+                return;
+
+            timeText.text = $"Moves {movesLeft}";
+            timeText.color = movesLeft <= 3 ? lowTimeColor : normalTimeColor;
+        }
+
+        private void HandleObjectivesChanged()
+        {
+            if (gameManager.Mode != GameMode.Moves || gameManager.Objectives == null)
+                return;
+
+            targetText.text = ObjectiveSummary(gameManager.Objectives);
+        }
+
+        /// <summary>"Score 450/600 | Red 12/30" — one entry per objective, done ones ticked.</summary>
+        private static string ObjectiveSummary(Match3.Core.ObjectiveTracker tracker)
+        {
+            var parts = new System.Text.StringBuilder();
+            for (int i = 0; i < tracker.Count; i++)
+            {
+                if (i > 0) parts.Append("  |  ");
+
+                Match3.Core.Objective objective = tracker.At(i);
+                string label = objective.Type == Match3.Core.ObjectiveType.Score
+                    ? "Score"
+                    : ColorNames[Mathf.Clamp(objective.ColorIndex, 0, ColorNames.Length - 1)];
+
+                parts.Append($"{label} {tracker.Progress(i)}/{objective.TargetAmount}");
+            }
+            return parts.ToString();
+        }
+
         private void HandleLevelChanged(int level)
         {
             levelText.text = $"Level {level}";
-            targetText.text = $"Target {gameManager.CurrentTarget}";
+            targetText.text = gameManager.Mode == GameMode.Moves && gameManager.Objectives != null
+                ? ObjectiveSummary(gameManager.Objectives)
+                : $"Target {gameManager.CurrentTarget}";
         }
 
         private void HandleLevelCompleted()

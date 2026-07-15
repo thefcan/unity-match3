@@ -10,6 +10,10 @@ namespace Match3.Game
         LevelComplete,
         Shuffling,
         GameOver,
+        /// <summary>Moves mode: objectives complete — celebrating before the result panel.</summary>
+        LevelWon,
+        /// <summary>Moves mode: out of moves with objectives unfinished.</summary>
+        LevelFailed,
     }
 
     /// <summary>

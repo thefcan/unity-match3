@@ -59,16 +59,44 @@ namespace Match3.Game
                 yield break;
             }
 
+            // A committed swap costs a move in Moves mode — spent up front, so the
+            // counter reads correctly while the cascade animation still plays.
+            if (Game.Mode == GameMode.Moves)
+                Game.SpendMove();
+
             // Animate the recording wave by wave, scoring each one as its animation
-            // lands and topping up the clock for big matches.
+            // lands. Moves mode feeds every wave into the objectives; time attack
+            // tops up the clock for big matches instead.
             foreach (CascadeStep step in result.Steps)
             {
                 yield return Game.BoardView.PlayStep(step);
                 Game.AddScore(step.Points);
 
-                int bigMatches = step.BigMatchCount(Game.Config.bonusMatchSize);
-                if (bigMatches > 0)
-                    Game.AddTime(bigMatches * Game.Config.bonusSeconds);
+                if (Game.Mode == GameMode.Moves)
+                {
+                    Game.Objectives.Consume(step);
+                    Game.RaiseObjectivesChanged();
+                }
+                else
+                {
+                    int bigMatches = step.BigMatchCount(Game.Config.bonusMatchSize);
+                    if (bigMatches > 0)
+                        Game.AddTime(bigMatches * Game.Config.bonusSeconds);
+                }
+            }
+
+            if (Game.Mode == GameMode.Moves)
+            {
+                // Objectives first: completing them ON the final move is a win.
+                if (Game.Objectives.AllComplete)
+                    Game.SetState(new LevelWonState(Game));
+                else if (Game.MovesLeft <= 0)
+                    Game.SetState(new LevelFailedState(Game));
+                else if (!Game.Board.HasPossibleMove())
+                    Game.SetState(new ShuffleState(Game));
+                else
+                    Game.SetState(new PlayingState(Game));
+                yield break;
             }
 
             // Reaching the target clears the level and loops on (endless). A clutch

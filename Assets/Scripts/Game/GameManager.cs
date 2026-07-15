@@ -41,16 +41,31 @@ namespace Match3.Game
         /// <summary>Fired when a dead board triggers a shuffle (clock is paused).</summary>
         public event Action ShuffleStarted;
         public event Action<GamePhase> PhaseChanged;
-        /// <summary>Fired once when the clock runs out.</summary>
+        /// <summary>Fired once when the clock runs out (time attack).</summary>
         public event Action GameEnded;
+        /// <summary>Moves mode: the move counter changed.</summary>
+        public event Action<int> MovesChanged;
+        /// <summary>Moves mode: objective progress changed.</summary>
+        public event Action ObjectivesChanged;
+        /// <summary>Moves mode: level won; carries the 0-3 star rating.</summary>
+        public event Action<int> LevelWon;
+        /// <summary>Moves mode: out of moves with objectives unfinished.</summary>
+        public event Action LevelFailed;
 
         public Board Board { get; private set; }
         public CascadeResolver Resolver { get; private set; }
+        public GameMode Mode { get; private set; }
+        /// <summary>The authored level being played (Moves mode only, else null).</summary>
+        public LevelDefinition LevelDefinition { get; private set; }
+        /// <summary>Moves mode: swaps remaining. Meaningless in time attack.</summary>
+        public int MovesLeft { get; private set; }
+        /// <summary>Moves mode: goal progress. Null in time attack.</summary>
+        public ObjectiveTracker Objectives { get; private set; }
         public int Score { get; private set; }
         public int Level { get; private set; }
-        /// <summary>Score needed to clear the current level.</summary>
+        /// <summary>Score needed to clear the current level (time attack).</summary>
         public int CurrentTarget { get; private set; }
-        /// <summary>Seconds left on the clock. Polled by the HUD every frame.</summary>
+        /// <summary>Seconds left on the clock. Polled by the HUD every frame (time attack).</summary>
         public float TimeLeft { get; private set; }
 
         public LevelConfig Config => levelConfig;
@@ -94,8 +109,9 @@ namespace Match3.Game
             if (_currentState == null) return;
             GamePhase phase = _currentState.Phase;
 
-            // The clock ticks while you're playing or watching a cascade resolve.
-            if (phase == GamePhase.Playing || phase == GamePhase.Resolving)
+            // The clock ticks while you're playing or watching a cascade resolve —
+            // time attack only; moves mode has no clock.
+            if (Mode == GameMode.TimeAttack && (phase == GamePhase.Playing || phase == GamePhase.Resolving))
             {
                 TimeLeft -= Time.deltaTime;
                 if (TimeLeft <= 0f)
@@ -162,25 +178,66 @@ namespace Match3.Game
         /// <summary>States are plain C# classes; they borrow MonoBehaviour's coroutine runner via this.</summary>
         public Coroutine RunCoroutine(IEnumerator routine) => StartCoroutine(routine);
 
-        /// <summary>Creates fresh core objects and starts a brand-new run at level 1. Called by InitState.</summary>
+        /// <summary>
+        /// Creates fresh core objects and starts a new run. Called by InitState.
+        /// The mode comes from <see cref="GameSession"/>: Moves plays the selected
+        /// (or default) LevelDefinition; TimeAttack keeps the original endless loop.
+        /// </summary>
         public void BuildNewGame()
         {
+            Mode = GameSession.Mode;
+            LevelDefinition = GameSession.SelectedLevel;
+            if (Mode == GameMode.Moves && LevelDefinition == null)
+                LevelDefinition = Resources.Load<LevelDefinition>("Levels/Level_01");
+            if (LevelDefinition == null)
+                Mode = GameMode.TimeAttack; // no level asset anywhere — original game
+
             _random = new SystemRandom();
-            var factory = new TileFactory(levelConfig.ColorCount, _random);
-            Board = new Board(levelConfig.width, levelConfig.height, factory);
-            // Factory + random unlock the resolver's special-candy mode: match shapes
-            // mint striped/wrapped/colour-bomb tiles and combos detonate.
-            Resolver = new CascadeResolver(levelConfig.ToScoreConfig(), factory, _random);
 
-            Level = 1;
+            if (Mode == GameMode.Moves)
+            {
+                // The palette caps the colour count: the core only knows indices and
+                // every index must have a colour (and candy sprites) to render.
+                int colorCount = Mathf.Clamp(LevelDefinition.colorCount, 3, levelConfig.ColorCount);
+                var factory = new TileFactory(colorCount, _random);
+                Board = new Board(LevelDefinition.width, LevelDefinition.height, factory);
+                Resolver = new CascadeResolver(LevelDefinition.ToScoreConfig(), factory, _random);
+
+                Level = GameSession.SelectedLevelIndex;
+                MovesLeft = LevelDefinition.movesLimit;
+                Objectives = new ObjectiveTracker(LevelDefinition.ToObjectives());
+                CurrentTarget = 0;
+                TimeLeft = 0f;
+            }
+            else
+            {
+                var factory = new TileFactory(levelConfig.ColorCount, _random);
+                Board = new Board(levelConfig.width, levelConfig.height, factory);
+                // Factory + random unlock the resolver's special-candy mode: match shapes
+                // mint striped/wrapped/colour-bomb tiles and combos detonate.
+                Resolver = new CascadeResolver(levelConfig.ToScoreConfig(), factory, _random);
+
+                Level = 1;
+                MovesLeft = 0;
+                Objectives = null;
+                CurrentTarget = levelConfig.TargetScoreForLevel(Level);
+                TimeLeft = levelConfig.timeLimit;
+            }
+
             Score = 0;
-            CurrentTarget = levelConfig.TargetScoreForLevel(Level);
-            TimeLeft = levelConfig.timeLimit;
-
             boardView.Initialize(Board, levelConfig);
 
             ScoreChanged?.Invoke(Score);
             LevelChanged?.Invoke(Level);
+            MovesChanged?.Invoke(MovesLeft);
+            ObjectivesChanged?.Invoke();
+        }
+
+        /// <summary>Moves mode: burns one move (a committed, non-bounced swap).</summary>
+        public void SpendMove()
+        {
+            MovesLeft = Mathf.Max(0, MovesLeft - 1);
+            MovesChanged?.Invoke(MovesLeft);
         }
 
         /// <summary>
@@ -224,6 +281,21 @@ namespace Match3.Game
         public void RaiseGameEnded()
         {
             GameEnded?.Invoke();
+        }
+
+        public void RaiseObjectivesChanged()
+        {
+            ObjectivesChanged?.Invoke();
+        }
+
+        public void RaiseLevelWon(int stars)
+        {
+            LevelWon?.Invoke(stars);
+        }
+
+        public void RaiseLevelFailed()
+        {
+            LevelFailed?.Invoke();
         }
 
         // ---- Input routing ----------------------------------------------------------
