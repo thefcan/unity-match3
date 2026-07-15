@@ -41,10 +41,15 @@ namespace Match3.UI
             hostRect.anchorMax = Vector2.one;
             hostRect.sizeDelta = Vector2.zero;
 
+            // AddComponent on an ACTIVE object runs OnEnable immediately — before _game
+            // is wired, which would silently skip every event subscription. Deactivate
+            // around construction so OnEnable fires exactly once, fully wired.
+            host.SetActive(false);
             var panel = host.AddComponent<LevelResultPanel>();
             panel._game = game;
             panel.Build();
             panel.Hide();
+            host.SetActive(true);
             return panel;
         }
 
