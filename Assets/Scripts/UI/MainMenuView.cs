@@ -164,6 +164,7 @@ namespace Match3.UI
 
         private void StartLevel(LevelDefinition definition, int number)
         {
+            AudioManager.Play(Sfx.Button);
             GameSession.Mode = GameMode.Moves;
             GameSession.SelectedLevel = definition;
             GameSession.SelectedLevelIndex = number;
@@ -172,6 +173,7 @@ namespace Match3.UI
 
         private void StartTimeAttack()
         {
+            AudioManager.Play(Sfx.Button);
             GameSession.Mode = GameMode.TimeAttack;
             GameSession.SelectedLevel = null;
             GameSession.SelectedLevelIndex = 1;

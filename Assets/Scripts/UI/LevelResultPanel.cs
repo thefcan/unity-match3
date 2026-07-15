@@ -68,6 +68,7 @@ namespace Match3.UI
 
         private void HandleLevelWon(int stars)
         {
+            AudioManager.Play(Sfx.Win);
             // "Next" jumps straight into the following level when the catalog has one;
             // otherwise the campaign is finished and the button replays this level.
             var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
@@ -97,11 +98,13 @@ namespace Match3.UI
 
         private void HandleLevelFailed()
         {
+            AudioManager.Play(Sfx.Lose);
             Show("Out of Moves!", $"Score {_game.Score}", "Retry", _game.Restart);
         }
 
         private void HandleGameEnded()
         {
+            AudioManager.Play(Sfx.Lose);
             Show("Time's Up!", $"Reached Level {_game.Level}\nScore {_game.Score}", "Restart", _game.Restart);
         }
 
@@ -129,11 +132,13 @@ namespace Match3.UI
 
         private void OnButtonClicked()
         {
+            AudioManager.Play(Sfx.Button);
             _primaryAction?.Invoke();
         }
 
         private static void OnMenuClicked()
         {
+            AudioManager.Play(Sfx.Button);
             SceneManager.LoadScene("MainMenu");
         }
 

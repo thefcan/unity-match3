@@ -92,6 +92,7 @@ namespace Match3.View
         /// </summary>
         public IEnumerator AnimateReshuffle()
         {
+            AudioManager.Play(Sfx.Shuffle);
             var moves = new List<IEnumerator>();
             for (int x = 0; x < _board.Width; x++)
             {
@@ -170,6 +171,7 @@ namespace Match3.View
         /// </summary>
         public IEnumerator AnimateSwap(GridPosition a, GridPosition b)
         {
+            AudioManager.Play(Sfx.Swap);
             var moves = new List<IEnumerator>();
             foreach (GridPosition pos in new[] { a, b })
             {
@@ -186,6 +188,10 @@ namespace Match3.View
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
+            PlayDetonationJuice(step);
+            if (step.Cleared.Count > 0)
+                AudioManager.Play(Sfx.Pop, 1f + 0.08f * step.CascadeIndex); // combos climb in pitch
+
             Dictionary<GridPosition, float> delays = BuildDetonationDelays(step);
 
             // Cells that fund a SURVIVING creation fly into the morph point instead of
@@ -209,6 +215,9 @@ namespace Match3.View
             }
             yield return RunAll(clears);
 
+            if (step.Points > 0 && step.Cleared.Count > 0)
+                ScorePopup.Spawn(Centroid(step.Cleared), step.Points, Color.white);
+
             // Morphs rebind the replaced tile's view to the created special — this must
             // land before falls, which reference the created tile's Id.
             var morphs = new List<IEnumerator>();
@@ -224,7 +233,10 @@ namespace Match3.View
                 }
             }
             if (morphs.Count > 0)
+            {
+                AudioManager.Play(Sfx.SpecialCreate);
                 yield return RunAll(morphs);
+            }
 
             List<IEnumerator> moves = step.Falls.Select(AnimateFall)
                 .Concat(step.Spawns.Select(AnimateSpawn))
@@ -263,10 +275,62 @@ namespace Match3.View
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
+            EffectsView.TileBurst(view.transform.position, BurstColorFor(cleared.Tile));
             yield return view.Pop(popDuration);
 
             _viewsById.Remove(cleared.Tile.Id);
             tilePool.Release(view);
+        }
+
+        private Color BurstColorFor(Tile tile) =>
+            tile.ColorIndex >= 0 && tile.ColorIndex < _config.tileColors.Length
+                ? _config.tileColors[tile.ColorIndex]
+                : Color.white;
+
+        /// <summary>Sounds + blast bursts + camera shakes for every special that went off this wave.</summary>
+        private void PlayDetonationJuice(CascadeStep step)
+        {
+            const int maxSounds = 4; // a bomb+striped combo fires many lanes — don't stack 10 clips
+            int sounds = 0;
+
+            foreach (Detonation detonation in step.Detonations)
+            {
+                Vector3 origin = GridToWorld(detonation.Origin);
+                bool playSound = sounds++ < maxSounds;
+
+                switch (detonation.Kind)
+                {
+                    case DetonationKind.Row:
+                    case DetonationKind.Column:
+                    case DetonationKind.Cross:
+                    case DetonationKind.TripleCross:
+                        if (playSound) AudioManager.Play(Sfx.LineClear);
+                        EffectsView.BlastBurst(origin, Color.white);
+                        break;
+
+                    case DetonationKind.Blast3x3:
+                    case DetonationKind.Blast5x5:
+                        if (playSound) AudioManager.Play(Sfx.WrappedBlast);
+                        EffectsView.BlastBurst(origin, new Color(1f, 0.7f, 0.3f));
+                        EffectsView.Shake(detonation.Kind == DetonationKind.Blast5x5 ? 0.2f : 0.12f);
+                        break;
+
+                    case DetonationKind.ColorClear:
+                    case DetonationKind.BoardClear:
+                        if (playSound) AudioManager.Play(Sfx.ColorBomb);
+                        EffectsView.BlastBurst(origin, new Color(0.8f, 0.5f, 1f));
+                        EffectsView.Shake(0.22f, 0.3f);
+                        break;
+                }
+            }
+        }
+
+        private Vector3 Centroid(IReadOnlyList<ClearedTile> cleared)
+        {
+            Vector3 sum = Vector3.zero;
+            foreach (ClearedTile tile in cleared)
+                sum += GridToWorld(tile.Position);
+            return sum / cleared.Count;
         }
 
         private IEnumerator ConvergeAndRelease(ClearedTile cleared, Vector3 target)
