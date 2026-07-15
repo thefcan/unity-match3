@@ -118,21 +118,10 @@ LevelConfig → `Level1`. Also set the camera's **Background** color to somethin
    GameManager → `Game`, then Score/Time/Target/Level Text → their labels, and
    **Message Text → `MessageText`** (this last one is optional — without it the pause
    still happens, just no banner). Leave the colour / threshold fields at defaults.
-4. Game-over overlay, as a child of the Canvas:
-   - Right-click Canvas → **UI → Panel**, name it `GameOverPanel`. Set its Image
-     color to black with ~200 alpha (the dim background).
-   - Inside it: a **Text - TextMeshPro** named `TitleText` (`Time's Up!`, size 96,
-     centered, anchored center, pos Y ≈ +150), another named `SummaryText`
-     (`Reached Level 1`, size 56, pos Y ≈ 0), and a **UI → Button - TextMeshPro** named
-     `RestartButton` (label `Play Again`, pos Y ≈ -200, width ≈ 420, height ≈ 110).
-   - Select the **Canvas** again → **Add Component → Game Over Panel** → wire:
-     GameManager → `Game`, PanelRoot → the `GameOverPanel` object, TitleText,
-     SummaryText, RestartButton → their objects.
-   - The script hides the panel on start, so you can leave it visible while editing.
-
-   > Why does the script sit on the Canvas instead of the panel? A disabled
-   > GameObject never receives events — the listener must live on something that
-   > stays active while the panel is hidden.
+4. That's the whole overlay story: the end-of-level panel (win / out-of-moves /
+   time's-up, with star pips and Next/Retry/Level Map buttons) is **built at
+   runtime** by `LevelResultPanel` — it attaches itself to any scene that has a
+   Canvas and a GameManager, so there is nothing to wire.
 
 5. Save the scene (Cmd+S).
 
@@ -145,12 +134,35 @@ in an engine-free assembly.
 
 ## 8. Play
 
-Press **Play**. Swap adjacent tiles by pressing on a tile and dragging towards its
-neighbour (useless swaps bounce back for free). Reach the **target score before the
-clock hits zero**; a 4-in-a-line match adds bonus seconds (timer flashes green). Clear
-the target → a "Level Complete!" beat → the next level with a higher target. Sit idle
-and a hint pulses; if the board ever has no moves it auto-shuffles. None of these
-extras need wiring — they're pure code driven off the data in `Level1`.
+Press **Play**. Swap adjacent candies by pressing on one and dragging towards its
+neighbour (useless swaps bounce back for free).
+
+- **Moves campaign (default):** the Game scene plays `Resources/Levels/Level_01`
+  unless you arrived via the level map. Complete the objectives shown at the top
+  before the move counter runs out; make 4 / L / T / 5 shapes for striped, wrapped
+  and colour-bomb candies, and swap specials into each other for combos.
+- **Time attack:** start it from the MainMenu scene's button — the original
+  countdown/target rules, driven by the `Level1` config asset.
+
+Sit idle and a hint pulses; if the board ever has no moves it auto-shuffles. None of
+these extras need wiring — they're pure code driven off data assets.
+
+## 8b. The Candy-Crush layer — everything is generated
+
+The campaign content and all art/audio ship as generated assets. To regenerate any
+of them (or after changing the palette / `LevelCurve`), use the **Match3** menu:
+
+| Menu item | Produces |
+|---|---|
+| **Match3 → Generate → Candy Sprites** | `Assets/Sprites/Candies/*.png` (21) + `Assets/Resources/CandySpriteLibrary.asset` |
+| **Match3 → Generate → Level Definitions** | `Assets/Resources/Levels/Level_01..20.asset` + `Assets/Resources/LevelCatalog.asset` |
+| **Match3 → Generate → Sound Effects** | `Assets/Resources/Audio/*.wav` (10 synthesized clips) |
+| **Match3 → Setup → Add Scenes To Build** | Build list: `MainMenu` (0) + `Game` (1) — needed for scene switching |
+
+Nothing in the scene references these directly: `BoardView` auto-loads the sprite
+library from Resources, `AudioManager` builds itself on the first sound, the result
+panel and main menu construct their own UI, and progress saves itself to
+`persistentDataPath/progress.sav`.
 
 ## 9. First commit
 
