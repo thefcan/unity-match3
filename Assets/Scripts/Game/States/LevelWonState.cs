@@ -28,6 +28,7 @@ namespace Match3.Game
                 Game.AddScore(bonus);
 
             int stars = StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores);
+            ProgressService.RecordWin(Game.Level, stars);
 
             yield return Game.BoardView.AnimateHideTiles();
             Game.RaiseLevelWon(stars);
