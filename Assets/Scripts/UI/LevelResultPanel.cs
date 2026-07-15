@@ -28,6 +28,8 @@ namespace Match3.UI
         private TMP_Text _summary;
         private Image[] _starPips;
         private TMP_Text _buttonLabel;
+        private GameObject _menuButton;
+        private System.Action _primaryAction;
 
         /// <summary>Builds the (hidden) panel under <paramref name="canvas"/> and hooks the game's outcome events.</summary>
         public static LevelResultPanel Attach(Canvas canvas, GameManager game)
@@ -66,7 +68,26 @@ namespace Match3.UI
 
         private void HandleLevelWon(int stars)
         {
-            Show($"Level {_game.Level} Complete!", $"Score {_game.Score}", "Continue");
+            // "Next" jumps straight into the following level when the catalog has one;
+            // otherwise the campaign is finished and the button replays this level.
+            var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
+            LevelDefinition next = catalog != null ? catalog.Get(_game.Level + 1) : null;
+            if (next != null)
+            {
+                int nextIndex = _game.Level + 1;
+                Show($"Level {_game.Level} Complete!", $"Score {_game.Score}", "Next", () =>
+                {
+                    GameSession.Mode = GameMode.Moves;
+                    GameSession.SelectedLevel = next;
+                    GameSession.SelectedLevelIndex = nextIndex;
+                    _game.Restart();
+                });
+            }
+            else
+            {
+                Show($"Level {_game.Level} Complete!", $"Score {_game.Score}\nAll levels cleared!", "Replay", _game.Restart);
+            }
+
             for (int i = 0; i < _starPips.Length; i++)
             {
                 _starPips[i].gameObject.SetActive(true);
@@ -76,12 +97,12 @@ namespace Match3.UI
 
         private void HandleLevelFailed()
         {
-            Show("Out of Moves!", $"Score {_game.Score}", "Retry");
+            Show("Out of Moves!", $"Score {_game.Score}", "Retry", _game.Restart);
         }
 
         private void HandleGameEnded()
         {
-            Show("Time's Up!", $"Reached Level {_game.Level}\nScore {_game.Score}", "Restart");
+            Show("Time's Up!", $"Reached Level {_game.Level}\nScore {_game.Score}", "Restart", _game.Restart);
         }
 
         private void HandlePhaseChanged(GamePhase phase)
@@ -90,13 +111,17 @@ namespace Match3.UI
                 Hide();
         }
 
-        private void Show(string title, string summary, string buttonText)
+        private void Show(string title, string summary, string buttonText, System.Action primaryAction)
         {
             _title.text = title;
             _summary.text = summary;
             _buttonLabel.text = buttonText;
+            _primaryAction = primaryAction;
             foreach (Image pip in _starPips)
                 pip.gameObject.SetActive(false);
+            // The menu button only makes sense when the MainMenu scene is loadable
+            // (i.e. registered in the build scene list).
+            _menuButton.SetActive(Application.CanStreamedLevelBeLoaded("MainMenu"));
             _root.SetActive(true);
         }
 
@@ -104,9 +129,12 @@ namespace Match3.UI
 
         private void OnButtonClicked()
         {
-            // "Continue" after a win re-enters the flow (the level map takes over once
-            // scenes exist); Retry/Restart rebuild the same setup. Restart covers all.
-            _game.Restart();
+            _primaryAction?.Invoke();
+        }
+
+        private static void OnMenuClicked()
+        {
+            SceneManager.LoadScene("MainMenu");
         }
 
         // ---- Runtime UI construction --------------------------------------------------
@@ -129,7 +157,7 @@ namespace Match3.UI
             }
 
             GameObject buttonGo = CreateRect("ActionButton", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 110f));
-            buttonGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -220f);
+            buttonGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -200f);
             var buttonImage = buttonGo.AddComponent<Image>();
             buttonImage.color = ButtonColor;
             var button = buttonGo.AddComponent<Button>();
@@ -137,6 +165,16 @@ namespace Match3.UI
             button.onClick.AddListener(OnButtonClicked);
 
             _buttonLabel = CreateText("Label", buttonGo.transform, Vector2.zero, 44f, FontStyles.Bold);
+
+            _menuButton = CreateRect("MenuButton", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 90f));
+            _menuButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -330f);
+            var menuImage = _menuButton.AddComponent<Image>();
+            menuImage.color = new Color(0.3f, 0.32f, 0.4f);
+            var menuButton = _menuButton.AddComponent<Button>();
+            menuButton.targetGraphic = menuImage;
+            menuButton.onClick.AddListener(OnMenuClicked);
+            TMP_Text menuLabel = CreateText("Label", _menuButton.transform, Vector2.zero, 38f, FontStyles.Normal);
+            menuLabel.text = "Level Map";
         }
 
         private static GameObject CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 size)
