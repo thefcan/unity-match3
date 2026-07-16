@@ -9,15 +9,21 @@ layer, and classic design patterns used where they pull their weight.
 > 🎬 *gameplay GIF placeholder — record with Cmd+Shift+5 on macOS and drop it here as `docs/gameplay.gif`*
 
 **Stack:** Unity 2022.3 LTS · 2D URP · TextMeshPro · Unity Test Framework (NUnit) ·
-no third-party assets — sprites and sound effects are **procedurally generated**,
-all "juice" is hand-rolled coroutine tweens + one runtime-built ParticleSystem.
+no third-party assets — candy sprites, UI chrome and sound effects are all
+**procedurally generated**, the UI implements a Figma-authored design language
+(Baloo 2 + Nunito), and all "juice" is hand-rolled coroutine tweens + one
+runtime-built ParticleSystem.
 
 ## Gameplay
 
 ### Moves campaign (Candy Crush style — the main mode)
 
 - **20 authored levels** on a scrollable level map, sequentially unlocked, each with
-  a **move limit** and **objectives** (reach a score, collect N candies of a colour).
+  a **move limit** and **objectives** shown as icon chips over the board: reach a
+  score, collect N candies of a colour, or **clear all the jelly**.
+- **Jelly blockers** (from level 8): translucent cells under the candies, in one or
+  two layers. A match on a jelly cell peels one layer; jelly sticks to the CELL, so
+  candies fall through it. Late levels widen the jelly and double its layers.
 - **Special candies** from match shapes:
 
   | Shape | Candy | Detonation |
@@ -55,21 +61,25 @@ A player move flows one way: `InputController` raises an event → the current
 `GameState` validates it → `CascadeResolver.ResolveSwap` mutates the `Board` and
 returns a **recording** (`CascadeStep[]`: what cleared, what **morphed into a
 special** (`SpecialCreation`), what **detonated** (`Detonation` — kind + area, in
-chain order), what fell, what spawned, wave by wave) → `BoardView` animates the
-recording (staggered blast pops, converge-and-morph beats) → C# events update the
-HUD. The view never re-derives rules, so logic and presentation can't drift apart.
+chain order), which **jelly layers came off** (`JellyHit`), what fell, what spawned,
+wave by wave) → `BoardView` animates the recording (staggered blast pops,
+converge-and-morph beats, jelly pops) → C# events update the HUD. The view never
+re-derives rules, so logic and presentation can't drift apart.
 
 Core rule units, each small and independently tested:
 
 - `Board` — match runs, gravity, refill, possible moves (incl. activation swaps), shuffle
+- `JellyGrid` — the per-CELL blocker layer; matches damage it, gravity ignores it
 - `SpecialMatchAnalyzer` — match *shape* → which special is born, and in which cell
 - `DetonationRules` — pure blast geometry (rows, columns, blasts, colour/board wipes)
 - `SwapRules` — classifies special+special / bomb swaps
 - `CascadeResolver` — the wave loop: combos → matches → creations → detonation
-  worklist (chains, wrapped double-blast) → score → clear/morph → gravity → refill
+  worklist (chains, wrapped double-blast) → jelly damage → score → clear/morph →
+  gravity → refill
 - `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` — moves-mode win logic & save
 - `LevelCurve` — the 20-level difficulty curve (single source for generated assets)
-- `CandyArtist` / `SfxSynth` — procedural sprite & sound generation (pure pixel/sample math)
+- `CandyArtist` / `UiArtist` / `SfxSynth` — procedural candy sprites, UI chrome and
+  sounds (pure pixel/sample math, no engine types)
 
 ### Game flow (State pattern)
 
@@ -105,8 +115,17 @@ stateDiagram-v2
 Two supporting ideas: **dependency inversion** on randomness (`IRandom` is injected
 into the factory, shuffle *and* resolver, so tests script every dice roll) and on
 persistence (`IProgressRepository`), and **runtime-built UI** (result panel, main
-menu, effects, audio) — no fragile scene wiring; each builds itself from code and
-`Resources/`.
+menu, objective chips, HUD card, effects, audio) — no fragile scene wiring; each
+builds itself from code and `Resources/`.
+
+## Design language
+
+The UI implements a Figma-authored design ("Candy Match — Game UI"): a deep
+purple-navy gradient, rounded cards, pill CTAs with a pink gradient, gold star
+pips, and a **Baloo 2 / Nunito** type pairing (TTFs ship in `Resources/Fonts`,
+turned into TMP font assets at runtime). The whole language lives in one code
+surface — [`UiTheme`](Assets/Scripts/UI/UiTheme.cs) mirrors the Figma colour
+variables, fonts and generated sprites, so restyling the game is a one-file edit.
 
 ## Generated assets — no art or audio dependencies
 
@@ -116,14 +135,17 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
   stripedV/wrapped + colour bomb) drawn by `CandyArtist`: one silhouette per colour
   (circle/square/triangle/diamond/hexagon) so candies stay tellable-apart without
   colour vision.
+- **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
+  9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
+  baked background/CTA gradients.
 - **Match3 → Generate → Level Definitions** — the 20 campaign levels + catalog
-  from `LevelCurve`.
+  from `LevelCurve` (jelly rows included).
 - **Match3 → Generate → Sound Effects** — 10 WAVs synthesized by `SfxSynth`.
 - **Match3 → Setup → Add Scenes To Build** — registers MainMenu + Game scenes.
 
 ## Testing
 
-**146 tests, all green** — the core is tested without ever opening a scene:
+**156 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -138,11 +160,18 @@ Assets/Tests/EditMode/
 ├── SwapComboTests.cs             all special+special / bomb swaps, no-bounce activation
 ├── SpecialBoardTests.cs          bombs never colour-match, bomb keeps a board playable
 ├── ObjectiveTrackerTests.cs      collection/score objectives, star thresholds
+├── JellyTests.cs                 jelly damage/recording, double layers, morph-cell hits, curve
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
 
-Run in Unity via **Window → General → Test Runner → EditMode → Run All**, or
-headless without Unity (the core is plain C#):
+Plus **3 PlayMode smoke tests** (`Assets/Tests/PlayMode/SceneSmokeTests.cs`) that
+boot the real scenes: the Game scene builds a full match-free board in Moves mode
+with the runtime UI attached, TimeAttack starts with a running clock, and the
+MainMenu builds its 20-row level map. These catch what unit tests can't — broken
+scene references, missing Resources assets, lifecycle ordering.
+
+Run in Unity via **Window → General → Test Runner** (EditMode and PlayMode tabs),
+or headless without Unity (the core is plain C#):
 
 ```bash
 dotnet test   # a csproj that links Assets/Scripts/Core + Assets/Tests/EditMode
@@ -153,17 +182,19 @@ dotnet test   # a csproj that links Assets/Scripts/Core + Assets/Tests/EditMode
 ```
 Assets/
 ├── Scripts/
-│   ├── Core/        ← Match3.Core.asmdef (noEngineReferences) — board, resolver,
-│   │                  special-candy rules, objectives, progress, level curve,
-│   │                  CandyArtist + SfxSynth generators
+│   ├── Core/        ← Match3.Core.asmdef (noEngineReferences) — board, jelly grid,
+│   │                  resolver, special-candy rules, objectives, progress, level
+│   │                  curve, CandyArtist + UiArtist + SfxSynth generators
 │   ├── Game/        ← GameManager, GameSession, LevelConfig/LevelDefinition/
 │   │                  LevelCatalog, AudioManager, ProgressService, States/
-│   ├── View/        ← BoardView, TileView, TilePool, InputController,
-│   │                  EffectsView, ScorePopup, CameraFitter
-│   ├── UI/          ← HudView, LevelResultPanel, MainMenuView (runtime-built)
-│   └── Editor/      ← Match3.Editor.asmdef — sprite/level/SFX generators, scene setup
-├── Tests/EditMode/  ← NUnit tests for the core
-├── Resources/       ← CandySpriteLibrary, LevelCatalog, Levels/, Audio/
+│   ├── View/        ← BoardView (incl. jelly overlay), TileView, TilePool,
+│   │                  InputController, EffectsView, ScorePopup, CameraFitter
+│   ├── UI/          ← UiTheme + HudView, ObjectiveBarView, LevelResultPanel,
+│   │                  MainMenuView (all runtime-built)
+│   └── Editor/      ← Match3.Editor.asmdef — sprite/UI/level/SFX generators, scene setup
+├── Tests/EditMode/  ← NUnit tests for the core (dotnet-runnable)
+├── Tests/PlayMode/  ← scene-boot smoke tests
+├── Resources/       ← CandySpriteLibrary, LevelCatalog, Levels/, Audio/, Fonts/, UI/
 ├── Prefabs/ · Scenes/ (MainMenu + Game) · ScriptableObjects/ · Sprites/Candies/
 ```
 
@@ -178,7 +209,8 @@ Assets/
 
 ## Scope cuts (deliberate)
 
-Kept out to leave obvious seams to grow from: **blockers** (jelly/frosting — needs a
-per-cell state layer on `Board`), **non-rectangular boards**, **ingredients**,
-**boosters/economy**. The objective model (`ObjectiveType` + per-step recording data)
-and `TileFactory` are the intended extension points.
+Kept out to leave obvious seams to grow from: **frosting-style blockers that occupy
+the cell** (jelly shipped and shows the pattern — a state grid beside the board, a
+per-step recording list, an `ObjectiveType`), **non-rectangular boards**,
+**ingredients**, **boosters/economy**. The objective model and `TileFactory` are
+the intended extension points.

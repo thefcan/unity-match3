@@ -110,7 +110,21 @@ namespace Match3.UI
                 return;
 
             // The icon chips (ObjectiveBarView) supersede the text summary when present.
-            targetText.text = ObjectiveBarView.Active ? string.Empty : ObjectiveSummary(gameManager.Objectives);
+            // Presence-based rather than a static flag: the bar attaches AFTER this view
+            // subscribes, so a flag would lag one event behind (text + chips both visible).
+            targetText.text = ObjectiveBarPresent ? string.Empty : ObjectiveSummary(gameManager.Objectives);
+        }
+
+        private ObjectiveBarView _objectiveBar;
+
+        private bool ObjectiveBarPresent
+        {
+            get
+            {
+                if (_objectiveBar == null)
+                    _objectiveBar = FindObjectOfType<ObjectiveBarView>();
+                return _objectiveBar != null;
+            }
         }
 
         /// <summary>"Score 450/600 | Red 12/30" — one entry per objective (fallback when no icon bar).</summary>
@@ -138,7 +152,7 @@ namespace Match3.UI
         {
             levelText.text = $"Level {level}";
             if (gameManager.Mode == GameMode.Moves && gameManager.Objectives != null)
-                targetText.text = ObjectiveBarView.Active ? string.Empty : ObjectiveSummary(gameManager.Objectives);
+                targetText.text = ObjectiveBarPresent ? string.Empty : ObjectiveSummary(gameManager.Objectives);
             else
                 targetText.text = $"Target {gameManager.CurrentTarget}";
         }

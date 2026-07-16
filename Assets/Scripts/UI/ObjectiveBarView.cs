@@ -19,9 +19,6 @@ namespace Match3.UI
     {
         private const float ChipHeight = 96f;
 
-        /// <summary>True while a bar is showing objectives — HudView then leaves its text label empty.</summary>
-        public static bool Active { get; private set; }
-
         private GameManager _game;
         private GameObject _root;
         private CandySpriteLibrary _candies;
@@ -61,7 +58,6 @@ namespace Match3.UI
             if (_game == null) return;
             _game.ObjectivesChanged -= Refresh;
             _game.LevelChanged -= HandleLevelChanged;
-            Active = false;
         }
 
         private void Build()
@@ -91,12 +87,10 @@ namespace Match3.UI
             ObjectiveTracker tracker = _game.Mode == GameMode.Moves ? _game.Objectives : null;
             if (tracker == null)
             {
-                Active = false;
                 _root.SetActive(false);
                 return;
             }
 
-            Active = true;
             _root.SetActive(true);
             EnsureChipCount(tracker.Count);
 
