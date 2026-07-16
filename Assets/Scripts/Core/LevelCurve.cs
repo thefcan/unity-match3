@@ -14,8 +14,15 @@ namespace Match3.Core
         public IReadOnlyList<Objective> Objectives { get; }
         public IReadOnlyList<int> StarScores { get; }
 
+        /// <summary>Bottom rows covered in jelly (0 = no jelly on this level).</summary>
+        public int JellyRows { get; }
+
+        /// <summary>Layers per jelly cell (1 or 2).</summary>
+        public int JellyLayers { get; }
+
         public LevelParameters(int width, int height, int colorCount, int movesLimit, int movesBonusPoints,
-                               IReadOnlyList<Objective> objectives, IReadOnlyList<int> starScores)
+                               IReadOnlyList<Objective> objectives, IReadOnlyList<int> starScores,
+                               int jellyRows = 0, int jellyLayers = 1)
         {
             Width = width;
             Height = height;
@@ -24,6 +31,8 @@ namespace Match3.Core
             MovesBonusPoints = movesBonusPoints;
             Objectives = objectives ?? throw new ArgumentNullException(nameof(objectives));
             StarScores = starScores ?? throw new ArgumentNullException(nameof(starScores));
+            JellyRows = jellyRows;
+            JellyLayers = jellyLayers;
         }
     }
 
@@ -65,10 +74,17 @@ namespace Match3.Core
                     objectives.Add(new Objective(ObjectiveType.Score, 0, scoreTarget));
             }
 
+            // Jelly arrives at level 8 (two floor rows), widens to three rows at 13,
+            // and doubles its layers from 16 — the late-campaign difficulty spike.
+            int jellyRows = level < 8 ? 0 : level < 13 ? 2 : 3;
+            int jellyLayers = level < 16 ? 1 : 2;
+            if (jellyRows > 0)
+                objectives.Add(new Objective(ObjectiveType.ClearJelly, 0, jellyRows * 8 * jellyLayers));
+
             int oneStar = 400 + level * 100;
             var starScores = new[] { oneStar, oneStar * 3 / 2, oneStar * 2 };
 
-            return new LevelParameters(8, 8, colorCount, movesLimit, 30, objectives, starScores);
+            return new LevelParameters(8, 8, colorCount, movesLimit, 30, objectives, starScores, jellyRows, jellyLayers);
         }
     }
 }

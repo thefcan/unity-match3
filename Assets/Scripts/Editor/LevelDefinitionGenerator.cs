@@ -50,6 +50,8 @@ namespace Match3.EditorTools
                     })
                     .ToArray();
                 level.starScores = parameters.StarScores.ToArray();
+                level.jellyRows = parameters.JellyRows;
+                level.jellyLayers = parameters.JellyLayers;
                 EditorUtility.SetDirty(level);
 
                 levels.Add(level);

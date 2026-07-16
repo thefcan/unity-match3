@@ -68,8 +68,12 @@ namespace Match3.Core
             }
 
             for (int i = 0; i < _objectives.Length; i++)
+            {
                 if (_objectives[i].Type == ObjectiveType.Score)
                     _progress[i] = Score;
+                else if (_objectives[i].Type == ObjectiveType.ClearJelly)
+                    _progress[i] += step.JellyHits.Count;
+            }
         }
     }
 }

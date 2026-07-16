@@ -24,6 +24,11 @@ MonoBehaviour:
   - type: 1
     colorIndex: 0
     amount: 26
+  - type: 2
+    colorIndex: 0
+    amount: 48
+  jellyRows: 3
+  jellyLayers: 2
   starScores:
   - 2000
   - 3000

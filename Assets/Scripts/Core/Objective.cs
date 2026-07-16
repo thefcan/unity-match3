@@ -14,6 +14,8 @@ namespace Match3.Core
         Score,
         /// <summary>Clear <see cref="Objective.TargetAmount"/> tiles of colour <see cref="Objective.ColorIndex"/>.</summary>
         CollectColor,
+        /// <summary>Remove <see cref="Objective.TargetAmount"/> jelly layers (matches on jelly cells).</summary>
+        ClearJelly,
     }
 
     /// <summary>One goal of a level: the type, the colour it applies to (if any), and how much.</summary>

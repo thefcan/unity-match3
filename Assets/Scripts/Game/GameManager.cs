@@ -61,6 +61,8 @@ namespace Match3.Game
         public int MovesLeft { get; private set; }
         /// <summary>Moves mode: goal progress. Null in time attack.</summary>
         public ObjectiveTracker Objectives { get; private set; }
+        /// <summary>Moves mode: the level's jelly layer. Null when the level (or mode) has none.</summary>
+        public JellyGrid Jelly { get; private set; }
         public int Score { get; private set; }
         public int Level { get; private set; }
         /// <summary>Score needed to clear the current level (time attack).</summary>
@@ -206,6 +208,11 @@ namespace Match3.Game
                 Level = GameSession.SelectedLevelIndex;
                 MovesLeft = LevelDefinition.movesLimit;
                 Objectives = new ObjectiveTracker(LevelDefinition.ToObjectives());
+                Jelly = LevelDefinition.jellyRows > 0
+                    ? JellyGrid.BottomRows(LevelDefinition.width, LevelDefinition.height,
+                                           LevelDefinition.jellyRows, LevelDefinition.jellyLayers)
+                    : null;
+                Resolver.AttachJelly(Jelly);
                 CurrentTarget = 0;
                 TimeLeft = 0f;
             }
@@ -220,12 +227,13 @@ namespace Match3.Game
                 Level = 1;
                 MovesLeft = 0;
                 Objectives = null;
+                Jelly = null;
                 CurrentTarget = levelConfig.TargetScoreForLevel(Level);
                 TimeLeft = levelConfig.timeLimit;
             }
 
             Score = 0;
-            boardView.Initialize(Board, levelConfig);
+            boardView.Initialize(Board, levelConfig, Jelly);
 
             ScoreChanged?.Invoke(Score);
             LevelChanged?.Invoke(Level);

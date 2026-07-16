@@ -26,6 +26,7 @@ namespace Match3.Core
         private readonly ScoreConfig _scoreConfig;
         private readonly TileFactory _factory; // null => classic mode (no special creation)
         private readonly IRandom _random;      // only used to pick bomb+striped conversion orientations
+        private JellyGrid _jelly;              // null => level has no jelly
 
         public CascadeResolver(ScoreConfig scoreConfig)
             : this(scoreConfig, null, null)
@@ -37,6 +38,16 @@ namespace Match3.Core
             _scoreConfig = scoreConfig ?? throw new ArgumentNullException(nameof(scoreConfig));
             _factory = factory;
             _random = random;
+        }
+
+        /// <summary>
+        /// Attaches the level's jelly layer: every cleared (or special-creation) cell
+        /// damages it one layer per wave, recorded as <see cref="JellyHit"/>s. Pass
+        /// null for levels without jelly.
+        /// </summary>
+        public void AttachJelly(JellyGrid jelly)
+        {
+            _jelly = jelly;
         }
 
         /// <summary>Resolves without swap context — cascade-made matches only (and shuffle settling).</summary>
@@ -189,6 +200,19 @@ namespace Match3.Core
                     .ToList();
                 int points = _scoreConfig.PointsFor(cleared.Count, cascadeIndex);
 
+                // Jelly takes one hit per matched cell — creation cells were matched
+                // too (the special morphs on top of the jelly it just damaged).
+                var jellyHits = new List<JellyHit>();
+                if (_jelly != null)
+                {
+                    foreach (GridPosition pos in clearSet)
+                        if (_jelly.Damage(pos))
+                            jellyHits.Add(new JellyHit(pos, _jelly.LayersAt(pos)));
+                    foreach (SpecialCreation creation in creations)
+                        if (!clearSet.Contains(creation.Position) && _jelly.Damage(creation.Position))
+                            jellyHits.Add(new JellyHit(creation.Position, _jelly.LayersAt(creation.Position)));
+                }
+
                 // ---- 4. Mutate: clear, morph creations in, gravity, refill ------------
                 board.ClearTiles(clearSet);
                 foreach (SpecialCreation creation in creations)
@@ -202,7 +226,7 @@ namespace Match3.Core
                 List<TileSpawn> spawns = board.Refill();
 
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
-                                          creations, detonations));
+                                          creations, detonations, jellyHits));
                 cascadeIndex++;
             }
 

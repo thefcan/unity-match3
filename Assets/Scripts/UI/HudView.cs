@@ -109,10 +109,11 @@ namespace Match3.UI
             if (gameManager.Mode != GameMode.Moves || gameManager.Objectives == null)
                 return;
 
-            targetText.text = ObjectiveSummary(gameManager.Objectives);
+            // The icon chips (ObjectiveBarView) supersede the text summary when present.
+            targetText.text = ObjectiveBarView.Active ? string.Empty : ObjectiveSummary(gameManager.Objectives);
         }
 
-        /// <summary>"Score 450/600 | Red 12/30" — one entry per objective, done ones ticked.</summary>
+        /// <summary>"Score 450/600 | Red 12/30" — one entry per objective (fallback when no icon bar).</summary>
         private static string ObjectiveSummary(Match3.Core.ObjectiveTracker tracker)
         {
             var parts = new System.Text.StringBuilder();
@@ -121,9 +122,12 @@ namespace Match3.UI
                 if (i > 0) parts.Append("  |  ");
 
                 Match3.Core.Objective objective = tracker.At(i);
-                string label = objective.Type == Match3.Core.ObjectiveType.Score
-                    ? "Score"
-                    : ColorNames[Mathf.Clamp(objective.ColorIndex, 0, ColorNames.Length - 1)];
+                string label = objective.Type switch
+                {
+                    Match3.Core.ObjectiveType.Score => "Score",
+                    Match3.Core.ObjectiveType.ClearJelly => "Jelly",
+                    _ => ColorNames[Mathf.Clamp(objective.ColorIndex, 0, ColorNames.Length - 1)],
+                };
 
                 parts.Append($"{label} {tracker.Progress(i)}/{objective.TargetAmount}");
             }
@@ -133,9 +137,10 @@ namespace Match3.UI
         private void HandleLevelChanged(int level)
         {
             levelText.text = $"Level {level}";
-            targetText.text = gameManager.Mode == GameMode.Moves && gameManager.Objectives != null
-                ? ObjectiveSummary(gameManager.Objectives)
-                : $"Target {gameManager.CurrentTarget}";
+            if (gameManager.Mode == GameMode.Moves && gameManager.Objectives != null)
+                targetText.text = ObjectiveBarView.Active ? string.Empty : ObjectiveSummary(gameManager.Objectives);
+            else
+                targetText.text = $"Target {gameManager.CurrentTarget}";
         }
 
         private void HandleLevelCompleted()

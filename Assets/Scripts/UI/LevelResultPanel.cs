@@ -264,10 +264,30 @@ namespace Match3.UI
             var canvas = Object.FindObjectOfType<Canvas>();
             if (game == null || canvas == null)
                 return;
-            if (canvas.transform.Find(nameof(LevelResultPanel)) != null)
-                return;
 
-            LevelResultPanel.Attach(canvas, game);
+            if (canvas.transform.Find("HudTopCard") == null)
+                BuildHudCard(canvas);
+            if (canvas.transform.Find(nameof(ObjectiveBarView)) == null)
+                ObjectiveBarView.Attach(canvas, game);
+            if (canvas.transform.Find(nameof(LevelResultPanel)) == null)
+                LevelResultPanel.Attach(canvas, game);
+        }
+
+        /// <summary>The design's top-bar card, slid BEHIND the scene-authored HUD labels.</summary>
+        private static void BuildHudCard(Canvas canvas)
+        {
+            var go = new GameObject("HudTopCard", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(canvas.transform, false);
+            go.transform.SetAsFirstSibling(); // behind every HUD label
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(-40f, 430f);
+            rect.anchoredPosition = new Vector2(0f, -14f);
+            var image = go.GetComponent<Image>();
+            UiTheme.ApplySprite(image, UiTheme.Round, new Color(UiTheme.Card.r, UiTheme.Card.g, UiTheme.Card.b, 0.88f));
+            image.raycastTarget = false;
         }
     }
 }

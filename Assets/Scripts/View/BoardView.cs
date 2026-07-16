@@ -48,7 +48,7 @@ namespace Match3.View
         private TileView _hintB;
 
         /// <summary>Spawns a view for every tile. Safe to call again on restart — old views return to the pool.</summary>
-        public void Initialize(Board board, LevelConfig config)
+        public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
             _config = config != null ? config : throw new ArgumentNullException(nameof(config));
@@ -60,6 +60,8 @@ namespace Match3.View
                 tilePool.Release(view);
             _viewsById.Clear();
 
+            BuildJellyOverlay(jelly);
+
             for (int x = 0; x < board.Width; x++)
             {
                 for (int y = 0; y < board.Height; y++)
@@ -67,6 +69,77 @@ namespace Match3.View
                     var pos = new GridPosition(x, y);
                     if (board[pos] is { } tile)
                         SpawnView(tile, GridToWorld(pos));
+                }
+            }
+        }
+
+        // ---- Jelly overlay -----------------------------------------------------------
+        // Jelly belongs to CELLS: translucent rounded quads UNDER the tiles (sorting
+        // order -1). The resolver reports layer removals as JellyHits per wave; the
+        // view restyles or pops the overlay from that recording alone.
+
+        private readonly Dictionary<GridPosition, SpriteRenderer> _jellyViews = new Dictionary<GridPosition, SpriteRenderer>();
+        private Transform _jellyRoot;
+
+        private static readonly Color JellySingle = new Color(0.98f, 0.55f, 0.75f, 0.42f);
+        private static readonly Color JellyDouble = new Color(0.95f, 0.32f, 0.6f, 0.62f);
+
+        private void BuildJellyOverlay(JellyGrid jelly)
+        {
+            if (_jellyRoot != null)
+                Destroy(_jellyRoot.gameObject);
+            _jellyViews.Clear();
+
+            if (jelly == null || jelly.IsClear)
+                return;
+
+            _jellyRoot = new GameObject("JellyOverlay").transform;
+            _jellyRoot.SetParent(transform, false);
+
+            var sprite = Resources.Load<Sprite>("UI/ui_round");
+            for (int x = 0; x < jelly.Width; x++)
+            {
+                for (int y = 0; y < jelly.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    int layers = jelly.LayersAt(pos);
+                    if (layers == 0)
+                        continue;
+
+                    var go = new GameObject($"Jelly_{x}_{y}");
+                    go.transform.SetParent(_jellyRoot, false);
+                    go.transform.position = GridToWorld(pos);
+                    var renderer = go.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    renderer.sortingOrder = -1;
+                    renderer.color = layers >= 2 ? JellyDouble : JellySingle;
+                    if (sprite != null)
+                    {
+                        // scale the sprite's natural world size down to one cell
+                        float worldSize = sprite.rect.width / sprite.pixelsPerUnit;
+                        go.transform.localScale = Vector3.one * (cellSize * 0.96f / worldSize);
+                    }
+                    _jellyViews[pos] = renderer;
+                }
+            }
+        }
+
+        private void ApplyJellyHits(CascadeStep step)
+        {
+            foreach (JellyHit hit in step.JellyHits)
+            {
+                if (!_jellyViews.TryGetValue(hit.Position, out SpriteRenderer renderer))
+                    continue;
+
+                if (hit.RemainingLayers <= 0)
+                {
+                    EffectsView.TileBurst(renderer.transform.position, JellyDouble, 8);
+                    _jellyViews.Remove(hit.Position);
+                    Destroy(renderer.gameObject);
+                }
+                else
+                {
+                    renderer.color = hit.RemainingLayers >= 2 ? JellyDouble : JellySingle;
                 }
             }
         }
@@ -214,6 +287,8 @@ namespace Match3.View
                     : PopAndRelease(cleared, delays.TryGetValue(cleared.Position, out float delay) ? delay : 0f));
             }
             yield return RunAll(clears);
+
+            ApplyJellyHits(step);
 
             if (step.Points > 0 && step.Cleared.Count > 0)
                 ScorePopup.Spawn(Centroid(step.Cleared), step.Points, Color.white);

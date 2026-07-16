@@ -114,6 +114,23 @@ namespace Match3.Core
         BoardClear,
     }
 
+    /// <summary>
+    /// One jelly layer coming off a cell this wave. <see cref="RemainingLayers"/> is
+    /// the cell's state AFTER the hit (0 = jelly gone), so the view can restyle or
+    /// remove its overlay without consulting the grid.
+    /// </summary>
+    public readonly struct JellyHit
+    {
+        public GridPosition Position { get; }
+        public int RemainingLayers { get; }
+
+        public JellyHit(GridPosition position, int remainingLayers)
+        {
+            Position = position;
+            RemainingLayers = remainingLayers;
+        }
+    }
+
     /// <summary>One special going off: which tile, from where, what shape, which cells it hit.</summary>
     public readonly struct Detonation
     {
@@ -154,6 +171,9 @@ namespace Match3.Core
         /// <summary>Specials that went off this wave, in trigger order (chains preserved).</summary>
         public IReadOnlyList<Detonation> Detonations { get; }
 
+        /// <summary>Jelly layers removed this wave (empty when the level has no jelly).</summary>
+        public IReadOnlyList<JellyHit> JellyHits { get; }
+
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
@@ -175,6 +195,21 @@ namespace Match3.Core
             IReadOnlyList<int> runLengths,
             IReadOnlyList<SpecialCreation> creations,
             IReadOnlyList<Detonation> detonations)
+            : this(cascadeIndex, cleared, falls, spawns, points, runLengths,
+                   creations, detonations, Array.Empty<JellyHit>())
+        {
+        }
+
+        public CascadeStep(
+            int cascadeIndex,
+            IReadOnlyList<ClearedTile> cleared,
+            IReadOnlyList<TileFall> falls,
+            IReadOnlyList<TileSpawn> spawns,
+            int points,
+            IReadOnlyList<int> runLengths,
+            IReadOnlyList<SpecialCreation> creations,
+            IReadOnlyList<Detonation> detonations,
+            IReadOnlyList<JellyHit> jellyHits)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -184,6 +219,7 @@ namespace Match3.Core
             RunLengths = runLengths ?? throw new ArgumentNullException(nameof(runLengths));
             Creations = creations ?? throw new ArgumentNullException(nameof(creations));
             Detonations = detonations ?? throw new ArgumentNullException(nameof(detonations));
+            JellyHits = jellyHits ?? throw new ArgumentNullException(nameof(jellyHits));
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>

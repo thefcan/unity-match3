@@ -41,6 +41,11 @@ namespace Match3.Game
             new ObjectiveSpec { type = ObjectiveType.Score, colorIndex = 0, amount = 600 },
         };
 
+        [Header("Jelly")]
+        [Tooltip("Bottom rows covered in jelly (0 = none). Pair with a ClearJelly objective.")]
+        [Min(0)] public int jellyRows = 0;
+        [Range(1, 2)] public int jellyLayers = 1;
+
         [Header("Stars (ascending score thresholds)")]
         public int[] starScores = { 600, 900, 1300 };
 
