@@ -33,6 +33,7 @@ namespace Match3.View
             var go = new GameObject(nameof(ScorePopup));
             var popup = go.AddComponent<ScorePopup>();
             popup._text = go.AddComponent<TextMeshPro>();
+            Match3.UI.UiTheme.ApplyFont(popup._text, Match3.UI.UiTheme.ButtonFont);
             popup._text.fontSize = 5f;
             popup._text.fontStyle = FontStyles.Bold;
             popup._text.alignment = TextAlignmentOptions.Center;

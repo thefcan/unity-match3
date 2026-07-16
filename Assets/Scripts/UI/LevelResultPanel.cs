@@ -18,9 +18,9 @@ namespace Match3.UI
     public sealed class LevelResultPanel : MonoBehaviour
     {
         private static readonly Color PanelColor = new Color(0f, 0f, 0f, 0.78f);
-        private static readonly Color StarEarned = new Color(1f, 0.8f, 0.15f);
-        private static readonly Color StarMissing = new Color(0.28f, 0.28f, 0.32f);
-        private static readonly Color ButtonColor = new Color(0.18f, 0.52f, 0.9f);
+        private static readonly Color StarEarned = UiTheme.Gold;
+        private static readonly Color StarMissing = UiTheme.StarDim;
+        private static readonly Color ButtonColor = UiTheme.Cta;
 
         private GameManager _game;
         private GameObject _root;
@@ -148,43 +148,77 @@ namespace Match3.UI
         }
 
         // ---- Runtime UI construction --------------------------------------------------
+        // Implements the Figma design language (UiTheme): rounded card on a dim
+        // overlay, Baloo 2 headings, star sprites, pink gradient CTA pill.
 
         private void Build()
         {
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = PanelColor;
 
-            _title = CreateText("Title", _root.transform, new Vector2(0f, 240f), 64f, FontStyles.Bold);
-            _summary = CreateText("Summary", _root.transform, new Vector2(0f, 20f), 42f, FontStyles.Normal);
+            GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 980f));
+            var card = cardGo.AddComponent<Image>();
+            UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.Card);
+            Transform content = cardGo.transform;
+
+            _title = CreateText("Title", content, new Vector2(0f, 330f), 76f, FontStyles.Bold);
+            UiTheme.ApplyFont(_title, UiTheme.TitleFont);
+
+            _summary = CreateText("Summary", content, new Vector2(0f, 10f), 50f, FontStyles.Normal);
+            UiTheme.ApplyFont(_summary, UiTheme.BodyFont);
+            _summary.color = UiTheme.TextDim;
 
             _starPips = new Image[3];
             for (int i = 0; i < 3; i++)
             {
-                GameObject pip = CreateRect($"Star{i}", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(90f, 90f));
-                pip.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 1) * 130f, 140f);
-                pip.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                GameObject pip = CreateRect($"Star{i}", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(150f, 150f));
+                // the middle star sits slightly higher, the classic result-screen arc
+                pip.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 1) * 180f, i == 1 ? 185f : 160f);
                 _starPips[i] = pip.AddComponent<Image>();
+                UiTheme.ApplySprite(_starPips[i], UiTheme.StarSprite, StarMissing);
+                if (_starPips[i].sprite == null)
+                    pip.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
             }
 
-            GameObject buttonGo = CreateRect("ActionButton", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 110f));
-            buttonGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -200f);
+            GameObject buttonGo = CreateRect("ActionButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 140f));
+            buttonGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -160f);
             var buttonImage = buttonGo.AddComponent<Image>();
-            buttonImage.color = ButtonColor;
+            UiTheme.ApplySprite(buttonImage, UiTheme.PillPink, Color.white);
+            if (buttonImage.sprite == null)
+                buttonImage.color = ButtonColor;
             var button = buttonGo.AddComponent<Button>();
             button.targetGraphic = buttonImage;
             button.onClick.AddListener(OnButtonClicked);
 
-            _buttonLabel = CreateText("Label", buttonGo.transform, Vector2.zero, 44f, FontStyles.Bold);
+            _buttonLabel = CreateText("Label", buttonGo.transform, Vector2.zero, 52f, FontStyles.Bold);
+            UiTheme.ApplyFont(_buttonLabel, UiTheme.ButtonFont);
+            Stretch(_buttonLabel.rectTransform);
 
-            _menuButton = CreateRect("MenuButton", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 90f));
+            _menuButton = CreateRect("MenuButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 120f));
             _menuButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -330f);
             var menuImage = _menuButton.AddComponent<Image>();
-            menuImage.color = new Color(0.3f, 0.32f, 0.4f);
+            UiTheme.ApplySprite(menuImage, UiTheme.Pill, UiTheme.Slot);
             var menuButton = _menuButton.AddComponent<Button>();
             menuButton.targetGraphic = menuImage;
             menuButton.onClick.AddListener(OnMenuClicked);
-            TMP_Text menuLabel = CreateText("Label", _menuButton.transform, Vector2.zero, 38f, FontStyles.Normal);
+            Image menuOutline = new GameObject("Outline", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            menuOutline.transform.SetParent(_menuButton.transform, false);
+            UiTheme.ApplySprite(menuOutline, UiTheme.PillOutline, UiTheme.OutlineDim);
+            Stretch(menuOutline.rectTransform);
+            menuOutline.raycastTarget = false;
+            TMP_Text menuLabel = CreateText("Label", _menuButton.transform, Vector2.zero, 44f, FontStyles.Normal);
+            UiTheme.ApplyFont(menuLabel, UiTheme.ButtonFont);
+            menuLabel.color = UiTheme.TextDim;
             menuLabel.text = "Level Map";
+            Stretch(menuLabel.rectTransform);
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private static GameObject CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 size)

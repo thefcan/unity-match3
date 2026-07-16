@@ -40,6 +40,19 @@ namespace Match3.UI
         private Coroutine _scoreTween;
         private float _bonusFlashUntil;
 
+        private void Awake()
+        {
+            // Apply the Figma design language (UiTheme fonts) to the scene-authored
+            // labels — a code-side restyle, so the scene needs no re-wiring.
+            UiTheme.ApplyFont(scoreText, UiTheme.ButtonFont);
+            UiTheme.ApplyFont(timeText, UiTheme.ButtonFont);
+            UiTheme.ApplyFont(targetText, UiTheme.BodyFont);
+            UiTheme.ApplyFont(levelText, UiTheme.BodyFont);
+            UiTheme.ApplyFont(messageText, UiTheme.TitleFont);
+            if (levelText != null)
+                levelText.color = UiTheme.TextDim;
+        }
+
         private void OnEnable()
         {
             gameManager.ScoreChanged += HandleScoreChanged;
