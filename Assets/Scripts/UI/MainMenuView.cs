@@ -79,7 +79,9 @@ namespace Match3.UI
                 dot.raycastTarget = false;
             }
 
-            TMP_Text subtitle = NewText("Subtitle", canvas, "A sweet 20-level campaign", 38f, FontStyles.Normal, UiTheme.BodyFont);
+            var catalogForCount = Resources.Load<LevelCatalog>("LevelCatalog");
+            int levelCount = catalogForCount != null && catalogForCount.Count > 0 ? catalogForCount.Count : 60;
+            TMP_Text subtitle = NewText("Subtitle", canvas, $"A sweet {levelCount}-level campaign", 38f, FontStyles.Normal, UiTheme.BodyFont);
             subtitle.color = UiTheme.TextDim;
             Anchor(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(900f, 60f));
 
@@ -209,6 +211,24 @@ namespace Match3.UI
                     if (pip.sprite == null) // fallback: rotated square reads as a diamond pip
                         pip.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
                     pip.raycastTarget = false;
+                }
+
+                // Status badge (Stitch design): green DONE on completed rows, pink PLAY
+                // on the current one — a quick read of where you are in the campaign.
+                bool completed = ProgressService.Current.IsCompleted(number);
+                if (completed || isCurrent)
+                {
+                    Image badge = NewImage("Badge", rowGo.transform, isCurrent ? UiTheme.Cta : new Color(0.16f, 0.55f, 0.35f));
+                    UiTheme.ApplySprite(badge, UiTheme.Pill, isCurrent ? UiTheme.Cta : new Color(0.16f, 0.55f, 0.35f));
+                    var badgeRect = badge.rectTransform;
+                    badgeRect.anchorMin = badgeRect.anchorMax = new Vector2(1f, 0.5f);
+                    badgeRect.sizeDelta = new Vector2(140f, 54f);
+                    badgeRect.anchoredPosition = new Vector2(-320f, 0f);
+                    badge.raycastTarget = false;
+
+                    TMP_Text badgeLabel = NewText("Label", badge.transform, isCurrent ? "PLAY" : "DONE", 26f, FontStyles.Bold, UiTheme.BodyFont);
+                    badgeLabel.characterSpacing = 3f;
+                    Stretch(badgeLabel.rectTransform, Vector2.zero, Vector2.one);
                 }
             }
             else

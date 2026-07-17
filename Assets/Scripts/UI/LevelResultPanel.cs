@@ -27,10 +27,13 @@ namespace Match3.UI
         private Image _card;
         private TMP_Text _title;
         private TMP_Text _summary;
+        private TMP_Text _scoreCaption;
+        private TMP_Text _scoreValue;
         private Image[] _starPips;
         private TMP_Text _buttonLabel;
         private GameObject _menuButton;
         private System.Action _primaryAction;
+        private Coroutine _starPop;
 
         /// <summary>Builds the (hidden) panel under <paramref name="canvas"/> and hooks the game's outcome events.</summary>
         public static LevelResultPanel Attach(Canvas canvas, GameManager game)
@@ -82,7 +85,7 @@ namespace Match3.UI
             if (next != null)
             {
                 int nextIndex = _game.Level + 1;
-                Show($"Level {_game.Level} Complete!", $"Score {_game.Score}", "Next", () =>
+                Show($"Level {_game.Level}\nComplete!", string.Empty, "Next", () =>
                 {
                     GameSession.Mode = GameMode.Moves;
                     GameSession.SelectedLevel = next;
@@ -92,14 +95,47 @@ namespace Match3.UI
             }
             else
             {
-                Show($"Level {_game.Level} Complete!", $"Score {_game.Score}\nAll levels cleared!", "Replay", _game.Restart);
+                Show($"Level {_game.Level}\nComplete!", "All levels cleared!", "Replay", _game.Restart);
             }
+
+            // The win layout (from the Stitch design): FINAL SCORE caption + big gold
+            // number instead of the plain summary line.
+            _scoreCaption.gameObject.SetActive(true);
+            _scoreValue.gameObject.SetActive(true);
+            _scoreValue.text = _game.Score.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
 
             for (int i = 0; i < _starPips.Length; i++)
             {
                 _starPips[i].gameObject.SetActive(true);
                 _starPips[i].color = i < stars ? StarEarned : StarMissing;
             }
+            if (_starPop != null)
+                StopCoroutine(_starPop);
+            _starPop = StartCoroutine(PopStars(stars));
+        }
+
+        /// <summary>Stitch-design beat: the stars pop in one by one over the card's top edge.</summary>
+        private System.Collections.IEnumerator PopStars(int stars)
+        {
+            foreach (Image pip in _starPips)
+                pip.transform.localScale = Vector3.zero;
+
+            for (int i = 0; i < _starPips.Length; i++)
+            {
+                Transform pip = _starPips[i].transform;
+                if (i < stars)
+                    AudioManager.Play(Sfx.Pop, 1f + 0.18f * i);
+
+                for (float t = 0f; t < 1f; t += Time.deltaTime / 0.22f)
+                {
+                    // overshoot to 1.25 then settle — a squash-free pop
+                    float scale = t < 0.7f ? Mathf.Lerp(0f, 1.25f, t / 0.7f) : Mathf.Lerp(1.25f, 1f, (t - 0.7f) / 0.3f);
+                    pip.localScale = Vector3.one * scale;
+                    yield return null;
+                }
+                pip.localScale = Vector3.one;
+            }
+            _starPop = null;
         }
 
         private void HandleLevelFailed()
@@ -127,6 +163,8 @@ namespace Match3.UI
             _summary.text = summary;
             _buttonLabel.text = buttonText;
             _primaryAction = primaryAction;
+            _scoreCaption.gameObject.SetActive(false);
+            _scoreValue.gameObject.SetActive(false);
             foreach (Image pip in _starPips)
                 pip.gameObject.SetActive(false);
             // The menu button only makes sense when the MainMenu scene is loadable
@@ -163,19 +201,32 @@ namespace Match3.UI
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
             Transform content = cardGo.transform;
 
-            _title = CreateText("Title", content, new Vector2(0f, 330f), 76f, FontStyles.Bold);
+            _title = CreateText("Title", content, new Vector2(0f, 280f), 72f, FontStyles.Bold);
             UiTheme.ApplyFont(_title, UiTheme.TitleFont);
 
             _summary = CreateText("Summary", content, new Vector2(0f, 10f), 50f, FontStyles.Normal);
             UiTheme.ApplyFont(_summary, UiTheme.BodyFont);
             _summary.color = UiTheme.TextDim;
 
+            // Win-only score block (Stitch design): a spaced caption over a big gold number.
+            _scoreCaption = CreateText("ScoreCaption", content, new Vector2(0f, 110f), 32f, FontStyles.Normal);
+            UiTheme.ApplyFont(_scoreCaption, UiTheme.BodyFont);
+            _scoreCaption.color = UiTheme.TextDim;
+            _scoreCaption.characterSpacing = 8f;
+            _scoreCaption.text = "FINAL SCORE";
+
+            _scoreValue = CreateText("ScoreValue", content, new Vector2(0f, 15f), 96f, FontStyles.Bold);
+            UiTheme.ApplyFont(_scoreValue, UiTheme.TitleFont);
+            _scoreValue.color = UiTheme.Gold;
+
+            // The star trio STRADDLES the card's top edge (card is 980 tall, so the
+            // edge sits at +490 in card space) — straight from the Stitch mock.
             _starPips = new Image[3];
             for (int i = 0; i < 3; i++)
             {
-                GameObject pip = CreateRect($"Star{i}", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(150f, 150f));
-                // the middle star sits slightly higher, the classic result-screen arc
-                pip.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 1) * 180f, i == 1 ? 185f : 160f);
+                GameObject pip = CreateRect($"Star{i}", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    i == 1 ? new Vector2(170f, 170f) : new Vector2(140f, 140f));
+                pip.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 1) * 190f, i == 1 ? 525f : 480f);
                 _starPips[i] = pip.AddComponent<Image>();
                 UiTheme.ApplySprite(_starPips[i], UiTheme.StarSprite, StarMissing);
                 if (_starPips[i].sprite == null)
