@@ -97,7 +97,11 @@ namespace Match3.UI
             for (int i = 0; i < tracker.Count; i++)
             {
                 Objective objective = tracker.At(i);
-                (GameObject _, Image icon, TMP_Text count) = _chips[i];
+                (GameObject chipGo, Image icon, TMP_Text count) = _chips[i];
+
+                // Re-tint the pill each refresh — the chapter theme drifts per level.
+                if (chipGo.TryGetComponent(out Image pill))
+                    pill.color = UiTheme.ThemeSlot;
 
                 (Sprite sprite, Color tint) = IconFor(objective);
                 icon.sprite = sprite;

@@ -91,11 +91,15 @@ namespace Match3.Core
             }, White);
         }
 
-        /// <summary>The screen background: vertical purple-navy gradient, baked.</summary>
+        /// <summary>
+        /// The screen background: a NEUTRAL vertical luminance gradient (white top
+        /// fading to mid-gray). Kept hueless on purpose — the UI tints it with the
+        /// current chapter's theme colour, so one sprite serves every ambience.
+        /// </summary>
         public static byte[] BackgroundGradient(int width, int height)
         {
-            var top = new Rgba(0.12f, 0.09f, 0.24f);
-            var bottom = new Rgba(0.06f, 0.06f, 0.14f);
+            var top = new Rgba(1f, 1f, 1f);
+            var bottom = new Rgba(0.5f, 0.5f, 0.5f);
             var pixels = new byte[width * height * 4];
             for (int row = 0; row < height; row++)
             {

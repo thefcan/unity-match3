@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Match3.Core;
+using Match3.UI;
 using Match3.View;
 using UnityEngine;
 
@@ -233,12 +234,32 @@ namespace Match3.Game
             }
 
             Score = 0;
+
+            // The ambience drifts one notch per level (ThemeCurve) — set it BEFORE the
+            // UI-refreshing events below so themed widgets read the current chapter.
+            UiTheme.SetThemeForLevel(Mode == GameMode.Moves ? Level : 1);
+            ApplyAmbience();
+
             boardView.Initialize(Board, levelConfig, Jelly);
 
             ScoreChanged?.Invoke(Score);
             LevelChanged?.Invoke(Level);
             MovesChanged?.Invoke(MovesLeft);
             ObjectivesChanged?.Invoke();
+        }
+
+        /// <summary>Tints the scene's ambience (camera + HUD card) with the level's chapter theme.</summary>
+        private void ApplyAmbience()
+        {
+            if (Camera.main != null)
+                Camera.main.backgroundColor = UiTheme.ThemeBgBottom;
+
+            GameObject card = GameObject.Find("HudTopCard");
+            if (card != null && card.TryGetComponent(out UnityEngine.UI.Image image))
+            {
+                Color tint = UiTheme.ThemeCard;
+                image.color = new Color(tint.r, tint.g, tint.b, 0.88f);
+            }
         }
 
         /// <summary>Moves mode: burns one move (a committed, non-bounced swap).</summary>

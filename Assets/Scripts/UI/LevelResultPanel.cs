@@ -24,6 +24,7 @@ namespace Match3.UI
 
         private GameManager _game;
         private GameObject _root;
+        private Image _card;
         private TMP_Text _title;
         private TMP_Text _summary;
         private Image[] _starPips;
@@ -121,6 +122,7 @@ namespace Match3.UI
 
         private void Show(string title, string summary, string buttonText, System.Action primaryAction)
         {
+            _card.color = UiTheme.ThemeCard; // the ambience may have drifted since Build
             _title.text = title;
             _summary.text = summary;
             _buttonLabel.text = buttonText;
@@ -157,8 +159,8 @@ namespace Match3.UI
             _root.AddComponent<Image>().color = PanelColor;
 
             GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 980f));
-            var card = cardGo.AddComponent<Image>();
-            UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.Card);
+            _card = cardGo.AddComponent<Image>();
+            UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
             Transform content = cardGo.transform;
 
             _title = CreateText("Title", content, new Vector2(0f, 330f), 76f, FontStyles.Bold);

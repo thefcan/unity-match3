@@ -1,8 +1,8 @@
 # Candy Match — a Candy-Crush-style match-3 built for architecture
 
-A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (20
-levels, objectives, special candies, star ratings, saved progress) and the original
-**endless time-attack**. Deliberately built so the focus stays on **code
+A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (60
+levels in three slowly-shifting chapters, objectives, special candies, jelly, star
+ratings, saved progress) and the original **endless time-attack**. Deliberately built so the focus stays on **code
 architecture** — an engine-free, unit-tested C# core, a thin MonoBehaviour view
 layer, and classic design patterns used where they pull their weight.
 
@@ -18,9 +18,14 @@ runtime-built ParticleSystem.
 
 ### Moves campaign (Candy Crush style — the main mode)
 
-- **20 authored levels** on a scrollable level map, sequentially unlocked, each with
+- **60 authored levels** on a scrollable level map, sequentially unlocked, each with
   a **move limit** and **objectives** shown as icon chips over the board: reach a
   score, collect N candies of a colour, or **clear all the jelly**.
+- **Chapters that drift, never jump.** Every 20 levels is a chapter with its own
+  ambience — purple night → ocean teal → dusk plum — and each level interpolates
+  1/20th of the way towards the next palette (`ThemeCurve`, unit-tested to never
+  shift a colour channel more than 0.02 per level). Difficulty repeats the chapter
+  rhythm one notch harder; candy colours and controls never change.
 - **Jelly blockers** (from level 8): translucent cells under the candies, in one or
   two layers. A match on a jelly cell peels one layer; jelly sticks to the CELL, so
   candies fall through it. Late levels widen the jelly and double its layers.
@@ -77,7 +82,8 @@ Core rule units, each small and independently tested:
   worklist (chains, wrapped double-blast) → jelly damage → score → clear/morph →
   gravity → refill
 - `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` — moves-mode win logic & save
-- `LevelCurve` — the 20-level difficulty curve (single source for generated assets)
+- `LevelCurve` / `ThemeCurve` — the 60-level difficulty curve and the per-chapter
+  ambience drift (single source for generated assets and runtime tinting)
 - `CandyArtist` / `UiArtist` / `SfxSynth` — procedural candy sprites, UI chrome and
   sounds (pure pixel/sample math, no engine types)
 
@@ -138,14 +144,14 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
-- **Match3 → Generate → Level Definitions** — the 20 campaign levels + catalog
+- **Match3 → Generate → Level Definitions** — the 60 campaign levels + catalog
   from `LevelCurve` (jelly rows included).
 - **Match3 → Generate → Sound Effects** — 10 WAVs synthesized by `SfxSynth`.
 - **Match3 → Setup → Add Scenes To Build** — registers MainMenu + Game scenes.
 
 ## Testing
 
-**156 EditMode tests, all green** — the core is tested without ever opening a scene:
+**203 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -161,13 +167,14 @@ Assets/Tests/EditMode/
 ├── SpecialBoardTests.cs          bombs never colour-match, bomb keeps a board playable
 ├── ObjectiveTrackerTests.cs      collection/score objectives, star thresholds
 ├── JellyTests.cs                 jelly damage/recording, double layers, morph-cell hits, curve
+├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 60-level campaign rhythm
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
 
 Plus **3 PlayMode smoke tests** (`Assets/Tests/PlayMode/SceneSmokeTests.cs`) that
 boot the real scenes: the Game scene builds a full match-free board in Moves mode
 with the runtime UI attached, TimeAttack starts with a running clock, and the
-MainMenu builds its 20-row level map. These catch what unit tests can't — broken
+MainMenu builds its 60-row level map. These catch what unit tests can't — broken
 scene references, missing Resources assets, lifecycle ordering.
 
 Run in Unity via **Window → General → Test Runner** (EditMode and PlayMode tabs),

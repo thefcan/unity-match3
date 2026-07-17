@@ -13,6 +13,23 @@ namespace Match3.UI
     /// </summary>
     public static class UiTheme
     {
+        // ---- Chapter theme (drifts every 20 levels — see ThemeCurve) -------------------
+
+        private static Match3.Core.ThemeParameters _theme = Match3.Core.ThemeCurve.For(1);
+
+        /// <summary>Sets the ambience for a level. Call before building/refreshing themed UI.</summary>
+        public static void SetThemeForLevel(int level)
+        {
+            _theme = Match3.Core.ThemeCurve.For(Mathf.Max(1, level));
+        }
+
+        public static Color ThemeBgTop => ToColor(_theme.BgTop);
+        public static Color ThemeBgBottom => ToColor(_theme.BgBottom);
+        public static Color ThemeCard => ToColor(_theme.Card);
+        public static Color ThemeSlot => ToColor(_theme.Slot);
+
+        private static Color ToColor(Match3.Core.ThemeColor c) => new Color(c.R, c.G, c.B);
+
         // ---- Colours (Figma: Candy UI variable collection) ----------------------------
         public static readonly Color BgDeep = new Color(0.075f, 0.078f, 0.16f);
         public static readonly Color Card = new Color(0.137f, 0.145f, 0.28f);

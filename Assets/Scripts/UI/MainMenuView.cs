@@ -21,6 +21,11 @@ namespace Match3.UI
 
         private void Start()
         {
+            // The menu wears the theme of wherever the player currently is in the campaign.
+            UiTheme.SetThemeForLevel(ProgressService.Current.HighestUnlocked);
+            if (Camera.main != null)
+                Camera.main.backgroundColor = UiTheme.ThemeBgBottom;
+
             EnsureEventSystem();
             Canvas canvas = BuildCanvas();
             BuildMenu(canvas.transform);
@@ -48,10 +53,12 @@ namespace Match3.UI
 
         private void BuildMenu(Transform canvas)
         {
-            Image background = NewImage("Background", canvas, Color.white);
-            UiTheme.ApplySprite(background, UiTheme.BgGradient, Color.white);
+            // The gradient sprite is NEUTRAL (white->gray) — the theme tint gives it
+            // its hue, so the same sprite serves every chapter's ambience.
+            Image background = NewImage("Background", canvas, UiTheme.ThemeBgTop);
+            UiTheme.ApplySprite(background, UiTheme.BgGradient, UiTheme.ThemeBgTop);
             if (background.sprite == null)
-                background.color = UiTheme.BgDeep;
+                background.color = UiTheme.ThemeBgBottom;
             Stretch(background.rectTransform, Vector2.zero, Vector2.one);
             background.raycastTarget = false;
 
@@ -149,7 +156,7 @@ namespace Match3.UI
             rowGo.GetComponent<CanvasGroup>().alpha = unlocked ? 1f : 0.55f;
 
             var card = rowGo.GetComponent<Image>();
-            UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.Card);
+            UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.ThemeCard);
 
             var button = rowGo.GetComponent<Button>();
             button.targetGraphic = card;
@@ -167,7 +174,7 @@ namespace Match3.UI
             }
 
             // candy chip with the level number — the chip colour cycles the candy palette
-            Color chipColor = unlocked ? UiTheme.CandyColors[(number - 1) % UiTheme.CandyColors.Length] : UiTheme.Slot;
+            Color chipColor = unlocked ? UiTheme.CandyColors[(number - 1) % UiTheme.CandyColors.Length] : UiTheme.ThemeSlot;
             Image chip = NewImage("Chip", rowGo.transform, chipColor);
             UiTheme.ApplySprite(chip, UiTheme.CircleSprite, chipColor);
             var chipRect = chip.rectTransform;
