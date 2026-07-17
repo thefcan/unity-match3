@@ -1,10 +1,32 @@
 # Candy Match — a Candy-Crush-style match-3 built for architecture
 
+<p align="center">
+  <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
+</p>
+
 A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (60
 levels in three slowly-shifting chapters, objectives, special candies, jelly, star
 ratings, saved progress) and the original **endless time-attack**. Deliberately built so the focus stays on **code
 architecture** — an engine-free, unit-tested C# core, a thin MonoBehaviour view
 layer, and classic design patterns used where they pull their weight.
+
+<p align="center">
+  <img src="docs/design-main-menu.png" alt="Main menu with the scrollable level map" width="230">
+  &nbsp;
+  <img src="docs/design-hud.png" alt="In-game HUD with objective chips and the jelly rows" width="230">
+  &nbsp;
+  <img src="docs/design-level-complete.png" alt="Level-complete panel with the star trio and gold score" width="230">
+</p>
+<p align="center"><sub><i>UI design previews (Stitch + Figma) — the game builds this exact language at runtime, no scene wiring.</i></sub></p>
+
+**The ambience drifts with the campaign** — every 20-level chapter slides towards a
+new palette (purple night → ocean teal → dusk plum), one gentle step per level:
+
+<p align="center">
+  <img src="docs/design-hud-ocean.png" alt="Chapter 2 ambience — ocean teal" width="230">
+  &nbsp;
+  <img src="docs/design-hud-plum.png" alt="Chapter 3 ambience — dusk plum" width="230">
+</p>
 
 > 🎬 *gameplay GIF placeholder — record with Cmd+Shift+5 on macOS and drop it here as `docs/gameplay.gif`*
 
