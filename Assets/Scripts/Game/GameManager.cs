@@ -231,6 +231,12 @@ namespace Match3.Game
                 Resolver.AttachJelly(Jelly);
                 CurrentTarget = 0;
                 TimeLeft = 0f;
+
+                // Daily-streak reward: extra moves, or a special candy planted on the
+                // fresh board. Same-colour replacement can never create a match the
+                // no-initial-matches board didn't already have.
+                if (MetaService.ConsumePendingReward() is { } boost)
+                    ApplyStreakBoost(boost, factory);
             }
             else
             {
@@ -262,6 +268,35 @@ namespace Match3.Game
             LevelChanged?.Invoke(Level);
             MovesChanged?.Invoke(MovesLeft);
             ObjectivesChanged?.Invoke();
+        }
+
+        private void ApplyStreakBoost(StreakReward boost, TileFactory factory)
+        {
+            if (boost.Kind == StreakRewardKind.ExtraMoves)
+            {
+                MovesLeft += boost.Amount;
+                return;
+            }
+
+            for (int planted = 0; planted < boost.Amount; planted++)
+            {
+                for (int attempt = 0; attempt < 40; attempt++)
+                {
+                    var pos = new GridPosition(_random.Next(Board.Width), _random.Next(Board.Height));
+                    if (!(Board[pos] is { } tile) || tile.Kind != TileKind.Normal)
+                        continue;
+
+                    Tile replacement = boost.Kind switch
+                    {
+                        StreakRewardKind.StartStriped => factory.CreateSpecial(tile.ColorIndex,
+                            _random.Next(2) == 0 ? TileKind.StripedH : TileKind.StripedV),
+                        StreakRewardKind.StartWrapped => factory.CreateSpecial(tile.ColorIndex, TileKind.Wrapped),
+                        _ => factory.CreateColorBomb(),
+                    };
+                    Board.SetTile(pos, replacement);
+                    break;
+                }
+            }
         }
 
         /// <summary>Tints the scene's ambience (camera + HUD card) with the level's chapter theme.</summary>

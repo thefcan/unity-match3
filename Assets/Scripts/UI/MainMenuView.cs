@@ -110,6 +110,7 @@ namespace Match3.UI
             BuildButtons(content);
 
             SettingsPanel.Attach(canvas.GetComponent<Canvas>(), content, null);
+            StreakPanel.Attach(canvas.GetComponent<Canvas>(), content);
         }
 
         private static Transform BuildSafeAreaHost(Transform canvas)

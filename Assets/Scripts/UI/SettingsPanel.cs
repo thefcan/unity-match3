@@ -31,6 +31,7 @@ namespace Match3.UI
         private System.Action<bool> _setSfxVisual;
         private System.Action<bool> _setHapticsVisual;
         private System.Action<bool> _setColorblindVisual;
+        private System.Action<bool> _setNotificationsVisual;
 
         /// <summary>
         /// Builds the (hidden) overlay under <paramref name="canvas"/> plus its opener
@@ -93,6 +94,7 @@ namespace Match3.UI
             _setSfxVisual?.Invoke(Prefs.SfxOn);
             _setHapticsVisual?.Invoke(Prefs.HapticsOn);
             _setColorblindVisual?.Invoke(Prefs.ColorblindOn);
+            _setNotificationsVisual?.Invoke(Prefs.NotificationsOn);
         }
 
         /// <summary>Faz G fills this in with the real sign-in state.</summary>
@@ -142,6 +144,15 @@ namespace Match3.UI
             Hide();
         }
 
+        private static void OnNotificationsChanged(bool on)
+        {
+            Prefs.NotificationsOn = on;
+            if (on)
+                NotificationScheduler.EnsurePermissionThenSchedule(); // contextual permission ask
+            else
+                NotificationScheduler.Reschedule(); // cancels everything when disabled
+        }
+
         private void OnColorblindChanged(bool on)
         {
             Prefs.ColorblindOn = on;
@@ -158,37 +169,38 @@ namespace Match3.UI
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = OverlayColor; // also blocks board input
 
-            GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 1240f));
+            GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 1400f));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
             Transform content = cardGo.transform;
 
-            _title = CreateText("Title", content, new Vector2(0f, 520f), 72f, FontStyles.Bold);
+            _title = CreateText("Title", content, new Vector2(0f, 590f), 72f, FontStyles.Bold);
             UiTheme.ApplyFont(_title, UiTheme.TitleFont);
             _title.text = _game != null ? "PAUSED" : "SETTINGS";
 
-            // Music volume — the slider writes Prefs; MusicManager (Faz C) listens.
-            BuildRowLabel(content, "Music", 380f);
-            BuildVolumeSlider(content, new Vector2(160f, 380f));
+            // Music volume — the slider writes Prefs; MusicManager listens.
+            BuildRowLabel(content, "Music", 440f);
+            BuildVolumeSlider(content, new Vector2(160f, 440f));
 
-            (_setSfxVisual, _) = BuildToggleRow(content, "Sound FX", 250f, Prefs.SfxOn, on => Prefs.SfxOn = on);
-            (_setHapticsVisual, _) = BuildToggleRow(content, "Haptics", 120f, Prefs.HapticsOn, on => Prefs.HapticsOn = on);
-            (_setColorblindVisual, _) = BuildToggleRow(content, "Colorblind mode", -10f, Prefs.ColorblindOn, OnColorblindChanged);
+            (_setSfxVisual, _) = BuildToggleRow(content, "Sound FX", 310f, Prefs.SfxOn, on => Prefs.SfxOn = on);
+            (_setHapticsVisual, _) = BuildToggleRow(content, "Haptics", 180f, Prefs.HapticsOn, on => Prefs.HapticsOn = on);
+            (_setColorblindVisual, _) = BuildToggleRow(content, "Colorblind mode", 50f, Prefs.ColorblindOn, OnColorblindChanged);
+            (_setNotificationsVisual, _) = BuildToggleRow(content, "Daily reminders", -80f, Prefs.NotificationsOn, OnNotificationsChanged);
 
-            _cloudStatus = CreateText("CloudStatus", content, new Vector2(0f, -130f), 30f, FontStyles.Normal);
+            _cloudStatus = CreateText("CloudStatus", content, new Vector2(0f, -200f), 30f, FontStyles.Normal);
             UiTheme.ApplyFont(_cloudStatus, UiTheme.BodyFont);
             _cloudStatus.color = UiTheme.TextDim;
             _cloudStatus.text = "Cloud sync: offline";
 
             if (_game != null)
             {
-                BuildActionButton(content, "Resume", new Vector2(0f, -270f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnResumeClicked);
-                BuildActionButton(content, "Restart", new Vector2(0f, -420f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextPrimary, OnRestartClicked);
-                BuildActionButton(content, "Level Map", new Vector2(0f, -545f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextDim, OnLevelMapClicked);
+                BuildActionButton(content, "Resume", new Vector2(0f, -350f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnResumeClicked);
+                BuildActionButton(content, "Restart", new Vector2(0f, -490f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextPrimary, OnRestartClicked);
+                BuildActionButton(content, "Level Map", new Vector2(0f, -615f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextDim, OnLevelMapClicked);
             }
             else
             {
-                BuildActionButton(content, "Close", new Vector2(0f, -270f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnCloseClicked);
+                BuildActionButton(content, "Close", new Vector2(0f, -350f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnCloseClicked);
             }
         }
 
