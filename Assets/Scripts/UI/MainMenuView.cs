@@ -18,6 +18,17 @@ namespace Match3.UI
     public sealed class MainMenuView : MonoBehaviour
     {
         private const float RowHeight = 150f;
+        private const float RowSpacing = 24f;
+        private const float RowPitch = RowHeight + RowSpacing;
+        private const float ListPadding = 8f;
+        // Rows are VIRTUALIZED: a fixed pool rebinds while scrolling, so an 80-level
+        // catalog costs ~12 rows of UI objects instead of building every row eagerly.
+        private const int RowPoolSize = 12;
+
+        private LevelCatalog _catalog;
+        private RectTransform _listContent;
+        private readonly System.Collections.Generic.List<LevelRow> _rows = new System.Collections.Generic.List<LevelRow>();
+        private int _firstRowIndex = -1;
 
         private void Start()
         {
@@ -54,7 +65,9 @@ namespace Match3.UI
         private void BuildMenu(Transform canvas)
         {
             // The gradient sprite is NEUTRAL (white->gray) — the theme tint gives it
-            // its hue, so the same sprite serves every chapter's ambience.
+            // its hue, so the same sprite serves every chapter's ambience. It stays on
+            // the canvas root so it bleeds under notches; everything else moves into
+            // the safe-area host below.
             Image background = NewImage("Background", canvas, UiTheme.ThemeBgTop);
             UiTheme.ApplySprite(background, UiTheme.BgGradient, UiTheme.ThemeBgTop);
             if (background.sprite == null)
@@ -62,11 +75,13 @@ namespace Match3.UI
             Stretch(background.rectTransform, Vector2.zero, Vector2.one);
             background.raycastTarget = false;
 
-            TMP_Text title = NewText("Title", canvas, "Candy Match", 112f, FontStyles.Bold, UiTheme.TitleFont);
+            Transform content = BuildSafeAreaHost(canvas);
+
+            TMP_Text title = NewText("Title", content, "Candy Match", 112f, FontStyles.Bold, UiTheme.TitleFont);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(980f, 150f));
 
             // the five candy dots under the logo
-            var dots = NewRect("CandyDots", canvas);
+            var dots = NewRect("CandyDots", content);
             Anchor(dots, new Vector2(0.5f, 1f), new Vector2(0f, -235f), new Vector2(300f, 36f));
             for (int i = 0; i < UiTheme.CandyColors.Length; i++)
             {
@@ -81,16 +96,29 @@ namespace Match3.UI
 
             var catalogForCount = Resources.Load<LevelCatalog>("LevelCatalog");
             int levelCount = catalogForCount != null && catalogForCount.Count > 0 ? catalogForCount.Count : 60;
-            TMP_Text subtitle = NewText("Subtitle", canvas, $"A sweet {levelCount}-level campaign", 38f, FontStyles.Normal, UiTheme.BodyFont);
+            TMP_Text subtitle = NewText("Subtitle", content, $"A sweet {levelCount}-level campaign", 38f, FontStyles.Normal, UiTheme.BodyFont);
             subtitle.color = UiTheme.TextDim;
             Anchor(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(900f, 60f));
 
-            TMP_Text mapLabel = NewText("MapLabel", canvas, "L E V E L   M A P", 30f, FontStyles.Bold, UiTheme.BodyFont);
+            TMP_Text mapLabel = NewText("MapLabel", content, "L E V E L   M A P", 30f, FontStyles.Bold, UiTheme.BodyFont);
             mapLabel.color = UiTheme.TextDim;
             Anchor(mapLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -370f), new Vector2(900f, 44f));
 
-            BuildLevelList(canvas);
-            BuildButtons(canvas);
+            BuildLevelList(content);
+            BuildButtons(content);
+        }
+
+        private static Transform BuildSafeAreaHost(Transform canvas)
+        {
+            var go = new GameObject("SafeArea", typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            go.AddComponent<SafeAreaFitter>();
+            return go.transform;
         }
 
         private void BuildLevelList(Transform canvas)
@@ -108,23 +136,16 @@ namespace Match3.UI
             Stretch(viewport, Vector2.zero, Vector2.one);
             viewportGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.01f);
 
-            var contentGo = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            // Plain RectTransform content — no layout group / size fitter: rows are
+            // positioned by hand from their catalog index, which is what makes the
+            // pooled virtualization possible (and kills per-frame layout rebuilds).
+            var contentGo = new GameObject("Content", typeof(RectTransform));
             contentGo.transform.SetParent(viewportGo.transform, false);
             var content = (RectTransform)contentGo.transform;
             content.anchorMin = new Vector2(0f, 1f);
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
             content.sizeDelta = Vector2.zero;
-
-            var layout = contentGo.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 24f;
-            layout.padding = new RectOffset(8, 8, 8, 8);
-            layout.childControlWidth = true;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-
-            contentGo.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var scroll = scrollGo.GetComponent<ScrollRect>();
             scroll.viewport = viewport;
@@ -134,76 +155,120 @@ namespace Match3.UI
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 30f;
 
-            var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
-            if (catalog == null || catalog.Count == 0)
+            _catalog = Resources.Load<LevelCatalog>("LevelCatalog");
+            if (_catalog == null || _catalog.Count == 0)
             {
                 TMP_Text missing = NewText("NoLevels", content, "No levels found.\nRun Match3 > Generate > Level Definitions.", 36f, FontStyles.Normal, UiTheme.BodyFont);
                 missing.rectTransform.sizeDelta = new Vector2(0f, 160f);
                 return;
             }
 
-            for (int number = 1; number <= catalog.Count; number++)
-                BuildLevelRow(content, catalog, number);
+            _listContent = content;
+            content.sizeDelta = new Vector2(0f, ListPadding * 2f + _catalog.Count * RowHeight + (_catalog.Count - 1) * RowSpacing);
+
+            int poolSize = Mathf.Min(RowPoolSize, _catalog.Count);
+            for (int i = 0; i < poolSize; i++)
+                _rows.Add(new LevelRow(content, StartLevel));
+
+            scroll.onValueChanged.AddListener(_ => RefreshVisibleRows());
+            RefreshVisibleRows();
         }
 
-        private void BuildLevelRow(Transform content, LevelCatalog catalog, int number)
+        /// <summary>Rebinds the row pool to the catalog window under the viewport. No-op until the window moves.</summary>
+        private void RefreshVisibleRows()
         {
-            bool unlocked = ProgressService.Current.IsUnlocked(number);
-            bool isCurrent = unlocked && !ProgressService.Current.IsCompleted(number);
-            int stars = ProgressService.Current.StarsFor(number);
+            if (_listContent == null || _rows.Count == 0)
+                return;
 
-            var rowGo = new GameObject($"Level_{number:00}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement), typeof(CanvasGroup));
-            rowGo.transform.SetParent(content, false);
-            rowGo.GetComponent<LayoutElement>().preferredHeight = RowHeight;
-            rowGo.GetComponent<CanvasGroup>().alpha = unlocked ? 1f : 0.55f;
+            float scrolled = Mathf.Max(0f, _listContent.anchoredPosition.y);
+            int first = Mathf.Clamp(Mathf.FloorToInt((scrolled - ListPadding) / RowPitch),
+                                    0, Mathf.Max(0, _catalog.Count - _rows.Count));
+            if (first == _firstRowIndex)
+                return;
+            _firstRowIndex = first;
 
-            var card = rowGo.GetComponent<Image>();
-            UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.ThemeCard);
-
-            var button = rowGo.GetComponent<Button>();
-            button.targetGraphic = card;
-            button.interactable = unlocked;
-            LevelDefinition definition = catalog.Get(number);
-            int capturedNumber = number;
-            button.onClick.AddListener(() => StartLevel(definition, capturedNumber));
-
-            if (isCurrent)
+            for (int i = 0; i < _rows.Count; i++)
             {
-                Image outline = NewImage("Outline", rowGo.transform, UiTheme.Cta);
-                UiTheme.ApplySprite(outline, UiTheme.RoundOutline, UiTheme.Cta);
-                Stretch(outline.rectTransform, Vector2.zero, Vector2.one);
-                outline.raycastTarget = false;
+                int number = first + i + 1;
+                if (number <= _catalog.Count)
+                    _rows[i].Bind(number, _catalog.Get(number), ListPadding + (number - 1) * RowPitch);
+                else
+                    _rows[i].Hide();
             }
+        }
 
-            // candy chip with the level number — the chip colour cycles the candy palette
-            Color chipColor = unlocked ? UiTheme.CandyColors[(number - 1) % UiTheme.CandyColors.Length] : UiTheme.ThemeSlot;
-            Image chip = NewImage("Chip", rowGo.transform, chipColor);
-            UiTheme.ApplySprite(chip, UiTheme.CircleSprite, chipColor);
-            var chipRect = chip.rectTransform;
-            chipRect.anchorMin = chipRect.anchorMax = new Vector2(0f, 0.5f);
-            chipRect.sizeDelta = new Vector2(96f, 96f);
-            chipRect.anchoredPosition = new Vector2(76f, 0f);
-            chip.raycastTarget = false;
+        /// <summary>
+        /// One pooled level-map row. Every child element exists from construction and
+        /// <see cref="Bind"/> only restyles/toggles them, so scrolling re-uses objects
+        /// instead of instantiating — the virtualization's other half.
+        /// </summary>
+        private sealed class LevelRow
+        {
+            private static readonly Color BadgeDone = new Color(0.16f, 0.55f, 0.35f);
 
-            TMP_Text numberLabel = NewText("Number", chip.transform, number.ToString(), 44f, FontStyles.Bold, UiTheme.ButtonFont);
-            Stretch(numberLabel.rectTransform, Vector2.zero, Vector2.one);
-            numberLabel.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
+            private readonly GameObject _go;
+            private readonly RectTransform _rect;
+            private readonly CanvasGroup _group;
+            private readonly Button _button;
+            private readonly Image _outline;
+            private readonly Image _chip;
+            private readonly TMP_Text _number;
+            private readonly TMP_Text _label;
+            private readonly Image[] _pips = new Image[3];
+            private readonly Image _badge;
+            private readonly TMP_Text _badgeLabel;
+            private readonly Image _lock;
 
-            TMP_Text label = NewText("Label", rowGo.transform, $"Level {number}", 44f, FontStyles.Bold, UiTheme.BodyFont);
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
-            var labelRect = label.rectTransform;
-            labelRect.anchorMin = new Vector2(0f, 0f);
-            labelRect.anchorMax = new Vector2(0.6f, 1f);
-            labelRect.offsetMin = new Vector2(150f, 0f);
-            labelRect.offsetMax = Vector2.zero;
+            private LevelDefinition _definition;
+            private int _levelNumber;
 
-            if (unlocked)
+            public LevelRow(Transform content, System.Action<LevelDefinition, int> onClick)
             {
+                _go = new GameObject("LevelRow", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
+                _go.transform.SetParent(content, false);
+                _rect = (RectTransform)_go.transform;
+                _rect.anchorMin = new Vector2(0f, 1f);
+                _rect.anchorMax = new Vector2(1f, 1f);
+                _rect.pivot = new Vector2(0.5f, 1f);
+                _rect.sizeDelta = new Vector2(-2f * ListPadding, RowHeight);
+                _group = _go.GetComponent<CanvasGroup>();
+
+                var card = _go.GetComponent<Image>();
+                UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.ThemeCard);
+
+                _button = _go.GetComponent<Button>();
+                _button.targetGraphic = card;
+                _button.onClick.AddListener(() => onClick(_definition, _levelNumber));
+
+                _outline = NewImage("Outline", _go.transform, UiTheme.Cta);
+                UiTheme.ApplySprite(_outline, UiTheme.RoundOutline, UiTheme.Cta);
+                Stretch(_outline.rectTransform, Vector2.zero, Vector2.one);
+                _outline.raycastTarget = false;
+
+                // candy chip with the level number — the chip colour cycles the candy palette
+                _chip = NewImage("Chip", _go.transform, Color.white);
+                UiTheme.ApplySprite(_chip, UiTheme.CircleSprite, Color.white);
+                var chipRect = _chip.rectTransform;
+                chipRect.anchorMin = chipRect.anchorMax = new Vector2(0f, 0.5f);
+                chipRect.sizeDelta = new Vector2(96f, 96f);
+                chipRect.anchoredPosition = new Vector2(76f, 0f);
+                _chip.raycastTarget = false;
+
+                _number = NewText("Number", _chip.transform, string.Empty, 44f, FontStyles.Bold, UiTheme.ButtonFont);
+                Stretch(_number.rectTransform, Vector2.zero, Vector2.one);
+
+                _label = NewText("Label", _go.transform, string.Empty, 44f, FontStyles.Bold, UiTheme.BodyFont);
+                _label.alignment = TextAlignmentOptions.MidlineLeft;
+                var labelRect = _label.rectTransform;
+                labelRect.anchorMin = new Vector2(0f, 0f);
+                labelRect.anchorMax = new Vector2(0.6f, 1f);
+                labelRect.offsetMin = new Vector2(150f, 0f);
+                labelRect.offsetMax = Vector2.zero;
+
                 for (int i = 0; i < 3; i++)
                 {
-                    Image pip = NewImage($"Star{i}", rowGo.transform, i < stars ? UiTheme.Gold : UiTheme.StarDim);
-                    UiTheme.ApplySprite(pip, UiTheme.StarSprite, i < stars ? UiTheme.Gold : UiTheme.StarDim);
+                    Image pip = NewImage($"Star{i}", _go.transform, UiTheme.StarDim);
+                    UiTheme.ApplySprite(pip, UiTheme.StarSprite, UiTheme.StarDim);
                     var pipRect = pip.rectTransform;
                     pipRect.anchorMin = pipRect.anchorMax = new Vector2(1f, 0.5f);
                     pipRect.sizeDelta = new Vector2(56f, 56f);
@@ -211,36 +276,73 @@ namespace Match3.UI
                     if (pip.sprite == null) // fallback: rotated square reads as a diamond pip
                         pip.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
                     pip.raycastTarget = false;
+                    _pips[i] = pip;
                 }
 
                 // Status badge (Stitch design): green DONE on completed rows, pink PLAY
                 // on the current one — a quick read of where you are in the campaign.
-                bool completed = ProgressService.Current.IsCompleted(number);
-                if (completed || isCurrent)
-                {
-                    Image badge = NewImage("Badge", rowGo.transform, isCurrent ? UiTheme.Cta : new Color(0.16f, 0.55f, 0.35f));
-                    UiTheme.ApplySprite(badge, UiTheme.Pill, isCurrent ? UiTheme.Cta : new Color(0.16f, 0.55f, 0.35f));
-                    var badgeRect = badge.rectTransform;
-                    badgeRect.anchorMin = badgeRect.anchorMax = new Vector2(1f, 0.5f);
-                    badgeRect.sizeDelta = new Vector2(140f, 54f);
-                    badgeRect.anchoredPosition = new Vector2(-320f, 0f);
-                    badge.raycastTarget = false;
+                _badge = NewImage("Badge", _go.transform, UiTheme.Cta);
+                UiTheme.ApplySprite(_badge, UiTheme.Pill, UiTheme.Cta);
+                var badgeRect = _badge.rectTransform;
+                badgeRect.anchorMin = badgeRect.anchorMax = new Vector2(1f, 0.5f);
+                badgeRect.sizeDelta = new Vector2(140f, 54f);
+                badgeRect.anchoredPosition = new Vector2(-320f, 0f);
+                _badge.raycastTarget = false;
 
-                    TMP_Text badgeLabel = NewText("Label", badge.transform, isCurrent ? "PLAY" : "DONE", 26f, FontStyles.Bold, UiTheme.BodyFont);
-                    badgeLabel.characterSpacing = 3f;
-                    Stretch(badgeLabel.rectTransform, Vector2.zero, Vector2.one);
-                }
-            }
-            else
-            {
-                Image lockIcon = NewImage("Lock", rowGo.transform, UiTheme.TextDim);
-                UiTheme.ApplySprite(lockIcon, UiTheme.LockSprite, UiTheme.TextDim);
-                var lockRect = lockIcon.rectTransform;
+                _badgeLabel = NewText("Label", _badge.transform, string.Empty, 26f, FontStyles.Bold, UiTheme.BodyFont);
+                _badgeLabel.characterSpacing = 3f;
+                Stretch(_badgeLabel.rectTransform, Vector2.zero, Vector2.one);
+
+                _lock = NewImage("Lock", _go.transform, UiTheme.TextDim);
+                UiTheme.ApplySprite(_lock, UiTheme.LockSprite, UiTheme.TextDim);
+                var lockRect = _lock.rectTransform;
                 lockRect.anchorMin = lockRect.anchorMax = new Vector2(1f, 0.5f);
                 lockRect.sizeDelta = new Vector2(52f, 52f);
                 lockRect.anchoredPosition = new Vector2(-70f, 0f);
-                lockIcon.raycastTarget = false;
+                _lock.raycastTarget = false;
             }
+
+            public void Bind(int number, LevelDefinition definition, float top)
+            {
+                _levelNumber = number;
+                _definition = definition;
+                _go.SetActive(true);
+                _rect.anchoredPosition = new Vector2(0f, -top);
+
+                bool unlocked = ProgressService.Current.IsUnlocked(number);
+                bool completed = ProgressService.Current.IsCompleted(number);
+                bool isCurrent = unlocked && !completed;
+                int stars = ProgressService.Current.StarsFor(number);
+
+                _group.alpha = unlocked ? 1f : 0.55f;
+                _button.interactable = unlocked;
+                _outline.gameObject.SetActive(isCurrent);
+
+                _chip.color = unlocked ? UiTheme.CandyColors[(number - 1) % UiTheme.CandyColors.Length] : UiTheme.ThemeSlot;
+                _number.text = number.ToString();
+                _number.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
+
+                _label.text = $"Level {number}";
+                _label.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
+
+                for (int i = 0; i < _pips.Length; i++)
+                {
+                    _pips[i].gameObject.SetActive(unlocked);
+                    _pips[i].color = i < stars ? UiTheme.Gold : UiTheme.StarDim;
+                }
+
+                bool showBadge = unlocked && (completed || isCurrent);
+                _badge.gameObject.SetActive(showBadge);
+                if (showBadge)
+                {
+                    _badge.color = isCurrent ? UiTheme.Cta : BadgeDone;
+                    _badgeLabel.text = isCurrent ? "PLAY" : "DONE";
+                }
+
+                _lock.gameObject.SetActive(!unlocked);
+            }
+
+            public void Hide() => _go.SetActive(false);
         }
 
         private void BuildButtons(Transform canvas)

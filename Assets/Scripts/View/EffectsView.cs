@@ -87,15 +87,20 @@ namespace Match3.View
             }
         }
 
+        private Camera _camera;
+
         private void StartShake(float amplitude, float duration)
         {
-            Camera camera = Camera.main;
-            if (camera == null)
+            // Cached: Camera.main is a tag search. The instance dies with its scene,
+            // so the cache can never point at a previous scene's camera.
+            if (_camera == null)
+                _camera = Camera.main;
+            if (_camera == null)
                 return;
 
             if (_shake != null)
                 StopCoroutine(_shake);
-            _shake = StartCoroutine(ShakeRoutine(camera.transform, amplitude, duration));
+            _shake = StartCoroutine(ShakeRoutine(_camera.transform, amplitude, duration));
         }
 
         private static IEnumerator ShakeRoutine(Transform target, float amplitude, float duration)

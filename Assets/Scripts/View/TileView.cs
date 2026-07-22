@@ -42,7 +42,9 @@ namespace Match3.View
             spriteRenderer.sprite = sprite != null ? sprite : _defaultSprite;
             spriteRenderer.color = color;
             transform.localScale = _baseScale;
-            name = $"Tile_{tile.Id}";
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            name = $"Tile_{tile.Id}"; // debug-only: SetName is a native call + string alloc per bind
+#endif
         }
 
         /// <summary>
@@ -56,7 +58,9 @@ namespace Match3.View
             TileId = tile.Id;
             if (sprite != null) spriteRenderer.sprite = sprite;
             spriteRenderer.color = color;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             name = $"Tile_{tile.Id}";
+#endif
 
             yield return ScaleTo(_baseScale * 1.25f, duration * 0.4f);
             yield return ScaleTo(_baseScale, duration * 0.25f);

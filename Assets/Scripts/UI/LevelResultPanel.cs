@@ -318,19 +318,51 @@ namespace Match3.UI
             if (game == null || canvas == null)
                 return;
 
-            if (canvas.transform.Find("HudTopCard") == null)
-                BuildHudCard(canvas);
-            if (canvas.transform.Find(nameof(ObjectiveBarView)) == null)
-                ObjectiveBarView.Attach(canvas, game);
+            Transform safe = canvas.transform.Find("SafeArea");
+            if (safe == null)
+                safe = BuildSafeAreaHost(canvas);
+
+            if (safe.Find("HudTopCard") == null)
+                BuildHudCard(safe);
+            if (safe.Find(nameof(ObjectiveBarView)) == null)
+                ObjectiveBarView.Attach(safe, game);
+            // The result panel stays OUTSIDE the safe area on purpose: its dim overlay
+            // should bleed under the notch, and its card is centred anyway.
             if (canvas.transform.Find(nameof(LevelResultPanel)) == null)
                 LevelResultPanel.Attach(canvas, game);
         }
 
+        /// <summary>
+        /// A full-stretch container tracking <see cref="Screen.safeArea"/>. The
+        /// scene-authored HUD labels are adopted into it once, so notches and gesture
+        /// bars never cover them — no scene edit required.
+        /// </summary>
+        private static Transform BuildSafeAreaHost(Canvas canvas)
+        {
+            var go = new GameObject("SafeArea", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            go.AddComponent<SafeAreaFitter>();
+
+            var adopt = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in canvas.transform)
+                if (child != go.transform)
+                    adopt.Add(child);
+            foreach (Transform child in adopt)
+                child.SetParent(go.transform, false); // parent rect is identical, layout is preserved
+
+            return go.transform;
+        }
+
         /// <summary>The design's top-bar card, slid BEHIND the scene-authored HUD labels.</summary>
-        private static void BuildHudCard(Canvas canvas)
+        private static void BuildHudCard(Transform parent)
         {
             var go = new GameObject("HudTopCard", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(canvas.transform, false);
+            go.transform.SetParent(parent, false);
             go.transform.SetAsFirstSibling(); // behind every HUD label
             var rect = (RectTransform)go.transform;
             rect.anchorMin = new Vector2(0f, 1f);

@@ -24,10 +24,10 @@ namespace Match3.UI
         private CandySpriteLibrary _candies;
         private readonly List<(GameObject chip, Image icon, TMP_Text count)> _chips = new List<(GameObject, Image, TMP_Text)>();
 
-        public static ObjectiveBarView Attach(Canvas canvas, GameManager game)
+        public static ObjectiveBarView Attach(Transform parent, GameManager game)
         {
             var host = new GameObject(nameof(ObjectiveBarView), typeof(RectTransform));
-            host.transform.SetParent(canvas.transform, false);
+            host.transform.SetParent(parent, false);
             var rect = (RectTransform)host.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);

@@ -79,24 +79,30 @@ namespace Match3.View
         // view restyles or pops the overlay from that recording alone.
 
         private readonly Dictionary<GridPosition, SpriteRenderer> _jellyViews = new Dictionary<GridPosition, SpriteRenderer>();
+        private readonly Stack<SpriteRenderer> _jellyPool = new Stack<SpriteRenderer>();
         private Transform _jellyRoot;
+        private static Sprite _jellySprite; // Resources asset — safe to cache across boards
 
         private static readonly Color JellySingle = new Color(0.98f, 0.55f, 0.75f, 0.42f);
         private static readonly Color JellyDouble = new Color(0.95f, 0.32f, 0.6f, 0.62f);
 
         private void BuildJellyOverlay(JellyGrid jelly)
         {
-            if (_jellyRoot != null)
-                Destroy(_jellyRoot.gameObject);
+            foreach (SpriteRenderer view in _jellyViews.Values)
+                ReleaseJellyView(view);
             _jellyViews.Clear();
 
             if (jelly == null || jelly.IsClear)
                 return;
 
-            _jellyRoot = new GameObject("JellyOverlay").transform;
-            _jellyRoot.SetParent(transform, false);
+            if (_jellyRoot == null)
+            {
+                _jellyRoot = new GameObject("JellyOverlay").transform;
+                _jellyRoot.SetParent(transform, false);
+            }
+            if (_jellySprite == null)
+                _jellySprite = Resources.Load<Sprite>("UI/ui_round");
 
-            var sprite = Resources.Load<Sprite>("UI/ui_round");
             for (int x = 0; x < jelly.Width; x++)
             {
                 for (int y = 0; y < jelly.Height; y++)
@@ -106,22 +112,46 @@ namespace Match3.View
                     if (layers == 0)
                         continue;
 
-                    var go = new GameObject($"Jelly_{x}_{y}");
-                    go.transform.SetParent(_jellyRoot, false);
-                    go.transform.position = GridToWorld(pos);
-                    var renderer = go.AddComponent<SpriteRenderer>();
-                    renderer.sprite = sprite;
-                    renderer.sortingOrder = -1;
+                    SpriteRenderer renderer = GetJellyView();
+                    renderer.transform.position = GridToWorld(pos);
                     renderer.color = layers >= 2 ? JellyDouble : JellySingle;
-                    if (sprite != null)
-                    {
-                        // scale the sprite's natural world size down to one cell
-                        float worldSize = sprite.rect.width / sprite.pixelsPerUnit;
-                        go.transform.localScale = Vector3.one * (cellSize * 0.96f / worldSize);
-                    }
                     _jellyViews[pos] = renderer;
                 }
             }
+        }
+
+        private SpriteRenderer GetJellyView()
+        {
+            while (_jellyPool.Count > 0)
+            {
+                SpriteRenderer pooled = _jellyPool.Pop();
+                if (pooled != null)
+                {
+                    pooled.gameObject.SetActive(true);
+                    return pooled;
+                }
+            }
+
+            var go = new GameObject("Jelly");
+            go.transform.SetParent(_jellyRoot, false);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = _jellySprite;
+            renderer.sortingOrder = -1;
+            if (_jellySprite != null)
+            {
+                // scale the sprite's natural world size down to one cell
+                float worldSize = _jellySprite.rect.width / _jellySprite.pixelsPerUnit;
+                go.transform.localScale = Vector3.one * (cellSize * 0.96f / worldSize);
+            }
+            return renderer;
+        }
+
+        private void ReleaseJellyView(SpriteRenderer view)
+        {
+            if (view == null)
+                return;
+            view.gameObject.SetActive(false);
+            _jellyPool.Push(view);
         }
 
         private void ApplyJellyHits(CascadeStep step)
@@ -135,7 +165,7 @@ namespace Match3.View
                 {
                     EffectsView.TileBurst(renderer.transform.position, JellyDouble, 8);
                     _jellyViews.Remove(hit.Position);
-                    Destroy(renderer.gameObject);
+                    ReleaseJellyView(renderer);
                 }
                 else
                 {
@@ -348,7 +378,7 @@ namespace Match3.View
                 yield break;
 
             if (delay > 0f)
-                yield return new WaitForSeconds(delay);
+                yield return Wait(delay);
 
             EffectsView.TileBurst(view.transform.position, BurstColorFor(cleared.Tile));
             yield return view.Pop(popDuration);
@@ -485,24 +515,45 @@ namespace Match3.View
         private float FallDuration(int cellsFallen) =>
             Mathf.Max(minFallDuration, cellsFallen * fallDurationPerCell);
 
+        // WaitForSeconds allocates; detonations request dozens per wave, so identical
+        // delays share one cached instance (keyed by millisecond to bound the table).
+        private static readonly Dictionary<int, WaitForSeconds> WaitCache = new Dictionary<int, WaitForSeconds>();
+
+        private static WaitForSeconds Wait(float seconds)
+        {
+            int key = Mathf.RoundToInt(seconds * 1000f);
+            if (!WaitCache.TryGetValue(key, out WaitForSeconds wait))
+            {
+                wait = new WaitForSeconds(key / 1000f);
+                WaitCache[key] = wait;
+            }
+            return wait;
+        }
+
+        /// <summary>Shared countdown for one RunAll batch — replaces a per-routine closure alloc.</summary>
+        private sealed class RunCounter
+        {
+            public int Remaining;
+        }
+
         /// <summary>
         /// Runs several animation routines concurrently and finishes when the last
         /// one does — a coroutine-flavoured Promise.all / CompletableFuture.allOf.
         /// </summary>
         private IEnumerator RunAll(List<IEnumerator> routines)
         {
-            int running = routines.Count;
+            var counter = new RunCounter { Remaining = routines.Count };
             foreach (IEnumerator routine in routines)
-                StartCoroutine(RunThenSignal(routine, () => running--));
+                StartCoroutine(RunThenSignal(routine, counter));
 
-            while (running > 0)
+            while (counter.Remaining > 0)
                 yield return null;
         }
 
-        private IEnumerator RunThenSignal(IEnumerator routine, Action onComplete)
+        private IEnumerator RunThenSignal(IEnumerator routine, RunCounter counter)
         {
             yield return routine;
-            onComplete();
+            counter.Remaining--;
         }
     }
 }

@@ -27,6 +27,17 @@ namespace Match3.Game
             Repository.Save(Current);
         }
 
+        /// <summary>
+        /// Persists the cached progress if it was ever loaded. Safety net for
+        /// OnApplicationPause/Quit — wins already save immediately, so this only
+        /// matters when Android kills a backgrounded app.
+        /// </summary>
+        public static void SaveNow()
+        {
+            if (_current != null)
+                Repository.Save(_current);
+        }
+
         /// <summary>Swap the backing store (tests / tooling). Resets the cache.</summary>
         public static void OverrideRepository(IProgressRepository repository)
         {

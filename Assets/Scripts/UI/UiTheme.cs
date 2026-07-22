@@ -69,6 +69,13 @@ namespace Match3.UI
 
         private static TMP_FontAsset LoadFont(string resourcePath)
         {
+            // Prefer a pre-baked SDF asset (Match3 > Generate > Font Assets): no
+            // runtime rasterization hitch, no dynamic atlas memory. Building from the
+            // raw TTF stays as the fallback so a missing bake never breaks a screen.
+            var baked = Resources.Load<TMP_FontAsset>(resourcePath + " SDF");
+            if (baked != null)
+                return baked;
+
             var font = Resources.Load<Font>(resourcePath);
             return font != null ? TMP_FontAsset.CreateFontAsset(font) : null;
         }
@@ -85,7 +92,20 @@ namespace Match3.UI
         public static Sprite LockSprite => LoadSprite("UI/ui_lock");
         public static Sprite BgGradient => LoadSprite("UI/ui_bg_gradient");
 
-        private static Sprite LoadSprite(string path) => Resources.Load<Sprite>(path);
+        // Cached: these properties are hit on every themed rebuild (level rows, chips,
+        // panels) and Resources.Load is a lookup + possible disk touch each time.
+        private static readonly System.Collections.Generic.Dictionary<string, Sprite> SpriteCache =
+            new System.Collections.Generic.Dictionary<string, Sprite>();
+
+        private static Sprite LoadSprite(string path)
+        {
+            if (SpriteCache.TryGetValue(path, out Sprite cached) && cached != null)
+                return cached;
+
+            Sprite sprite = Resources.Load<Sprite>(path);
+            SpriteCache[path] = sprite;
+            return sprite;
+        }
 
         // ---- Helpers --------------------------------------------------------------------
 

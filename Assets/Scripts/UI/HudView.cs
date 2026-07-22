@@ -39,6 +39,7 @@ namespace Match3.UI
         private int _displayedScore;
         private Coroutine _scoreTween;
         private float _bonusFlashUntil;
+        private int _shownTenths = int.MinValue;
 
         private void Awake()
         {
@@ -51,6 +52,17 @@ namespace Match3.UI
             UiTheme.ApplyFont(messageText, UiTheme.TitleFont);
             if (levelText != null)
                 levelText.color = UiTheme.TextDim;
+
+            // The score and clock change many times a second; a nested Canvas confines
+            // their mesh rebuilds to a tiny canvas instead of dirtying the whole HUD.
+            IsolateFrequentText(scoreText);
+            IsolateFrequentText(timeText);
+        }
+
+        private static void IsolateFrequentText(TMP_Text text)
+        {
+            if (text != null && text.GetComponent<Canvas>() == null)
+                text.gameObject.AddComponent<Canvas>();
         }
 
         private void OnEnable()
@@ -86,8 +98,15 @@ namespace Match3.UI
 
             // The clock changes every frame, so the HUD polls it instead of making the
             // GameManager fire 60 events a second. Discrete values come via events.
+            // Rebuild the label only when the displayed tenth changes — 10 string
+            // allocs + canvas dirties per second instead of one per frame.
             float seconds = Mathf.Max(0f, gameManager.TimeLeft);
-            timeText.text = $"{seconds:0.0}s";
+            int tenths = Mathf.FloorToInt(seconds * 10f);
+            if (tenths != _shownTenths)
+            {
+                _shownTenths = tenths;
+                timeText.text = $"{tenths * 0.1f:0.0}s";
+            }
 
             if (Time.time < _bonusFlashUntil)
                 timeText.color = bonusFlashColor;
@@ -100,6 +119,7 @@ namespace Match3.UI
             if (gameManager.Mode != GameMode.Moves)
                 return;
 
+            _shownTenths = int.MinValue; // the clock label was repurposed — drop its cache
             timeText.text = $"Moves {movesLeft}";
             timeText.color = movesLeft <= 3 ? lowTimeColor : normalTimeColor;
         }
