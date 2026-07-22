@@ -209,6 +209,30 @@ namespace Match3.View
             yield return RunAll(moves);
         }
 
+        /// <summary>
+        /// Re-applies every tile's sprite in place (colorblind toggle) without touching
+        /// board state or positions. Bind also resets scale, which is fine — the
+        /// settings panel is only reachable while the board is idle.
+        /// </summary>
+        public void RefreshTileVisuals()
+        {
+            if (_board == null)
+                return;
+
+            for (int x = 0; x < _board.Width; x++)
+            {
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+                    {
+                        (Sprite sprite, Color color) = VisualFor(tile);
+                        view.Bind(tile, sprite, color);
+                    }
+                }
+            }
+        }
+
         /// <summary>Pulses the two tiles of a suggested move until <see cref="HideHint"/>.</summary>
         public void ShowHint(GridPosition a, GridPosition b)
         {
@@ -392,11 +416,12 @@ namespace Match3.View
                 ? _config.tileColors[tile.ColorIndex]
                 : Color.white;
 
-        /// <summary>Sounds + blast bursts + camera shakes for every special that went off this wave.</summary>
+        /// <summary>Sounds + blast bursts + camera shakes + haptics for every special that went off this wave.</summary>
         private void PlayDetonationJuice(CascadeStep step)
         {
             const int maxSounds = 4; // a bomb+striped combo fires many lanes — don't stack 10 clips
             int sounds = 0;
+            bool haptic = false; // one pulse per wave, scaled to its biggest detonation
 
             foreach (Detonation detonation in step.Detonations)
             {
@@ -411,6 +436,7 @@ namespace Match3.View
                     case DetonationKind.TripleCross:
                         if (playSound) AudioManager.Play(Sfx.LineClear);
                         EffectsView.BlastBurst(origin, Color.white);
+                        if (!haptic) { haptic = true; Haptics.Light(); }
                         break;
 
                     case DetonationKind.Blast3x3:
@@ -418,6 +444,7 @@ namespace Match3.View
                         if (playSound) AudioManager.Play(Sfx.WrappedBlast);
                         EffectsView.BlastBurst(origin, new Color(1f, 0.7f, 0.3f));
                         EffectsView.Shake(detonation.Kind == DetonationKind.Blast5x5 ? 0.2f : 0.12f);
+                        if (!haptic) { haptic = true; Haptics.Medium(); }
                         break;
 
                     case DetonationKind.ColorClear:
@@ -425,6 +452,7 @@ namespace Match3.View
                         if (playSound) AudioManager.Play(Sfx.ColorBomb);
                         EffectsView.BlastBurst(origin, new Color(0.8f, 0.5f, 1f));
                         EffectsView.Shake(0.22f, 0.3f);
+                        if (!haptic) { haptic = true; Haptics.Heavy(); }
                         break;
                 }
             }

@@ -165,6 +165,21 @@ namespace Match3.Game
             SetState(new InitState(this));
         }
 
+        public GamePhase CurrentPhase => _currentState?.Phase ?? GamePhase.Init;
+
+        /// <summary>
+        /// Pause toggle (settings button / Android back). Deliberately only from and
+        /// back to Playing: pausing mid-cascade would freeze animations half-done, and
+        /// the end states have their own overlays.
+        /// </summary>
+        public void TogglePause()
+        {
+            if (CurrentPhase == GamePhase.Playing)
+                SetState(new PausedState(this));
+            else if (CurrentPhase == GamePhase.Paused)
+                SetState(new PlayingState(this));
+        }
+
         // ---- State machine plumbing -------------------------------------------------
         // The members below are the context API that states call back into. They're
         // public-but-narrow on purpose: states live in the same assembly and need them;

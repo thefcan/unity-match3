@@ -23,17 +23,34 @@ namespace Match3.Game
         }
 
         [SerializeField] private ColorSet[] colors;
+        [SerializeField] private ColorSet[] colorsColorblind;
         [SerializeField] private Sprite colorBomb;
+
+        /// <summary>
+        /// Accessibility switch (Settings → Colorblind mode): when true, For() serves
+        /// the glyph-badged sprite set. Falls back to the normal set until the badged
+        /// sprites have been generated, so the toggle can never blank the board.
+        /// </summary>
+        public static bool ColorblindMode;
 
         /// <summary>The sprite for a candy, or null when the library has no entry (caller falls back to tinting).</summary>
         public Sprite For(int colorIndex, TileKind kind)
         {
             if (kind == TileKind.ColorBomb)
-                return colorBomb;
+                return colorBomb; // multi-coloured by construction — no badge needed
             if (colors == null || colorIndex < 0 || colorIndex >= colors.Length)
                 return null;
 
-            ColorSet set = colors[colorIndex];
+            Sprite sprite = null;
+            if (ColorblindMode && colorsColorblind != null && colorIndex < colorsColorblind.Length)
+                sprite = FromSet(colorsColorblind[colorIndex], kind);
+            if (sprite == null)
+                sprite = FromSet(colors[colorIndex], kind);
+            return sprite;
+        }
+
+        private static Sprite FromSet(ColorSet set, TileKind kind)
+        {
             switch (kind)
             {
                 case TileKind.StripedH: return set.stripedH;
@@ -44,10 +61,11 @@ namespace Match3.Game
         }
 
 #if UNITY_EDITOR
-        /// <summary>Editor-only: the sprite generator rebuilds the table in place.</summary>
-        public void EditorSetSprites(ColorSet[] colorSets, Sprite bomb)
+        /// <summary>Editor-only: the sprite generator rebuilds the tables in place.</summary>
+        public void EditorSetSprites(ColorSet[] colorSets, ColorSet[] colorblindSets, Sprite bomb)
         {
             colors = colorSets;
+            colorsColorblind = colorblindSets;
             colorBomb = bomb;
         }
 #endif

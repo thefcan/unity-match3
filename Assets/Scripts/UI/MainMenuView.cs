@@ -106,6 +106,8 @@ namespace Match3.UI
 
             BuildLevelList(content);
             BuildButtons(content);
+
+            SettingsPanel.Attach(canvas.GetComponent<Canvas>(), content, null);
         }
 
         private static Transform BuildSafeAreaHost(Transform canvas)

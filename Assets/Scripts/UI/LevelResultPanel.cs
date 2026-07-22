@@ -78,6 +78,7 @@ namespace Match3.UI
         private void HandleLevelWon(int stars)
         {
             AudioManager.Play(Sfx.Win);
+            Haptics.Heavy();
             // "Next" jumps straight into the following level when the catalog has one;
             // otherwise the campaign is finished and the button replays this level.
             var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
@@ -330,6 +331,8 @@ namespace Match3.UI
             // should bleed under the notch, and its card is centred anyway.
             if (canvas.transform.Find(nameof(LevelResultPanel)) == null)
                 LevelResultPanel.Attach(canvas, game);
+            if (canvas.transform.Find(nameof(SettingsPanel)) == null)
+                SettingsPanel.Attach(canvas, safe, game);
         }
 
         /// <summary>

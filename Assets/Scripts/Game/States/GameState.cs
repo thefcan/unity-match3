@@ -14,6 +14,8 @@ namespace Match3.Game
         LevelWon,
         /// <summary>Moves mode: out of moves with objectives unfinished.</summary>
         LevelFailed,
+        /// <summary>Settings/pause overlay is open; time and audio are frozen.</summary>
+        Paused,
     }
 
     /// <summary>

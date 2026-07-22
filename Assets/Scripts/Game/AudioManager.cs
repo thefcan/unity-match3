@@ -34,8 +34,13 @@ namespace Match3.Game
         private AudioSource[] _sources;
         private int _nextSource;
 
+        /// <summary>Settings gate — initialized from <see cref="Prefs.SfxOn"/> at boot.</summary>
+        public static bool SfxEnabled = true;
+
         public static void Play(Sfx sfx, float pitch = 1f, float volume = 1f)
         {
+            if (!SfxEnabled)
+                return; // early-out before Instance so a muted app never even builds the pool
             Instance.PlayClip(sfx, pitch, volume);
         }
 

@@ -103,6 +103,96 @@ namespace Match3.Core
             return pixels;
         }
 
+        /// <summary>
+        /// Colorblind-mode variant: the normal candy plus a small badge in the lower-
+        /// right corner carrying a distinct white glyph per colour index (dot, plus,
+        /// bar, cross, ring). The silhouettes already differ per colour; the glyph adds
+        /// a second redundant channel for players who can't rely on hue at a glance.
+        /// </summary>
+        public static byte[] RenderColorblind(int size, Rgb color, int shapeIndex, TileKind kind)
+        {
+            byte[] pixels = Render(size, color, shapeIndex, kind);
+            StampGlyphBadge(pixels, size, shapeIndex);
+            return pixels;
+        }
+
+        private static void StampGlyphBadge(byte[] pixels, int size, int shapeIndex)
+        {
+            const float cx = 0.46f, cy = -0.46f; // badge centre (x right, y up)
+            const float badge = 0.27f;           // badge radius in normalized units
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                if (Math.Abs(y - cy) > badge + aa * 2f)
+                    continue;
+
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+                    float badgeD = Dist(x, y, cx, cy) - badge;
+                    if (badgeD > aa)
+                        continue;
+
+                    float badgeA = Clamp01(0.5f - badgeD / aa);
+                    float glyphD = GlyphSdf(shapeIndex, (x - cx) / badge, (y - cy) / badge);
+                    float glyphA = Clamp01(0.5f - glyphD * badge / aa);
+
+                    int offset = (row * size + col) * 4;
+                    float er = pixels[offset] / 255f;
+                    float eg = pixels[offset + 1] / 255f;
+                    float eb = pixels[offset + 2] / 255f;
+                    float ea = pixels[offset + 3] / 255f;
+
+                    // Dark plate over the candy (straight-alpha "over"), then the glyph.
+                    float outA = badgeA + ea * (1f - badgeA);
+                    if (outA <= 0f)
+                        continue;
+                    float r = (0.13f * badgeA + er * ea * (1f - badgeA)) / outA;
+                    float g = (0.11f * badgeA + eg * ea * (1f - badgeA)) / outA;
+                    float b = (0.18f * badgeA + eb * ea * (1f - badgeA)) / outA;
+
+                    r = Lerp(r, 1f, glyphA);
+                    g = Lerp(g, 1f, glyphA);
+                    b = Lerp(b, 1f, glyphA);
+
+                    WritePixel(pixels, offset, r, g, b, outA);
+                }
+            }
+        }
+
+        /// <summary>Glyph SDF in badge-local coordinates (unit circle). One symbol per colour index.</summary>
+        private static float GlyphSdf(int shapeIndex, float x, float y)
+        {
+            switch (((shapeIndex % 5) + 5) % 5)
+            {
+                case 0: // filled dot
+                    return (float)Math.Sqrt(x * x + y * y) - 0.4f;
+
+                case 1: // plus
+                    return Math.Min(BoxSdf(x, y, 0.52f, 0.15f), BoxSdf(x, y, 0.15f, 0.52f));
+
+                case 2: // horizontal bar
+                    return BoxSdf(x, y, 0.5f, 0.16f);
+
+                case 3: // diagonal cross
+                {
+                    float rx = (x + y) * 0.7071f;
+                    float ry = (y - x) * 0.7071f;
+                    return Math.Min(BoxSdf(rx, ry, 0.55f, 0.14f), BoxSdf(rx, ry, 0.14f, 0.55f));
+                }
+
+                default: // ring
+                    return Math.Abs((float)Math.Sqrt(x * x + y * y) - 0.38f) - 0.13f;
+            }
+        }
+
+        private static float BoxSdf(float x, float y, float halfWidth, float halfHeight)
+        {
+            return Math.Max(Math.Abs(x) - halfWidth, Math.Abs(y) - halfHeight);
+        }
+
         /// <summary>The colour bomb: a dark sphere sprinkled with dots of every candy colour.</summary>
         public static byte[] RenderColorBomb(int size, Rgb[] palette)
         {

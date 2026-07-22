@@ -27,6 +27,7 @@ namespace Match3.EditorTools
             Directory.CreateDirectory(Path.GetDirectoryName(LibraryPath));
 
             var colorSets = new CandySpriteLibrary.ColorSet[palette.Length];
+            var colorblindSets = new CandySpriteLibrary.ColorSet[palette.Length];
             for (int color = 0; color < palette.Length; color++)
             {
                 colorSets[color] = new CandySpriteLibrary.ColorSet
@@ -35,6 +36,14 @@ namespace Match3.EditorTools
                     stripedH = WriteSprite($"candy{color}_stripedH", CandyArtist.Render(Size, palette[color], color, TileKind.StripedH)),
                     stripedV = WriteSprite($"candy{color}_stripedV", CandyArtist.Render(Size, palette[color], color, TileKind.StripedV)),
                     wrapped = WriteSprite($"candy{color}_wrapped", CandyArtist.Render(Size, palette[color], color, TileKind.Wrapped)),
+                };
+                // Accessibility set: same candies with a per-colour glyph badge.
+                colorblindSets[color] = new CandySpriteLibrary.ColorSet
+                {
+                    normal = WriteSprite($"candy{color}_normal_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.Normal)),
+                    stripedH = WriteSprite($"candy{color}_stripedH_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.StripedH)),
+                    stripedV = WriteSprite($"candy{color}_stripedV_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.StripedV)),
+                    wrapped = WriteSprite($"candy{color}_wrapped_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.Wrapped)),
                 };
             }
             Sprite bomb = WriteSprite("candy_bomb", CandyArtist.RenderColorBomb(Size, palette));
@@ -45,11 +54,11 @@ namespace Match3.EditorTools
                 library = ScriptableObject.CreateInstance<CandySpriteLibrary>();
                 AssetDatabase.CreateAsset(library, LibraryPath);
             }
-            library.EditorSetSprites(colorSets, bomb);
+            library.EditorSetSprites(colorSets, colorblindSets, bomb);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 4 + 1} sprites and refreshed {LibraryPath}.");
+            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 8 + 1} sprites (incl. colorblind set) and refreshed {LibraryPath}.");
         }
 
         private static CandyArtist.Rgb[] LoadPalette()
