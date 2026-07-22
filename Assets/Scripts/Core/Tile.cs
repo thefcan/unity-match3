@@ -35,9 +35,18 @@ namespace Match3.Core
             Kind = kind;
         }
 
-        public bool IsSpecial => Kind != TileKind.Normal;
+        /// <summary>
+        /// A DETONATING candy (striped/wrapped/bomb). Deliberately not "Kind != Normal":
+        /// chocolate and ingredients are non-detonating board pieces, and the resolver's
+        /// chain expansion must never try to set them off.
+        /// </summary>
+        public bool IsSpecial => Kind == TileKind.StripedH || Kind == TileKind.StripedV ||
+                                 Kind == TileKind.Wrapped || Kind == TileKind.ColorBomb;
+
         public bool IsColorBomb => Kind == TileKind.ColorBomb;
         public bool IsStriped => Kind == TileKind.StripedH || Kind == TileKind.StripedV;
+        public bool IsChocolate => Kind == TileKind.Chocolate;
+        public bool IsIngredient => Kind == TileKind.Ingredient;
 
         // Identity is the Id alone — a tile never changes colour or kind during its
         // lifetime (a "morphed" tile is a NEW tile minted by the factory).

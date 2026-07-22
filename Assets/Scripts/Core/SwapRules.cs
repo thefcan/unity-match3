@@ -40,7 +40,9 @@ namespace Match3.Core
                 Tile other = a.IsColorBomb ? b : a;
                 if (other.IsStriped) return SwapKind.BombStriped;
                 if (other.Kind == TileKind.Wrapped) return SwapKind.BombWrapped;
-                return SwapKind.BombNormal;
+                // A colourless partner (an ingredient) gives the bomb nothing to
+                // target — not an activation swap, so the move bounces back.
+                return other.ColorIndex >= 0 ? SwapKind.BombNormal : SwapKind.None;
             }
 
             if (a.IsStriped && b.IsStriped) return SwapKind.StripedStriped;

@@ -23,10 +23,14 @@ namespace Match3.Core
     /// </summary>
     public sealed class CascadeResolver
     {
+        private const int MaxIngredientsOnBoard = 2;
+
         private readonly ScoreConfig _scoreConfig;
         private readonly TileFactory _factory; // null => classic mode (no special creation)
-        private readonly IRandom _random;      // only used to pick bomb+striped conversion orientations
+        private readonly IRandom _random;      // bomb+striped orientations, ingredient columns, chocolate spread
         private JellyGrid _jelly;              // null => level has no jelly
+        private LockGrid _locks;               // null => level has no locks
+        private int _ingredientsToSpawn;       // refill injection budget (CollectIngredients levels)
 
         public CascadeResolver(ScoreConfig scoreConfig)
             : this(scoreConfig, null, null)
@@ -50,6 +54,26 @@ namespace Match3.Core
             _jelly = jelly;
         }
 
+        /// <summary>
+        /// Attaches the level's lock layer (also attach it to the Board for mobility).
+        /// Locks ABSORB hits: a locked cell hit by a match or blast breaks its lock,
+        /// keeps its candy, and is recorded as a <see cref="LockBreak"/>.
+        /// </summary>
+        public void AttachLocks(LockGrid locks)
+        {
+            _locks = locks;
+        }
+
+        /// <summary>
+        /// Arms the refill injector for CollectIngredients levels: up to
+        /// <paramref name="totalCount"/> ingredients enter through top-row refills,
+        /// never more than <see cref="MaxIngredientsOnBoard"/> in play at once.
+        /// </summary>
+        public void AttachIngredients(int totalCount)
+        {
+            _ingredientsToSpawn = Math.Max(0, totalCount);
+        }
+
         /// <summary>Resolves without swap context — cascade-made matches only (and shuffle settling).</summary>
         public ResolutionResult Resolve(Board board) => ResolveInternal(board, null, null);
 
@@ -68,6 +92,7 @@ namespace Match3.Core
 
             var steps = new List<CascadeStep>();
             int cascadeIndex = 0;
+            bool chocolateDestroyed = false; // any chocolate cleared during this whole move?
 
             // Wrapped candies that blasted once and survive, waiting to re-detonate at
             // their post-gravity position next wave. Tracked by Id: falls preserve tiles.
@@ -92,7 +117,11 @@ namespace Match3.Core
                     foreach (GridPosition cell in area)
                     {
                         if (creationCells.Contains(cell)) continue; // freshly created specials survive the wave
-                        if (clearSet.Add(cell) && board[cell] is { } hit && hit.IsSpecial && !processedIds.Contains(hit.Id))
+                        bool locked = _locks != null && _locks.HasLock(cell);
+                        // A LOCKED special never chains: the lock absorbs the hit
+                        // (the lock pass below turns the cell into a LockBreak).
+                        if (clearSet.Add(cell) && !locked &&
+                            board[cell] is { } hit && hit.IsSpecial && !processedIds.Contains(hit.Id))
                             pending.Enqueue(cell);
                     }
                 }
@@ -114,7 +143,9 @@ namespace Match3.Core
                 if (!comboWave)
                 {
                     List<MatchRun> runs = board.FindMatchRuns();
-                    if (runs.Count == 0 && primedWrapped.Count == 0)
+                    // A stray ingredient sitting on the bottom row keeps the cascade
+                    // alive one more wave so its exit gets processed and recorded.
+                    if (runs.Count == 0 && primedWrapped.Count == 0 && !HasBottomIngredient(board))
                         break;
 
                     // Union the runs into the set of cells to clear; an L / T shape's
@@ -134,6 +165,11 @@ namespace Match3.Core
                         GridPosition? planTo = cascadeIndex == 0 ? swapTo : null;
                         foreach (SpecialPlan plan in SpecialMatchAnalyzer.Analyze(board, runs, planFrom, planTo))
                         {
+                            // A locked cell can't host a fresh special — the lock
+                            // absorbs the match; its run cells just clear normally.
+                            if (_locks != null && _locks.HasLock(plan.Position))
+                                continue;
+
                             Tile replaced = board[plan.Position].Value;
                             Tile created = _factory.CreateSpecial(plan.ColorIndex, plan.Kind);
                             creations.Add(new SpecialCreation(created, replaced, plan.Position, plan.SourcePositions));
@@ -159,8 +195,12 @@ namespace Match3.Core
 
                 // ---- 2. Detonation expansion: specials caught in the clear go off -----
                 foreach (GridPosition pos in clearSet.ToList())
+                {
+                    if (_locks != null && _locks.HasLock(pos))
+                        continue; // the lock absorbs the hit — the special stays dormant
                     if (board[pos] is { } tile && tile.IsSpecial && !processedIds.Contains(tile.Id))
                         pending.Enqueue(pos);
+                }
 
                 while (pending.Count > 0)
                 {
@@ -191,7 +231,55 @@ namespace Match3.Core
                     }
                 }
 
-                if (clearSet.Count == 0 && creations.Count == 0)
+                // ---- 2b. Locks absorb their hits: break the lock, keep the candy ------
+                var lockBreaks = new List<LockBreak>();
+                if (_locks != null && _locks.TotalRemaining > 0)
+                {
+                    foreach (GridPosition pos in clearSet.ToList())
+                    {
+                        if (!_locks.HasLock(pos))
+                            continue;
+                        _locks.Break(pos);
+                        lockBreaks.Add(new LockBreak(pos));
+                        clearSet.Remove(pos);
+                    }
+                }
+
+                // ---- 2c. Ingredients are indestructible — pull them out of any blast --
+                foreach (GridPosition pos in clearSet.ToList())
+                    if (board[pos] is { } shielded && shielded.Kind == TileKind.Ingredient)
+                        clearSet.Remove(pos);
+
+                // ---- 2d. Chocolate next to anything cleared crumbles -------------------
+                var adjacencySeeds = new List<GridPosition>(clearSet);
+                foreach (SpecialCreation creation in creations)
+                    adjacencySeeds.Add(creation.Position); // the morph cell was matched too
+                foreach (GridPosition seed in adjacencySeeds)
+                {
+                    foreach (GridPosition n in OrthogonalNeighbors(board, seed))
+                        if (board[n] is { } t && t.Kind == TileKind.Chocolate)
+                            clearSet.Add(n);
+                }
+                foreach (GridPosition pos in clearSet)
+                {
+                    if (board[pos] is { } t && t.Kind == TileKind.Chocolate)
+                    {
+                        chocolateDestroyed = true; // covers adjacency AND direct blast hits
+                        break;
+                    }
+                }
+
+                // ---- 2e. Ingredients standing on the bottom row exit this wave ---------
+                var ingredientExits = new List<IngredientExit>();
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var pos = new GridPosition(x, 0);
+                    if (board[pos] is { } t && t.Kind == TileKind.Ingredient)
+                        ingredientExits.Add(new IngredientExit(t, pos));
+                }
+
+                if (clearSet.Count == 0 && creations.Count == 0 &&
+                    lockBreaks.Count == 0 && ingredientExits.Count == 0)
                     break; // e.g. a lone primed wrapped that vanished — nothing to do
 
                 // ---- 3. Snapshot + score (on the final clear set) ---------------------
@@ -222,15 +310,132 @@ namespace Match3.Core
                     if (!clearSet.Contains(creation.Position))
                         board.SetTile(creation.Position, creation.Created);
                 }
+                if (ingredientExits.Count > 0)
+                {
+                    var exitCells = new List<GridPosition>(ingredientExits.Count);
+                    foreach (IngredientExit exit in ingredientExits)
+                        exitCells.Add(exit.Position);
+                    board.ClearTiles(exitCells);
+                }
+
                 List<TileFall> falls = board.ApplyGravity();
                 List<TileSpawn> spawns = board.Refill();
+                InjectIngredientSpawn(board, spawns);
 
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
-                                          creations, detonations, jellyHits));
+                                          creations, detonations, jellyHits, lockBreaks,
+                                          Array.Empty<ChocolateSpread>(), ingredientExits));
                 cascadeIndex++;
             }
 
+            // ---- 5. End of move: ignored chocolate creeps ------------------------------
+            // Only after a real player move (swap context + at least one wave), and only
+            // when the whole move destroyed no chocolate — the classic pressure rule.
+            if (steps.Count > 0 && swapFrom.HasValue && _factory != null && !chocolateDestroyed &&
+                TrySpreadChocolate(board) is { } spread)
+            {
+                steps.Add(new CascadeStep(cascadeIndex,
+                                          Array.Empty<ClearedTile>(), Array.Empty<TileFall>(),
+                                          Array.Empty<TileSpawn>(), 0, Array.Empty<int>(),
+                                          Array.Empty<SpecialCreation>(), Array.Empty<Detonation>(),
+                                          Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
+                                          new[] { spread }, Array.Empty<IngredientExit>()));
+            }
+
             return new ResolutionResult(steps);
+        }
+
+        /// <summary>
+        /// Picks one (chocolate, victim) pair — victim must be a NORMAL, unlocked
+        /// candy — mutates the board, and reports the spread. Null when no chocolate
+        /// remains or nothing edible borders one. Deterministic via the injected random.
+        /// </summary>
+        private ChocolateSpread? TrySpreadChocolate(Board board)
+        {
+            var pairs = new List<(GridPosition from, GridPosition to)>();
+            for (int x = 0; x < board.Width; x++)
+            {
+                for (int y = 0; y < board.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (board[pos] is not { } tile || tile.Kind != TileKind.Chocolate)
+                        continue;
+
+                    foreach (GridPosition n in OrthogonalNeighbors(board, pos))
+                    {
+                        if (board[n] is { } victim && victim.Kind == TileKind.Normal &&
+                            (_locks == null || !_locks.HasLock(n)))
+                            pairs.Add((pos, n));
+                    }
+                }
+            }
+
+            if (pairs.Count == 0)
+                return null;
+
+            (GridPosition from, GridPosition to) = pairs[_random != null ? _random.Next(pairs.Count) : 0];
+            Tile consumed = board[to].Value;
+            Tile spawned = _factory.CreateChocolate();
+            board.SetTile(to, spawned);
+            return new ChocolateSpread(from, to, consumed, spawned);
+        }
+
+        /// <summary>
+        /// Turns one freshly refilled top-row tile into an ingredient while the level
+        /// still owes some and fewer than <see cref="MaxIngredientsOnBoard"/> are in
+        /// play — at most one per wave, so they trickle in like Candy Crush cherries.
+        /// </summary>
+        private void InjectIngredientSpawn(Board board, List<TileSpawn> spawns)
+        {
+            if (_ingredientsToSpawn <= 0 || _factory == null || spawns.Count == 0)
+                return;
+            if (CountIngredients(board) >= MaxIngredientsOnBoard)
+                return;
+
+            var candidates = new List<int>();
+            for (int i = 0; i < spawns.Count; i++)
+                if (spawns[i].Position.Y == board.Height - 1)
+                    candidates.Add(i);
+            if (candidates.Count == 0)
+                for (int i = 0; i < spawns.Count; i++)
+                    candidates.Add(i);
+
+            int pick = candidates[_random != null ? _random.Next(candidates.Count) : 0];
+            TileSpawn chosen = spawns[pick];
+            Tile ingredient = _factory.CreateIngredient();
+            board.SetTile(chosen.Position, ingredient);
+            spawns[pick] = new TileSpawn(ingredient, chosen.Position, chosen.SpawnHeightOffset);
+            _ingredientsToSpawn--;
+        }
+
+        private static bool HasBottomIngredient(Board board)
+        {
+            for (int x = 0; x < board.Width; x++)
+                if (board[new GridPosition(x, 0)] is { } tile && tile.Kind == TileKind.Ingredient)
+                    return true;
+            return false;
+        }
+
+        private static int CountIngredients(Board board)
+        {
+            int count = 0;
+            for (int x = 0; x < board.Width; x++)
+                for (int y = 0; y < board.Height; y++)
+                    if (board[new GridPosition(x, y)] is { } tile && tile.Kind == TileKind.Ingredient)
+                        count++;
+            return count;
+        }
+
+        private static IEnumerable<GridPosition> OrthogonalNeighbors(Board board, GridPosition pos)
+        {
+            var left = new GridPosition(pos.X - 1, pos.Y);
+            if (board.IsInside(left)) yield return left;
+            var right = new GridPosition(pos.X + 1, pos.Y);
+            if (board.IsInside(right)) yield return right;
+            var down = new GridPosition(pos.X, pos.Y - 1);
+            if (board.IsInside(down)) yield return down;
+            var up = new GridPosition(pos.X, pos.Y + 1);
+            if (board.IsInside(up)) yield return up;
         }
 
         /// <summary>
@@ -300,6 +505,14 @@ namespace Match3.Core
                             var pos = new GridPosition(x, y);
                             if (board[pos] is not { } tile || tile.ColorIndex != color)
                                 continue;
+
+                            if (_locks != null && _locks.HasLock(pos))
+                            {
+                                // The wipe reaches it, but the lock absorbs the hit —
+                                // the generic lock pass turns this into a LockBreak.
+                                clearSet.Add(pos);
+                                continue;
+                            }
 
                             if (tile.Kind == TileKind.Normal && _factory != null && _random != null)
                             {

@@ -64,6 +64,9 @@ namespace Match3.Core
                     if (_objectives[i].Type == ObjectiveType.CollectColor &&
                         cleared.Tile.ColorIndex == _objectives[i].ColorIndex)
                         _progress[i]++;
+                    else if (_objectives[i].Type == ObjectiveType.ClearChocolate &&
+                             cleared.Tile.Kind == TileKind.Chocolate)
+                        _progress[i]++;
                 }
             }
 
@@ -73,6 +76,8 @@ namespace Match3.Core
                     _progress[i] = Score;
                 else if (_objectives[i].Type == ObjectiveType.ClearJelly)
                     _progress[i] += step.JellyHits.Count;
+                else if (_objectives[i].Type == ObjectiveType.CollectIngredients)
+                    _progress[i] += step.IngredientExits.Count;
             }
         }
     }

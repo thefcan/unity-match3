@@ -16,6 +16,10 @@ namespace Match3.Core
         CollectColor,
         /// <summary>Remove <see cref="Objective.TargetAmount"/> jelly layers (matches on jelly cells).</summary>
         ClearJelly,
+        /// <summary>Destroy <see cref="Objective.TargetAmount"/> chocolate blocks (adjacent clears / blasts).</summary>
+        ClearChocolate,
+        /// <summary>Bring <see cref="Objective.TargetAmount"/> ingredients down to the bottom row.</summary>
+        CollectIngredients,
     }
 
     /// <summary>One goal of a level: the type, the colour it applies to (if any), and how much.</summary>

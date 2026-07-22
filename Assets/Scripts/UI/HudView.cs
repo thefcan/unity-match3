@@ -160,6 +160,8 @@ namespace Match3.UI
                 {
                     Match3.Core.ObjectiveType.Score => "Score",
                     Match3.Core.ObjectiveType.ClearJelly => "Jelly",
+                    Match3.Core.ObjectiveType.ClearChocolate => "Chocolate",
+                    Match3.Core.ObjectiveType.CollectIngredients => "Ingredients",
                     _ => ColorNames[Mathf.Clamp(objective.ColorIndex, 0, ColorNames.Length - 1)],
                 };
 

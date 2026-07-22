@@ -26,6 +26,7 @@ namespace Match3.Core
 
         private readonly Tile?[,] _tiles;
         private readonly TileFactory _factory;
+        private LockGrid _locks; // null => level has no locks
 
         public int Width { get; }
         public int Height { get; }
@@ -98,6 +99,28 @@ namespace Match3.Core
             pos.X >= 0 && pos.X < Width && pos.Y >= 0 && pos.Y < Height;
 
         /// <summary>
+        /// Attaches the level's lock layer. The board consults it ONLY for mobility
+        /// (gravity, shuffle, move search); BREAKING locks is the resolver's job —
+        /// the same split JellyGrid uses.
+        /// </summary>
+        public void AttachLocks(LockGrid locks)
+        {
+            _locks = locks;
+        }
+
+        /// <summary>
+        /// True when the cell can neither move nor be swapped: a locked candy or a
+        /// chocolate block. Immobile cells act as floors for gravity and are pinned
+        /// through shuffles.
+        /// </summary>
+        public bool IsImmobile(GridPosition pos)
+        {
+            if (_locks != null && _locks.HasLock(pos))
+                return true;
+            return IsInside(pos) && _tiles[pos.X, pos.Y] is { } tile && tile.Kind == TileKind.Chocolate;
+        }
+
+        /// <summary>
         /// Exchanges the contents of two cells. Purely mechanical — adjacency rules and
         /// "does this swap produce a match?" live with the caller (game layer / resolver),
         /// because the board shouldn't dictate game flow.
@@ -136,15 +159,20 @@ namespace Match3.Core
                 {
                     var here = new GridPosition(x, y);
 
+                    if (IsImmobile(here))
+                        continue; // locked/chocolate cells can't be dragged — never suggest them
+
                     if (x + 1 < Width)
                     {
                         var right = new GridPosition(x + 1, y);
-                        if (WouldSwapMatch(here, right) || IsActivationSwap(here, right)) return (here, right);
+                        if (!IsImmobile(right) && (WouldSwapMatch(here, right) || IsActivationSwap(here, right)))
+                            return (here, right);
                     }
                     if (y + 1 < Height)
                     {
                         var up = new GridPosition(x, y + 1);
-                        if (WouldSwapMatch(here, up) || IsActivationSwap(here, up)) return (here, up);
+                        if (!IsImmobile(up) && (WouldSwapMatch(here, up) || IsActivationSwap(here, up)))
+                            return (here, up);
                     }
                 }
             }
@@ -173,10 +201,24 @@ namespace Match3.Core
         {
             if (random == null) throw new ArgumentNullException(nameof(random));
 
+            // Only MOBILE tiles take part — locked candies and chocolate stay planted,
+            // and their cells are excluded from the redistribution entirely.
+            var cells = new List<GridPosition>(Width * Height);
             var tiles = new List<Tile>(Width * Height);
-            foreach (Tile? cell in _tiles)
-                if (cell.HasValue)
-                    tiles.Add(cell.Value);
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (IsImmobile(pos))
+                        continue;
+                    if (_tiles[x, y] is { } tile)
+                    {
+                        cells.Add(pos);
+                        tiles.Add(tile);
+                    }
+                }
+            }
 
             const int maxAttempts = 100;
             for (int attempt = 0; attempt < maxAttempts; attempt++)
@@ -188,10 +230,8 @@ namespace Match3.Core
                     (tiles[i], tiles[j]) = (tiles[j], tiles[i]);
                 }
 
-                int index = 0;
-                for (int x = 0; x < Width; x++)
-                    for (int y = 0; y < Height; y++)
-                        _tiles[x, y] = tiles[index++];
+                for (int i = 0; i < cells.Count; i++)
+                    _tiles[cells[i].X, cells[i].Y] = tiles[i];
 
                 if (FindMatches().Count == 0 && HasPossibleMove())
                     return;
@@ -302,6 +342,15 @@ namespace Match3.Core
                 int writeY = 0; // lowest cell not yet settled in this column
                 for (int y = 0; y < Height; y++)
                 {
+                    // Immobile cells (locked candy, chocolate) are FLOORS: they never
+                    // move, and nothing above them may fall past — the column's
+                    // compaction restarts just above them.
+                    if (IsImmobile(new GridPosition(x, y)))
+                    {
+                        writeY = y + 1;
+                        continue;
+                    }
+
                     // Pattern matching: "is { } tile" reads as "is non-null; bind to tile".
                     if (_tiles[x, y] is { } tile)
                     {

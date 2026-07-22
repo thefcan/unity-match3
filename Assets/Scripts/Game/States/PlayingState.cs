@@ -22,6 +22,10 @@ namespace Match3.Game
             if (!from.IsAdjacentTo(to))
                 return;
 
+            // Locked candies and chocolate can't be dragged at all.
+            if (Game.Board.IsImmobile(from) || Game.Board.IsImmobile(to))
+                return;
+
             Game.SetState(new ResolvingState(Game, from, to));
         }
     }

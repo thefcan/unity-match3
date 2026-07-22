@@ -56,8 +56,14 @@ namespace Match3.Core
             return new Tile(_nextId++, colorIndex, kind);
         }
 
-        /// <summary>Creates a colour bomb — the only tile without a colour of its own.</summary>
+        /// <summary>Creates a colour bomb — a colourless tile that clears one colour.</summary>
         public Tile CreateColorBomb() => new Tile(_nextId++, Tile.NoColor, TileKind.ColorBomb);
+
+        /// <summary>Creates a chocolate blocker (colourless, immobile, spreads when ignored).</summary>
+        public Tile CreateChocolate() => new Tile(_nextId++, Tile.NoColor, TileKind.Chocolate);
+
+        /// <summary>Creates an ingredient (colourless, falls, exits at the bottom row).</summary>
+        public Tile CreateIngredient() => new Tile(_nextId++, Tile.NoColor, TileKind.Ingredient);
 
         /// <summary>
         /// Creates a tile whose colour is NOT in <paramref name="excludedColors"/>.

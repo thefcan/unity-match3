@@ -131,6 +131,52 @@ namespace Match3.Core
         }
     }
 
+    /// <summary>A licorice lock breaking this wave — the candy in the cell survives.</summary>
+    public readonly struct LockBreak
+    {
+        public GridPosition Position { get; }
+
+        public LockBreak(GridPosition position)
+        {
+            Position = position;
+        }
+    }
+
+    /// <summary>
+    /// Chocolate creeping onto a neighbouring candy at the end of a move in which no
+    /// chocolate was destroyed. <see cref="Consumed"/> is the candy it ate;
+    /// <see cref="Spawned"/> is the new chocolate tile now standing in
+    /// <see cref="To"/> — the view rebinds that cell's visual to it.
+    /// </summary>
+    public readonly struct ChocolateSpread
+    {
+        public GridPosition From { get; }
+        public GridPosition To { get; }
+        public Tile Consumed { get; }
+        public Tile Spawned { get; }
+
+        public ChocolateSpread(GridPosition from, GridPosition to, Tile consumed, Tile spawned)
+        {
+            From = from;
+            To = to;
+            Consumed = consumed;
+            Spawned = spawned;
+        }
+    }
+
+    /// <summary>An ingredient reaching the bottom row and leaving the board this wave.</summary>
+    public readonly struct IngredientExit
+    {
+        public Tile Tile { get; }
+        public GridPosition Position { get; }
+
+        public IngredientExit(Tile tile, GridPosition position)
+        {
+            Tile = tile;
+            Position = position;
+        }
+    }
+
     /// <summary>One special going off: which tile, from where, what shape, which cells it hit.</summary>
     public readonly struct Detonation
     {
@@ -174,6 +220,15 @@ namespace Match3.Core
         /// <summary>Jelly layers removed this wave (empty when the level has no jelly).</summary>
         public IReadOnlyList<JellyHit> JellyHits { get; }
 
+        /// <summary>Licorice locks broken this wave (their candies survive in place).</summary>
+        public IReadOnlyList<LockBreak> LockBreaks { get; }
+
+        /// <summary>Chocolate spread (only ever on the cascade's final, clear-less step).</summary>
+        public IReadOnlyList<ChocolateSpread> ChocolateSpreads { get; }
+
+        /// <summary>Ingredients that reached the bottom row and left the board this wave.</summary>
+        public IReadOnlyList<IngredientExit> IngredientExits { get; }
+
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
@@ -210,6 +265,24 @@ namespace Match3.Core
             IReadOnlyList<SpecialCreation> creations,
             IReadOnlyList<Detonation> detonations,
             IReadOnlyList<JellyHit> jellyHits)
+            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations, jellyHits,
+                   Array.Empty<LockBreak>(), Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>())
+        {
+        }
+
+        public CascadeStep(
+            int cascadeIndex,
+            IReadOnlyList<ClearedTile> cleared,
+            IReadOnlyList<TileFall> falls,
+            IReadOnlyList<TileSpawn> spawns,
+            int points,
+            IReadOnlyList<int> runLengths,
+            IReadOnlyList<SpecialCreation> creations,
+            IReadOnlyList<Detonation> detonations,
+            IReadOnlyList<JellyHit> jellyHits,
+            IReadOnlyList<LockBreak> lockBreaks,
+            IReadOnlyList<ChocolateSpread> chocolateSpreads,
+            IReadOnlyList<IngredientExit> ingredientExits)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -220,6 +293,9 @@ namespace Match3.Core
             Creations = creations ?? throw new ArgumentNullException(nameof(creations));
             Detonations = detonations ?? throw new ArgumentNullException(nameof(detonations));
             JellyHits = jellyHits ?? throw new ArgumentNullException(nameof(jellyHits));
+            LockBreaks = lockBreaks ?? throw new ArgumentNullException(nameof(lockBreaks));
+            ChocolateSpreads = chocolateSpreads ?? throw new ArgumentNullException(nameof(chocolateSpreads));
+            IngredientExits = ingredientExits ?? throw new ArgumentNullException(nameof(ingredientExits));
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
