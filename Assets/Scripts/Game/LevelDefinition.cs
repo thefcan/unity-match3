@@ -46,6 +46,14 @@ namespace Match3.Game
         [Min(0)] public int jellyRows = 0;
         [Range(1, 2)] public int jellyLayers = 1;
 
+        [Header("Blockers (chapter 4 mechanics)")]
+        [Tooltip("Cells starting under a licorice lock (x = column, y = row from the bottom).")]
+        public Vector2Int[] lockCells = Array.Empty<Vector2Int>();
+        [Tooltip("Cells starting as chocolate blocks.")]
+        public Vector2Int[] chocolateCells = Array.Empty<Vector2Int>();
+        [Tooltip("Ingredients dispensed through refills. Pair with a CollectIngredients objective.")]
+        [Min(0)] public int ingredientCount = 0;
+
         [Header("Stars (ascending score thresholds)")]
         public int[] starScores = { 600, 900, 1300 };
 

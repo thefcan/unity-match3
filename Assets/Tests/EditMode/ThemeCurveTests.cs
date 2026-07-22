@@ -75,7 +75,7 @@ namespace Match3.Tests
     public sealed class ExtendedCampaignTests
     {
         [Test]
-        public void EveryCampaignLevel_IsWellFormed([Range(21, 60)] int level)
+        public void EveryCampaignLevel_IsWellFormed([Range(21, 80)] int level)
         {
             LevelParameters parameters = LevelCurve.For(level);
 
@@ -125,6 +125,54 @@ namespace Match3.Tests
             // ...arriving at chapter-level 8 (global 28 / 48).
             Assert.That(LevelCurve.For(28).JellyRows, Is.EqualTo(2));
             Assert.That(LevelCurve.For(48).JellyRows, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Level61_IsTheEmberAnchor_AndOldLevelsAreUntouched()
+        {
+            // The 5th theme anchor must not move levels 1-60 by a single bit.
+            ThemeParameters ember = ThemeCurve.For(61);
+            Assert.That(ember.BgTop.R, Is.EqualTo(0.26f).Within(0.0001f), "level 61 opens on the ember anchor");
+            Assert.That(ember.Chapter, Is.EqualTo(3));
+
+            ThemeParameters level60 = ThemeCurve.For(60);
+            Assert.That(level60.BgTop.R, Is.EqualTo(0.23f + (0.26f - 0.23f) * (19f / 20f)).Within(0.0001f),
+                        "level 60 still sits 19/20ths through the plum→ember drift");
+
+            Assert.That(LevelCurve.For(60).StarScores[0], Is.EqualTo(4600), "chapter 2 landmark unchanged");
+        }
+
+        [Test]
+        public void ChapterThree_TeachesBlockersInActs()
+        {
+            // Act 1 — locks widen across row 5.
+            Assert.That(LevelCurve.For(61).LockCells.Count, Is.EqualTo(2));
+            Assert.That(LevelCurve.For(64).LockCells.Count, Is.EqualTo(8));
+            Assert.That(LevelCurve.For(65).LockCells.Count, Is.EqualTo(10));
+
+            // Act 2 — chocolate creeps in with a matching objective.
+            LevelParameters l66 = LevelCurve.For(66);
+            Assert.That(l66.ChocolateCells.Count, Is.EqualTo(2));
+            bool hasChocolateGoal = false;
+            foreach (Objective objective in l66.Objectives)
+                if (objective.Type == ObjectiveType.ClearChocolate && objective.TargetAmount == 2)
+                    hasChocolateGoal = true;
+            Assert.That(hasChocolateGoal, Is.True);
+            Assert.That(LevelCurve.For(70).ChocolateCells.Count, Is.EqualTo(10));
+
+            // Act 3 — ingredients ramp 2, 2, 3, 3, 4.
+            Assert.That(LevelCurve.For(71).IngredientCount, Is.EqualTo(2));
+            Assert.That(LevelCurve.For(75).IngredientCount, Is.EqualTo(4));
+
+            // Act 4 — the mixed finale carries all three.
+            LevelParameters l80 = LevelCurve.For(80);
+            Assert.That(l80.LockCells.Count, Is.EqualTo(4));
+            Assert.That(l80.ChocolateCells.Count, Is.EqualTo(4));
+            Assert.That(l80.IngredientCount, Is.EqualTo(4));
+
+            // Chapter 3 swaps jelly out for the blockers.
+            Assert.That(LevelCurve.For(68).JellyRows, Is.Zero, "no jelly in chapter 3 (cl 8 would have it elsewhere)");
+            Assert.That(LevelCurve.For(28).JellyRows, Is.EqualTo(2), "chapter 1 keeps its jelly rhythm");
         }
 
         [Test]

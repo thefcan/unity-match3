@@ -25,6 +25,12 @@ namespace Match3.Game
         [SerializeField] private ColorSet[] colors;
         [SerializeField] private ColorSet[] colorsColorblind;
         [SerializeField] private Sprite colorBomb;
+        [SerializeField] private Sprite chocolate;
+        [SerializeField] private Sprite ingredient;
+        [SerializeField] private Sprite lockCage;
+
+        /// <summary>The licorice-cage overlay sprite (drawn over a locked candy). Null until generated.</summary>
+        public Sprite LockCage => lockCage;
 
         /// <summary>
         /// Accessibility switch (Settings → Colorblind mode): when true, For() serves
@@ -38,6 +44,10 @@ namespace Match3.Game
         {
             if (kind == TileKind.ColorBomb)
                 return colorBomb; // multi-coloured by construction — no badge needed
+            if (kind == TileKind.Chocolate)
+                return chocolate;
+            if (kind == TileKind.Ingredient)
+                return ingredient;
             if (colors == null || colorIndex < 0 || colorIndex >= colors.Length)
                 return null;
 
@@ -62,11 +72,15 @@ namespace Match3.Game
 
 #if UNITY_EDITOR
         /// <summary>Editor-only: the sprite generator rebuilds the tables in place.</summary>
-        public void EditorSetSprites(ColorSet[] colorSets, ColorSet[] colorblindSets, Sprite bomb)
+        public void EditorSetSprites(ColorSet[] colorSets, ColorSet[] colorblindSets, Sprite bomb,
+                                     Sprite chocolateSprite, Sprite ingredientSprite, Sprite lockCageSprite)
         {
             colors = colorSets;
             colorsColorblind = colorblindSets;
             colorBomb = bomb;
+            chocolate = chocolateSprite;
+            ingredient = ingredientSprite;
+            lockCage = lockCageSprite;
         }
 #endif
     }

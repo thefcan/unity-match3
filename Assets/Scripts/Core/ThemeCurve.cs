@@ -53,7 +53,9 @@ namespace Match3.Core
     {
         public const int ChapterLength = 20;
 
-        // Anchor palettes at level 1, 21, 41, and a tail for the drift past 60.
+        // Anchor palettes at level 1, 21, 41, 61, and a tail for the drift past 80.
+        // Levels 1-60 interpolate over the SAME first four anchors as before the
+        // chapter-4 expansion — their colours are bit-identical (landmark-tested).
         private static readonly ThemeParameters[] Anchors =
         {
             new ThemeParameters( // chapter 0 — purple night (the original look)
@@ -65,9 +67,12 @@ namespace Match3.Core
             new ThemeParameters( // chapter 2 — dusk plum
                 new ThemeColor(0.23f, 0.10f, 0.20f), new ThemeColor(0.12f, 0.05f, 0.10f),
                 new ThemeColor(0.26f, 0.13f, 0.24f), new ThemeColor(0.19f, 0.09f, 0.17f), 2),
-            new ThemeParameters( // tail — warm ember (approached after level 60)
+            new ThemeParameters( // chapter 3 — warm ember (levels 61-80 open here)
                 new ThemeColor(0.26f, 0.13f, 0.10f), new ThemeColor(0.13f, 0.06f, 0.05f),
                 new ThemeColor(0.29f, 0.16f, 0.14f), new ThemeColor(0.21f, 0.11f, 0.09f), 3),
+            new ThemeParameters( // tail — golden dawn (approached after level 80)
+                new ThemeColor(0.27f, 0.19f, 0.08f), new ThemeColor(0.14f, 0.10f, 0.04f),
+                new ThemeColor(0.30f, 0.22f, 0.12f), new ThemeColor(0.22f, 0.16f, 0.07f), 4),
         };
 
         public static ThemeParameters For(int level)

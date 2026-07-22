@@ -52,6 +52,9 @@ namespace Match3.EditorTools
                 level.starScores = parameters.StarScores.ToArray();
                 level.jellyRows = parameters.JellyRows;
                 level.jellyLayers = parameters.JellyLayers;
+                level.lockCells = parameters.LockCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
+                level.chocolateCells = parameters.ChocolateCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
+                level.ingredientCount = parameters.IngredientCount;
                 EditorUtility.SetDirty(level);
 
                 levels.Add(level);

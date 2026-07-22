@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49865127264e2f4da82483ffcaa029e3, type: 3}
+  m_Name: Level_80
+  m_EditorClassIdentifier: 
+  width: 8
+  height: 8
+  colorCount: 5
+  movesLimit: 17
+  movesBonusPoints: 30
+  objectives:
+  - type: 1
+    colorIndex: 0
+    amount: 40
+  - type: 3
+    colorIndex: 0
+    amount: 4
+  - type: 4
+    colorIndex: 0
+    amount: 4
+  jellyRows: 0
+  jellyLayers: 2
+  lockCells:
+  - {x: 2, y: 5}
+  - {x: 3, y: 5}
+  - {x: 4, y: 5}
+  - {x: 5, y: 5}
+  chocolateCells:
+  - {x: 0, y: 7}
+  - {x: 7, y: 7}
+  - {x: 3, y: 7}
+  - {x: 4, y: 7}
+  ingredientCount: 4
+  starScores:
+  - 5700
+  - 8550
+  - 11400
+  pointsPerTile: 10
+  cascadeMultiplierStep: 1

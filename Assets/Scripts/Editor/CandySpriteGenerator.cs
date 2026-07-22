@@ -47,6 +47,9 @@ namespace Match3.EditorTools
                 };
             }
             Sprite bomb = WriteSprite("candy_bomb", CandyArtist.RenderColorBomb(Size, palette));
+            Sprite chocolate = WriteSprite("candy_chocolate", CandyArtist.RenderChocolate(Size));
+            Sprite ingredient = WriteSprite("candy_ingredient", CandyArtist.RenderIngredient(Size));
+            Sprite lockCage = WriteSprite("candy_lock_cage", CandyArtist.RenderLockCage(Size));
 
             var library = AssetDatabase.LoadAssetAtPath<CandySpriteLibrary>(LibraryPath);
             if (library == null)
@@ -54,11 +57,11 @@ namespace Match3.EditorTools
                 library = ScriptableObject.CreateInstance<CandySpriteLibrary>();
                 AssetDatabase.CreateAsset(library, LibraryPath);
             }
-            library.EditorSetSprites(colorSets, colorblindSets, bomb);
+            library.EditorSetSprites(colorSets, colorblindSets, bomb, chocolate, ingredient, lockCage);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 8 + 1} sprites (incl. colorblind set) and refreshed {LibraryPath}.");
+            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 8 + 4} sprites (colorblind set + blockers) and refreshed {LibraryPath}.");
         }
 
         private static CandyArtist.Rgb[] LoadPalette()

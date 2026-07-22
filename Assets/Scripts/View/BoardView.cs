@@ -48,7 +48,7 @@ namespace Match3.View
         private TileView _hintB;
 
         /// <summary>Spawns a view for every tile. Safe to call again on restart — old views return to the pool.</summary>
-        public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null)
+        public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null, LockGrid locks = null)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
             _config = config != null ? config : throw new ArgumentNullException(nameof(config));
@@ -61,6 +61,7 @@ namespace Match3.View
             _viewsById.Clear();
 
             BuildJellyOverlay(jelly);
+            BuildLockOverlay(locks);
 
             for (int x = 0; x < board.Width; x++)
             {
@@ -152,6 +153,101 @@ namespace Match3.View
                 return;
             view.gameObject.SetActive(false);
             _jellyPool.Push(view);
+        }
+
+        // ---- Lock overlay ------------------------------------------------------------
+        // Licorice cages render ON TOP of their candy (sorting +1). The resolver
+        // reports breaks as LockBreaks; the overlay pops off from the recording alone.
+
+        private readonly Dictionary<GridPosition, SpriteRenderer> _lockViews = new Dictionary<GridPosition, SpriteRenderer>();
+        private readonly Stack<SpriteRenderer> _lockPool = new Stack<SpriteRenderer>();
+        private Transform _lockRoot;
+
+        private static readonly Color LockFallbackTint = new Color(0.55f, 0.5f, 0.65f, 0.85f);
+
+        private void BuildLockOverlay(LockGrid locks)
+        {
+            foreach (SpriteRenderer view in _lockViews.Values)
+                ReleaseLockView(view);
+            _lockViews.Clear();
+
+            if (locks == null || locks.IsClear)
+                return;
+
+            if (_lockRoot == null)
+            {
+                _lockRoot = new GameObject("LockOverlay").transform;
+                _lockRoot.SetParent(transform, false);
+            }
+
+            for (int x = 0; x < locks.Width; x++)
+            {
+                for (int y = 0; y < locks.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (!locks.HasLock(pos))
+                        continue;
+
+                    SpriteRenderer renderer = GetLockView();
+                    renderer.transform.position = GridToWorld(pos);
+                    _lockViews[pos] = renderer;
+                }
+            }
+        }
+
+        private SpriteRenderer GetLockView()
+        {
+            while (_lockPool.Count > 0)
+            {
+                SpriteRenderer pooled = _lockPool.Pop();
+                if (pooled != null)
+                {
+                    pooled.gameObject.SetActive(true);
+                    return pooled;
+                }
+            }
+
+            // The generated cage sprite when available; a tinted outline until the
+            // sprite menu has been re-run (Match3 > Generate > Candy Sprites).
+            Sprite sprite = spriteLibrary != null ? spriteLibrary.LockCage : null;
+            bool fallback = sprite == null;
+            if (fallback)
+                sprite = Resources.Load<Sprite>("UI/ui_round_outline");
+
+            var go = new GameObject("Lock");
+            go.transform.SetParent(_lockRoot, false);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = 1; // cage sits over the candy
+            renderer.color = fallback ? LockFallbackTint : Color.white;
+            if (sprite != null)
+            {
+                float worldSize = sprite.rect.width / sprite.pixelsPerUnit;
+                go.transform.localScale = Vector3.one * (cellSize * 0.98f / worldSize);
+            }
+            return renderer;
+        }
+
+        private void ReleaseLockView(SpriteRenderer view)
+        {
+            if (view == null)
+                return;
+            view.gameObject.SetActive(false);
+            _lockPool.Push(view);
+        }
+
+        private void ApplyLockBreaks(CascadeStep step)
+        {
+            foreach (LockBreak lockBreak in step.LockBreaks)
+            {
+                if (!_lockViews.TryGetValue(lockBreak.Position, out SpriteRenderer view))
+                    continue;
+                EffectsView.TileBurst(view.transform.position, LockFallbackTint, 10);
+                _lockViews.Remove(lockBreak.Position);
+                ReleaseLockView(view);
+            }
+            if (step.LockBreaks.Count > 0)
+                AudioManager.Play(Sfx.Pop, 0.7f);
         }
 
         private void ApplyJellyHits(CascadeStep step)
@@ -315,6 +411,7 @@ namespace Match3.View
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
+            ApplyLockBreaks(step); // cages shatter first — their candies stay
             PlayDetonationJuice(step);
             if (step.Cleared.Count > 0)
                 AudioManager.Play(Sfx.Pop, 1f + 0.08f * step.CascadeIndex); // combos climb in pitch
@@ -367,10 +464,42 @@ namespace Match3.View
                 yield return RunAll(morphs);
             }
 
+            // Ingredients that reached the floor slide out below the board.
+            if (step.IngredientExits.Count > 0)
+            {
+                AudioManager.Play(Sfx.SpecialCreate, 0.8f);
+                var exits = new List<IEnumerator>();
+                foreach (IngredientExit exit in step.IngredientExits)
+                    if (_viewsById.TryGetValue(exit.Tile.Id, out TileView view))
+                        exits.Add(ExitAndRelease(exit, view));
+                yield return RunAll(exits);
+            }
+
             List<IEnumerator> moves = step.Falls.Select(AnimateFall)
                 .Concat(step.Spawns.Select(AnimateSpawn))
                 .ToList();
             yield return RunAll(moves);
+
+            // The end-of-move chocolate creep: the eaten candy squashes into a block.
+            foreach (ChocolateSpread spread in step.ChocolateSpreads)
+            {
+                if (_viewsById.TryGetValue(spread.Consumed.Id, out TileView victim))
+                {
+                    AudioManager.Play(Sfx.WrappedBlast, 0.6f);
+                    _viewsById.Remove(spread.Consumed.Id);
+                    (Sprite sprite, Color color) = VisualFor(spread.Spawned);
+                    yield return victim.MorphTo(spread.Spawned, sprite, color, morphDuration);
+                    _viewsById[spread.Spawned.Id] = victim;
+                }
+            }
+        }
+
+        private IEnumerator ExitAndRelease(IngredientExit exit, TileView view)
+        {
+            Vector3 target = GridToWorld(new GridPosition(exit.Position.X, -1));
+            yield return view.MoveTo(target, 0.25f);
+            _viewsById.Remove(exit.Tile.Id);
+            tilePool.Release(view);
         }
 
         private static bool IsCleared(CascadeStep step, int tileId) =>
@@ -526,6 +655,10 @@ namespace Match3.View
         {
             if (tile.IsColorBomb)
                 return new Color(0.25f, 0.2f, 0.3f);
+            if (tile.Kind == TileKind.Chocolate)
+                return new Color(0.36f, 0.22f, 0.12f);
+            if (tile.Kind == TileKind.Ingredient)
+                return new Color(0.95f, 0.88f, 0.72f);
 
             Color baseColor = _config.tileColors[tile.ColorIndex];
             switch (tile.Kind)

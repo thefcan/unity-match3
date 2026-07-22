@@ -121,6 +121,20 @@ namespace Match3.UI
                     return (UiTheme.StarSprite, UiTheme.Gold);
                 case ObjectiveType.ClearJelly:
                     return (UiTheme.Round, new Color(0.98f, 0.55f, 0.75f));
+                case ObjectiveType.ClearChocolate:
+                {
+                    Sprite chocolate = _candies != null ? _candies.For(0, TileKind.Chocolate) : null;
+                    return chocolate != null
+                        ? (chocolate, Color.white)
+                        : (UiTheme.Round, new Color(0.36f, 0.22f, 0.12f));
+                }
+                case ObjectiveType.CollectIngredients:
+                {
+                    Sprite ingredient = _candies != null ? _candies.For(0, TileKind.Ingredient) : null;
+                    return ingredient != null
+                        ? (ingredient, Color.white)
+                        : (UiTheme.CircleSprite, new Color(0.92f, 0.30f, 0.28f));
+                }
                 default:
                     Sprite candy = _candies != null ? _candies.For(objective.ColorIndex, TileKind.Normal) : null;
                     return candy != null

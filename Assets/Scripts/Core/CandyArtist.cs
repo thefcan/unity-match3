@@ -250,6 +250,160 @@ namespace Match3.Core
             return pixels;
         }
 
+        /// <summary>The chocolate block: a rounded brown slab with ridge grooves.</summary>
+        public static byte[] RenderChocolate(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float d = ShapeSdf(1, x, y); // the rounded square silhouette
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    float shade = Lerp(0.7f, 1.05f, (y + 1f) * 0.5f);
+                    float r = 0.42f * shade, g = 0.26f * shade, b = 0.14f * shade;
+
+                    // Three horizontal grooves make it read as a chocolate bar.
+                    float groove = Math.Min(Math.Abs(y - 0.34f), Math.Min(Math.Abs(y + 0.02f), Math.Abs(y + 0.38f)));
+                    if (groove < 0.045f)
+                    {
+                        float dark = Lerp(0.55f, 1f, groove / 0.045f);
+                        r *= dark; g *= dark; b *= dark;
+                    }
+
+                    float rim = Clamp01((d + 0.12f) / 0.12f);
+                    float rimMul = Lerp(1f, 0.62f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    float hd = Dist(x, y, -0.34f, 0.42f);
+                    if (hd < 0.26f)
+                    {
+                        float shine = (1f - hd / 0.26f) * 0.28f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>The ingredient: a cherry pair with stems and a leaf.</summary>
+        public static byte[] RenderIngredient(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    // Two cherries, slightly different sizes.
+                    float dA = Dist(x, y, -0.3f, -0.3f) - 0.36f;
+                    float dB = Dist(x, y, 0.34f, -0.42f) - 0.3f;
+                    // Stems: line segments from each cherry top to a shared point.
+                    float stemA = SegmentSdf(x, y, -0.24f, 0.02f, 0.06f, 0.62f) - 0.045f;
+                    float stemB = SegmentSdf(x, y, 0.3f, -0.16f, 0.06f, 0.62f) - 0.045f;
+                    // Leaf: a squashed disc by the stem top.
+                    float leaf = Dist((x - 0.28f) * 1.6f, y - 0.6f, 0f, 0f) - 0.22f;
+
+                    float r = 0f, g = 0f, b = 0f, alpha = 0f;
+
+                    float cherry = Math.Min(dA, dB);
+                    if (cherry < aa)
+                    {
+                        float a = Clamp01(0.5f - cherry / aa);
+                        float centre = dA < dB ? Dist(x, y, -0.3f, -0.3f) / 0.36f : Dist(x, y, 0.34f, -0.42f) / 0.3f;
+                        float shade = Lerp(1.05f, 0.6f, Clamp01(centre));
+                        r = 0.85f * shade; g = 0.16f * shade; b = 0.18f * shade;
+                        float hd = dA < dB ? Dist(x, y, -0.42f, -0.18f) : Dist(x, y, 0.26f, -0.32f);
+                        if (hd < 0.12f)
+                        {
+                            float shine = (1f - hd / 0.12f) * 0.55f;
+                            r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                        }
+                        alpha = a;
+                    }
+
+                    float green = Math.Min(Math.Min(stemA, stemB), leaf);
+                    if (green < aa)
+                    {
+                        float a = Clamp01(0.5f - green / aa);
+                        if (a > alpha)
+                        {
+                            r = 0.32f; g = 0.62f; b = 0.24f;
+                            alpha = a;
+                        }
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>
+        /// The licorice cage OVERLAY (transparent centre): a rounded frame with three
+        /// vertical bars, drawn over the locked candy by the view.
+        /// </summary>
+        public static byte[] RenderLockCage(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float body = ShapeSdf(1, x, y); // rounded square silhouette
+                    float frame = Math.Abs(body + 0.05f) - 0.07f; // hollow frame just inside the edge
+
+                    // Vertical bars at x = -0.4, 0, 0.4 spanning the body.
+                    float bars = Math.Min(Math.Abs(x + 0.4f), Math.Min(Math.Abs(x), Math.Abs(x - 0.4f))) - 0.055f;
+                    if (body > 0f)
+                        bars = 1f; // bars exist only inside the silhouette
+
+                    float d = Math.Min(frame, bars);
+                    float alpha = Clamp01(0.5f - d / aa) * 0.92f;
+                    if (alpha <= 0f)
+                    {
+                        WritePixel(pixels, (row * size + col) * 4, 0f, 0f, 0f, 0f);
+                        continue;
+                    }
+
+                    // Dark steel with a vertical sheen.
+                    float shade = Lerp(0.75f, 1.15f, (y + 1f) * 0.5f);
+                    float r = 0.30f * shade, g = 0.27f * shade, b = 0.36f * shade;
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>Distance from (x, y) to the segment (ax, ay)-(bx, by).</summary>
+        private static float SegmentSdf(float x, float y, float ax, float ay, float bx, float by)
+        {
+            float px = x - ax, py = y - ay;
+            float dx = bx - ax, dy = by - ay;
+            float lengthSq = dx * dx + dy * dy;
+            float t = lengthSq > 0f ? Clamp01((px * dx + py * dy) / lengthSq) : 0f;
+            float cx = px - dx * t, cy = py - dy * t;
+            return (float)Math.Sqrt(cx * cx + cy * cy);
+        }
+
         /// <summary>Signed distance to the silhouette for a colour index (negative = inside).</summary>
         private static float ShapeSdf(int shapeIndex, float x, float y)
         {

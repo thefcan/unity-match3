@@ -64,6 +64,8 @@ namespace Match3.Game
         public ObjectiveTracker Objectives { get; private set; }
         /// <summary>Moves mode: the level's jelly layer. Null when the level (or mode) has none.</summary>
         public JellyGrid Jelly { get; private set; }
+        /// <summary>Moves mode: the level's licorice locks. Null when the level has none.</summary>
+        public LockGrid Locks { get; private set; }
         public int Score { get; private set; }
         public int Level { get; private set; }
         /// <summary>Score needed to clear the current level (time attack).</summary>
@@ -229,6 +231,31 @@ namespace Match3.Game
                                            LevelDefinition.jellyRows, LevelDefinition.jellyLayers)
                     : null;
                 Resolver.AttachJelly(Jelly);
+
+                // Chapter-4 blockers: chocolate replaces candies in place (cannot
+                // create a match — it has no colour), locks pin their cells, and the
+                // ingredient dispenser arms the refill injector.
+                foreach (Vector2Int cell in LevelDefinition.chocolateCells ?? Array.Empty<Vector2Int>())
+                {
+                    var pos = new GridPosition(cell.x, cell.y);
+                    if (Board.IsInside(pos))
+                        Board.SetTile(pos, factory.CreateChocolate());
+                }
+                if (LevelDefinition.lockCells is { Length: > 0 })
+                {
+                    Locks = LockGrid.FromCells(Board.Width, Board.Height,
+                        System.Linq.Enumerable.Select(LevelDefinition.lockCells,
+                            cell => new GridPosition(cell.x, cell.y)));
+                }
+                else
+                {
+                    Locks = null;
+                }
+                Board.AttachLocks(Locks);
+                Resolver.AttachLocks(Locks);
+                if (LevelDefinition.ingredientCount > 0)
+                    Resolver.AttachIngredients(LevelDefinition.ingredientCount);
+
                 CurrentTarget = 0;
                 TimeLeft = 0f;
 
@@ -250,6 +277,8 @@ namespace Match3.Game
                 MovesLeft = 0;
                 Objectives = null;
                 Jelly = null;
+                Locks = null;
+                Board.AttachLocks(null);
                 CurrentTarget = levelConfig.TargetScoreForLevel(Level);
                 TimeLeft = levelConfig.timeLimit;
             }
@@ -262,7 +291,7 @@ namespace Match3.Game
             ApplyAmbience();
             MusicManager.PlayForLevel(Mode == GameMode.Moves ? Level : 1);
 
-            boardView.Initialize(Board, levelConfig, Jelly);
+            boardView.Initialize(Board, levelConfig, Jelly, Locks);
 
             ScoreChanged?.Invoke(Score);
             LevelChanged?.Invoke(Level);
