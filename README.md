@@ -4,11 +4,14 @@
   <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
 </p>
 
-A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (60
-levels in three slowly-shifting chapters, objectives, special candies, jelly, star
-ratings, saved progress) and the original **endless time-attack**. Deliberately built so the focus stays on **code
-architecture** — an engine-free, unit-tested C# core, a thin MonoBehaviour view
-layer, and classic design patterns used where they pull their weight.
+A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (80
+levels in four slowly-shifting chapters — objectives, special candies, jelly,
+licorice locks, spreading chocolate, ingredient drops, star ratings, daily streak
+rewards, saved + cloud-synced progress, generative chapter music) and the original
+**endless time-attack** with an online leaderboard. Deliberately built so the focus
+stays on **code architecture** — an engine-free, unit-tested C# core, a thin
+MonoBehaviour view layer, and classic design patterns used where they pull their
+weight.
 
 <p align="center">
   <img src="docs/design-main-menu.png" alt="Main menu with the scrollable level map" width="230">
@@ -20,7 +23,8 @@ layer, and classic design patterns used where they pull their weight.
 <p align="center"><sub><i>UI design previews (Stitch + Figma) — the game builds this exact language at runtime, no scene wiring.</i></sub></p>
 
 **The ambience drifts with the campaign** — every 20-level chapter slides towards a
-new palette (purple night → ocean teal → dusk plum), one gentle step per level:
+new palette (purple night → ocean teal → dusk plum → warm ember), one gentle step
+per level, and each chapter hums its own **procedurally composed music loop**:
 
 <p align="center">
   <img src="docs/design-hud-ocean.png" alt="Chapter 2 ambience — ocean teal" width="230">
@@ -31,26 +35,40 @@ new palette (purple night → ocean teal → dusk plum), one gentle step per lev
 > 🎬 *gameplay GIF placeholder — record with Cmd+Shift+5 on macOS and drop it here as `docs/gameplay.gif`*
 
 **Stack:** Unity 2022.3 LTS · 2D URP · TextMeshPro · Unity Test Framework (NUnit) ·
-no third-party assets — candy sprites, UI chrome and sound effects are all
-**procedurally generated**, the UI implements a Figma-authored design language
-(Baloo 2 + Nunito), and all "juice" is hand-rolled coroutine tweens + one
-runtime-built ParticleSystem.
+Unity Gaming Services (optional, anonymous auth + cloud save + leaderboards) ·
+no third-party assets — candy sprites, UI chrome, sound effects **and the music**
+are all **procedurally generated**, the UI implements a Figma-authored design
+language (Baloo 2 + Nunito), and all "juice" is hand-rolled coroutine tweens + one
+runtime-built ParticleSystem. Mobile-hardened: safe-area aware, 60 fps capped,
+pooled everything, virtualized level list, pause/settings with persisted options,
+haptics, and a colorblind sprite mode.
 
 ## Gameplay
 
 ### Moves campaign (Candy Crush style — the main mode)
 
-- **60 authored levels** on a scrollable level map, sequentially unlocked, each with
-  a **move limit** and **objectives** shown as icon chips over the board: reach a
-  score, collect N candies of a colour, or **clear all the jelly**.
+- **80 authored levels** on a scrollable (virtualized) level map, sequentially
+  unlocked, each with a **move limit** and **objectives** shown as icon chips over
+  the board: reach a score, collect N candies of a colour, **clear all the jelly**,
+  **crush the chocolate**, or **bring the ingredients home**.
 - **Chapters that drift, never jump.** Every 20 levels is a chapter with its own
-  ambience — purple night → ocean teal → dusk plum — and each level interpolates
-  1/20th of the way towards the next palette (`ThemeCurve`, unit-tested to never
-  shift a colour channel more than 0.02 per level). Difficulty repeats the chapter
-  rhythm one notch harder; candy colours and controls never change.
+  ambience — purple night → ocean teal → dusk plum → warm ember — and each level
+  interpolates 1/20th of the way towards the next palette (`ThemeCurve`, unit-tested
+  to never shift a colour channel more than 0.02 per level) while `MusicComposer`'s
+  chapter loop crossfades underneath. Difficulty repeats the chapter rhythm one
+  notch harder; candy colours and controls never change.
 - **Jelly blockers** (from level 8): translucent cells under the candies, in one or
   two layers. A match on a jelly cell peels one layer; jelly sticks to the CELL, so
   candies fall through it. Late levels widen the jelly and double its layers.
+- **Chapter 4 blockers** (levels 61–80, taught in five-level acts):
+  **licorice locks** pin their candy — a hit breaks the cage, the candy survives,
+  and gravity treats the cell as a floor; **chocolate** is immobile, crumbles next
+  to any clear, and *eats a neighbouring candy* at the end of every move that
+  ignored it; **ingredients** are indestructible colourless pieces that trickle in
+  through refills and score when they reach the bottom row.
+- **Daily streak rewards:** a 7-day calendar (menu → DAILY) of extra-moves and
+  special-candy head starts, with local "your treat is ready / streak about to
+  melt" notifications — fully offline, clock-rollback safe.
 - **Special candies** from match shapes:
 
   | Shape | Candy | Detonation |
@@ -72,10 +90,24 @@ runtime-built ParticleSystem.
 ### Time attack (the original endless mode)
 
 Race a countdown to rising score targets; 4+ matches add seconds; endless levels on
-the same board. Reachable from the main menu; all its original rules are intact.
+the same board. Reachable from the main menu — and its scores feed an **online
+leaderboard** (menu → RANKS) where every submission passes a **Cloud Code
+plausibility check** server-side (`ScoreBounds`: no run may score faster than
+physically possible).
 
 Shared by both modes: cascades with rising multipliers, auto-shuffle on dead boards
-(a board holding a colour bomb is never dead), idle move hints, drag-to-swap input.
+(a board holding a colour bomb is never dead), idle move hints, drag-to-swap input,
+a pause/settings overlay (music + SFX + haptics + colorblind + reminders, all
+persisted), and Android back-button handling.
+
+### Cloud sync (optional, free)
+
+With the Unity Gaming Services packages installed and a project linked
+(`docs/UGS-SETUP.md`, no credit card), the game signs in **anonymously** at boot
+and syncs progress: per-level **max-stars merging** (`ProgressMerger`, a CRDT-style
+join — no sync order or retry can ever lose progress). The game is strictly
+**local-first**: nothing ever blocks the menu, and every cloud failure silently
+degrades to local-only play.
 
 ## Architecture
 
@@ -95,19 +127,26 @@ re-derives rules, so logic and presentation can't drift apart.
 
 Core rule units, each small and independently tested:
 
-- `Board` — match runs, gravity, refill, possible moves (incl. activation swaps), shuffle
-- `JellyGrid` — the per-CELL blocker layer; matches damage it, gravity ignores it
+- `Board` — match runs, gravity (immobile cells act as floors), refill, possible
+  moves (incl. activation swaps), immobile-preserving shuffle
+- `JellyGrid` / `LockGrid` — the per-CELL blocker layers; matches damage jelly and
+  break locks, gravity ignores jelly but rests on locks
 - `SpecialMatchAnalyzer` — match *shape* → which special is born, and in which cell
 - `DetonationRules` — pure blast geometry (rows, columns, blasts, colour/board wipes)
 - `SwapRules` — classifies special+special / bomb swaps
 - `CascadeResolver` — the wave loop: combos → matches → creations → detonation
-  worklist (chains, wrapped double-blast) → jelly damage → score → clear/morph →
-  gravity → refill
-- `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` — moves-mode win logic & save
-- `LevelCurve` / `ThemeCurve` — the 60-level difficulty curve and the per-chapter
-  ambience drift (single source for generated assets and runtime tinting)
-- `CandyArtist` / `UiArtist` / `SfxSynth` — procedural candy sprites, UI chrome and
-  sounds (pure pixel/sample math, no engine types)
+  worklist (chains, wrapped double-blast) → lock absorption → chocolate crumble →
+  ingredient exits → jelly damage → score → clear/morph → gravity → refill (+
+  ingredient injection), and the end-of-move chocolate spread
+- `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` / `ProgressMerger` —
+  moves-mode win logic, save, and the conflict-free cloud merge
+- `DailyStreak` / `MetaState` — the login-streak rules and their tolerant save format
+- `LevelCurve` / `ThemeCurve` — the 80-level difficulty curve (chapter-4 blocker
+  acts included) and the per-chapter ambience drift (single source for generated
+  assets and runtime tinting)
+- `CandyArtist` / `UiArtist` / `SfxSynth` / `MusicComposer` — procedural candy
+  sprites, UI chrome, sounds and loop-perfect chapter music (pure pixel/sample
+  math, no engine types; the music wraps note tails around the loop seam)
 
 ### Game flow (State pattern)
 
@@ -159,21 +198,29 @@ variables, fonts and generated sprites, so restyling the game is a one-file edit
 
 Everything visual/audible ships generated, and can be regenerated inside Unity:
 
-- **Match3 → Generate → Candy Sprites** — 21 PNGs (5 colours × normal/stripedH/
-  stripedV/wrapped + colour bomb) drawn by `CandyArtist`: one silhouette per colour
-  (circle/square/triangle/diamond/hexagon) so candies stay tellable-apart without
-  colour vision.
+- **Match3 → Generate → Candy Sprites** — 44 PNGs drawn by `CandyArtist`: 5 colours
+  × normal/stripedH/stripedV/wrapped, the same set again with **colorblind glyph
+  badges**, the colour bomb, chocolate, the ingredient cherries and the licorice
+  cage. One silhouette per colour so candies stay tellable-apart without colour
+  vision even before the badge mode.
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
-- **Match3 → Generate → Level Definitions** — the 60 campaign levels + catalog
-  from `LevelCurve` (jelly rows included).
+- **Match3 → Generate → Level Definitions** — the 80 campaign levels + catalog
+  from `LevelCurve` (jelly, locks, chocolate and ingredient counts included).
 - **Match3 → Generate → Sound Effects** — 10 WAVs synthesized by `SfxSynth`.
+- **Match3 → Generate → Music** — one loop-perfect stereo track per chapter from
+  `MusicComposer` (deterministic: same chapter, same bytes).
+- **Match3 → Generate → Sprite Atlas / Font Assets** — the candy atlas (draw-call
+  batching) and pre-baked TMP SDF fonts (no runtime rasterization hitches).
+- **Match3 → Setup → Apply Mobile Settings** — portrait lock, IL2CPP + ARM64,
+  safe-area flag, vSync off on every tier, URP HDR/shadows off, Android ASTC
+  texture overrides, mono SFX.
 - **Match3 → Setup → Add Scenes To Build** — registers MainMenu + Game scenes.
 
 ## Testing
 
-**203 EditMode tests, all green** — the core is tested without ever opening a scene:
+**265 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -189,14 +236,23 @@ Assets/Tests/EditMode/
 ├── SpecialBoardTests.cs          bombs never colour-match, bomb keeps a board playable
 ├── ObjectiveTrackerTests.cs      collection/score objectives, star thresholds
 ├── JellyTests.cs                 jelly damage/recording, double layers, morph-cell hits, curve
-├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 60-level campaign rhythm
+├── LockTests.cs                  lock absorption, dormant locked specials, gravity floors,
+│                                 pinned shuffles, dead-board detection, jelly shielding
+├── ChocolateTests.cs             adjacent crumbling, deterministic spread, spread suppression,
+│                                 immobility, no spread without a player move
+├── IngredientTests.cs            fall-and-exit flow, blast immunity, refill injection budget
+├── DailyStreakTests.cs           streak rules (rollback-safe), 7-day reward cycle, meta roundtrip
+├── MusicComposerTests.cs         byte determinism, exact bar lengths, stereo PCM headers
+├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
+├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 80-level campaign rhythm,
+│                                 chapter-4 blocker acts, chapter 0-2 immutability landmarks
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
 
 Plus **3 PlayMode smoke tests** (`Assets/Tests/PlayMode/SceneSmokeTests.cs`) that
 boot the real scenes: the Game scene builds a full match-free board in Moves mode
 with the runtime UI attached, TimeAttack starts with a running clock, and the
-MainMenu builds its 60-row level map. These catch what unit tests can't — broken
+MainMenu builds its level map. These catch what unit tests can't — broken
 scene references, missing Resources assets, lifecycle ordering.
 
 Run in Unity via **Window → General → Test Runner** (EditMode and PlayMode tabs),
@@ -238,8 +294,9 @@ Assets/
 
 ## Scope cuts (deliberate)
 
-Kept out to leave obvious seams to grow from: **frosting-style blockers that occupy
-the cell** (jelly shipped and shows the pattern — a state grid beside the board, a
-per-step recording list, an `ObjectiveType`), **non-rectangular boards**,
-**ingredients**, **boosters/economy**. The objective model and `TileFactory` are
-the intended extension points.
+Kept out to leave obvious seams to grow from: **non-rectangular boards**,
+**boosters/economy**, and **account linking** (cloud identity is anonymous-only
+for now). Locks, chocolate and ingredients all landed through the seams the jelly
+layer established — a state grid or tile kind beside the board, a per-step
+recording list, an `ObjectiveType` — which is exactly how the next mechanic
+should arrive too.
