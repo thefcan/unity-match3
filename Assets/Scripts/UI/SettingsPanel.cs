@@ -63,6 +63,8 @@ namespace Match3.UI
             if (_game != null)
                 _game.PhaseChanged += HandlePhaseChanged;
             Prefs.Changed += RefreshFromPrefs;
+            CloudBridge.StatusChanged += RefreshCloudStatus;
+            RefreshCloudStatus();
         }
 
         private void OnDisable()
@@ -70,7 +72,10 @@ namespace Match3.UI
             if (_game != null)
                 _game.PhaseChanged -= HandlePhaseChanged;
             Prefs.Changed -= RefreshFromPrefs;
+            CloudBridge.StatusChanged -= RefreshCloudStatus;
         }
+
+        private void RefreshCloudStatus() => SetCloudStatus(CloudBridge.StatusText);
 
         private void HandlePhaseChanged(GamePhase phase)
         {

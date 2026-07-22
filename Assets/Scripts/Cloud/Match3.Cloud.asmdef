@@ -1,0 +1,32 @@
+{
+    "name": "Match3.Cloud",
+    "rootNamespace": "Match3.Cloud",
+    "references": [
+        "Match3.Core",
+        "Match3.Game",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.CloudSave",
+        "Unity.Services.Leaderboards",
+        "Unity.Services.CloudCode",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UGS_PACKAGES"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.services.core",
+            "expression": "1.0",
+            "define": "UGS_PACKAGES"
+        }
+    ],
+    "noEngineReferences": false
+}

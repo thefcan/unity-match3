@@ -30,6 +30,23 @@ namespace Match3.UI
         private readonly System.Collections.Generic.List<LevelRow> _rows = new System.Collections.Generic.List<LevelRow>();
         private int _firstRowIndex = -1;
 
+        private void OnEnable()
+        {
+            CloudBridge.ProgressRefreshed += HandleProgressRefreshed;
+        }
+
+        private void OnDisable()
+        {
+            CloudBridge.ProgressRefreshed -= HandleProgressRefreshed;
+        }
+
+        /// <summary>A cloud merge changed the save — rebind the visible rows to it.</summary>
+        private void HandleProgressRefreshed()
+        {
+            _firstRowIndex = -1;
+            RefreshVisibleRows();
+        }
+
         private void Start()
         {
             // The menu wears the theme of wherever the player currently is in the

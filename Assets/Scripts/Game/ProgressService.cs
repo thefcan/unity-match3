@@ -38,6 +38,13 @@ namespace Match3.Game
                 Repository.Save(_current);
         }
 
+        /// <summary>Cloud sync: swaps in a merged profile and persists it immediately.</summary>
+        public static void ReplaceCurrent(PlayerProgress progress)
+        {
+            _current = progress ?? new PlayerProgress();
+            Repository.Save(_current);
+        }
+
         /// <summary>Swap the backing store (tests / tooling). Resets the cache.</summary>
         public static void OverrideRepository(IProgressRepository repository)
         {
