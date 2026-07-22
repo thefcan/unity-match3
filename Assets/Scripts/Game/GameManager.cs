@@ -254,6 +254,7 @@ namespace Match3.Game
             // UI-refreshing events below so themed widgets read the current chapter.
             UiTheme.SetThemeForLevel(Mode == GameMode.Moves ? Level : 1);
             ApplyAmbience();
+            MusicManager.PlayForLevel(Mode == GameMode.Moves ? Level : 1);
 
             boardView.Initialize(Board, levelConfig, Jelly);
 

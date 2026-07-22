@@ -79,6 +79,7 @@ namespace Match3.UI
         {
             AudioManager.Play(Sfx.Win);
             Haptics.Heavy();
+            MusicManager.Duck();
             // "Next" jumps straight into the following level when the catalog has one;
             // otherwise the campaign is finished and the button replays this level.
             var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
@@ -142,12 +143,14 @@ namespace Match3.UI
         private void HandleLevelFailed()
         {
             AudioManager.Play(Sfx.Lose);
+            MusicManager.Duck();
             Show("Out of Moves!", $"Score {_game.Score}", "Retry", _game.Restart);
         }
 
         private void HandleGameEnded()
         {
             AudioManager.Play(Sfx.Lose);
+            MusicManager.Duck();
             Show("Time's Up!", $"Reached Level {_game.Level}\nScore {_game.Score}", "Restart", _game.Restart);
         }
 

@@ -32,8 +32,10 @@ namespace Match3.UI
 
         private void Start()
         {
-            // The menu wears the theme of wherever the player currently is in the campaign.
+            // The menu wears the theme of wherever the player currently is in the
+            // campaign — and hums its chapter's music.
             UiTheme.SetThemeForLevel(ProgressService.Current.HighestUnlocked);
+            MusicManager.PlayForLevel(ProgressService.Current.HighestUnlocked);
             if (Camera.main != null)
                 Camera.main.backgroundColor = UiTheme.ThemeBgBottom;
 
