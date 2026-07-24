@@ -3,7 +3,8 @@
     "rootNamespace": "Match3.EditorTools",
     "references": [
         "Match3.Core",
-        "Match3.Game"
+        "Match3.Game",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
