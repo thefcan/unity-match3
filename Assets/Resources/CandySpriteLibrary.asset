@@ -33,4 +33,28 @@ MonoBehaviour:
     stripedH: {fileID: 21300000, guid: 4b19d5c5dcf8706fcabe894eb53aa063, type: 3}
     stripedV: {fileID: 21300000, guid: 05409d03f7cc800ec816820122590ad1, type: 3}
     wrapped: {fileID: 21300000, guid: 332d7909a29df111ab68e0558c51735e, type: 3}
+  colorsColorblind:
+  - normal: {fileID: 21300000, guid: 101590bf06e734d028cc5a309eeb300e, type: 3}
+    stripedH: {fileID: 21300000, guid: 50a4a366080e5408c87f1f1ba2a1454b, type: 3}
+    stripedV: {fileID: 21300000, guid: 05b37bfff73dd4ee38929a2b47d265f0, type: 3}
+    wrapped: {fileID: 21300000, guid: 4becee0cf7ecd483495e9d3879d42759, type: 3}
+  - normal: {fileID: 21300000, guid: 1b0f7594668114113afbd01727b95ec0, type: 3}
+    stripedH: {fileID: 21300000, guid: 462048bcc4d5b457285726f23a29411b, type: 3}
+    stripedV: {fileID: 21300000, guid: 4d851d3801c904a46bf630b2f8ba10cc, type: 3}
+    wrapped: {fileID: 21300000, guid: 033d495c56c5b4652b35fbcf92839ce0, type: 3}
+  - normal: {fileID: 21300000, guid: 183448e17564e43a4a9356d3ffb78225, type: 3}
+    stripedH: {fileID: 21300000, guid: 0c1801d50e5534938b815703ffa32f6e, type: 3}
+    stripedV: {fileID: 21300000, guid: d5c4b51ed4d6842e3b36e597bc565bff, type: 3}
+    wrapped: {fileID: 21300000, guid: 93669743df5f2449a95a6c1f7d5baf7d, type: 3}
+  - normal: {fileID: 21300000, guid: 15f4f469681dd42eaa0a33676fce48da, type: 3}
+    stripedH: {fileID: 21300000, guid: 75796b03b31904e179cb902a4daeabee, type: 3}
+    stripedV: {fileID: 21300000, guid: e0ea3b80c908141aeacc887380edff8b, type: 3}
+    wrapped: {fileID: 21300000, guid: fe4aca844138d457fac05ad222e7b1ff, type: 3}
+  - normal: {fileID: 21300000, guid: a06d4511da69244288309256eaf0df69, type: 3}
+    stripedH: {fileID: 21300000, guid: 96b0fe4e4d1c94c5e82e18ead20b687c, type: 3}
+    stripedV: {fileID: 21300000, guid: aad598985d43a4cb2bf8d09e927194f5, type: 3}
+    wrapped: {fileID: 21300000, guid: 7ef52cc23dd2c46c0a5a6eecb7bf2a51, type: 3}
   colorBomb: {fileID: 21300000, guid: 27a05357a3e704063904f7c66f4ed24e, type: 3}
+  chocolate: {fileID: 21300000, guid: 6b1fc2bd503cd4841bff5889563fc492, type: 3}
+  ingredient: {fileID: 21300000, guid: 208c56aef428b4a83859975d863dc14e, type: 3}
+  lockCage: {fileID: 21300000, guid: 28b5a8d7cb2c24ed690352b18e729b5e, type: 3}
