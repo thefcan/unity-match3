@@ -100,9 +100,33 @@ namespace Match3.EditorTools
 
         private static void ApplyTextureSettings(StringBuilder report)
         {
-            int count = 0;
-            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D",
-                         new[] { "Assets/Sprites/Candies", "Assets/Resources/UI" }))
+            // Candies feed the sprite atlas, so their SOURCES must stay uncompressed:
+            // the atlas applies its own ASTC 6x6 (GenerateSpriteAtlas), and compressing
+            // the source too would both pack from lossy pixels and log a "Source
+            // Texture ... is using compressed format" warning on every pack. The
+            // originals are stripped from builds once packed, so this costs nothing.
+            int candyCount = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Sprites/Candies" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
+                    continue;
+
+                TextureImporterPlatformSettings android = importer.GetPlatformTextureSettings("Android");
+                if (!android.overridden && importer.textureCompression == TextureImporterCompression.Uncompressed)
+                    continue;
+
+                android.overridden = false;
+                importer.SetPlatformTextureSettings(android);
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+                candyCount++;
+            }
+
+            // Resources/UI sprites are NOT atlased (atlasing Resources duplicates
+            // texture memory) — they ship standalone, so they carry the ASTC override.
+            int uiCount = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Resources/UI" }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
@@ -120,9 +144,10 @@ namespace Match3.EditorTools
                 android.maxTextureSize = Mathf.Min(importer.maxTextureSize, 1024);
                 importer.SetPlatformTextureSettings(android);
                 importer.SaveAndReimport();
-                count++;
+                uiCount++;
             }
-            report.AppendLine($"- Texture: {count} sprite'a Android ASTC 6x6 override");
+
+            report.AppendLine($"- Texture: {uiCount} UI sprite ASTC 6x6; {candyCount} atlas kaynağı uncompressed");
         }
 
         private static void ApplyAudioSettings(StringBuilder report)
