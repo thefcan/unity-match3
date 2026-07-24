@@ -60,6 +60,7 @@ namespace Match3.View
                 tilePool.Release(view);
             _viewsById.Clear();
 
+            BuildBackdrop(board);
             BuildJellyOverlay(jelly);
             BuildLockOverlay(locks);
 
@@ -72,6 +73,33 @@ namespace Match3.View
                         SpawnView(tile, GridToWorld(pos));
                 }
             }
+        }
+
+        // ---- Board backdrop ------------------------------------------------------------
+        // The Stitch design sinks the board into a rounded container. One sliced
+        // sprite behind everything (order -20) — zero per-frame cost.
+
+        private SpriteRenderer _backdrop;
+
+        private void BuildBackdrop(Board board)
+        {
+            if (_backdrop == null)
+            {
+                var go = new GameObject("BoardBackdrop");
+                go.transform.SetParent(transform, false);
+                _backdrop = go.AddComponent<SpriteRenderer>();
+                _backdrop.sprite = Resources.Load<Sprite>("UI/ui_round"); // FullRect + 48px border → sliced-safe
+                _backdrop.drawMode = SpriteDrawMode.Sliced;
+                _backdrop.sortingOrder = -20; // under tiles (0), jelly (-1) and cages (+1)
+            }
+
+            if (_backdrop.sprite == null)
+                return;
+
+            Color card = Match3.UI.UiTheme.ThemeCard; // re-tinted per level on restart
+            _backdrop.color = new Color(card.r, card.g, card.b, 0.55f);
+            _backdrop.size = new Vector2(board.Width + 0.7f, board.Height + 0.7f) * cellSize;
+            _backdrop.transform.localPosition = Vector3.zero;
         }
 
         // ---- Jelly overlay -----------------------------------------------------------
