@@ -241,7 +241,8 @@ namespace Match3.UI
             rect.anchoredPosition = new Vector2(24f, -24f);
 
             var image = go.GetComponent<Image>();
-            UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Slot);
+            // Gold pill per the Stitch menu — the daily gift is the one "warm" opener.
+            UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Gold);
 
             var button = go.GetComponent<Button>();
             button.targetGraphic = image;
@@ -250,6 +251,7 @@ namespace Match3.UI
             TMP_Text label = CreateText("Label", go.transform, Vector2.zero, 34f, FontStyles.Bold);
             UiTheme.ApplyFont(label, UiTheme.ButtonFont);
             label.text = "DAILY";
+            label.color = new Color(0.24f, 0.16f, 0.02f); // dark on gold
             var labelRect = label.rectTransform;
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
@@ -263,7 +265,7 @@ namespace Match3.UI
             badgeRect.sizeDelta = new Vector2(30f, 30f);
             badgeRect.anchoredPosition = new Vector2(-4f, 4f);
             var badgeImage = _badge.GetComponent<Image>();
-            UiTheme.ApplySprite(badgeImage, UiTheme.CircleSprite, UiTheme.Gold);
+            UiTheme.ApplySprite(badgeImage, UiTheme.CircleSprite, UiTheme.Cta); // pink pops on the gold pill
             badgeImage.raycastTarget = false;
             RefreshBadge();
         }

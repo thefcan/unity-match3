@@ -94,10 +94,15 @@ namespace Match3.UI
             Stretch(background.rectTransform, Vector2.zero, Vector2.one);
             background.raycastTarget = false;
 
+            // Faint candy silhouettes between the gradient and the UI (Stitch decor).
+            BuildFloatingCandies(canvas);
+
             Transform content = BuildSafeAreaHost(canvas);
 
             TMP_Text title = NewText("Title", content, "Candy Match", 112f, FontStyles.Bold, UiTheme.TitleFont);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(980f, 150f));
+            title.outlineWidth = 0.08f; // soft gold halo, straight from the Stitch logo
+            title.outlineColor = new Color32(255, 199, 61, 140);
 
             // the five candy dots under the logo
             var dots = NewRect("CandyDots", content);
@@ -115,8 +120,9 @@ namespace Match3.UI
 
             var catalogForCount = Resources.Load<LevelCatalog>("LevelCatalog");
             int levelCount = catalogForCount != null && catalogForCount.Count > 0 ? catalogForCount.Count : 60;
-            TMP_Text subtitle = NewText("Subtitle", content, $"A sweet {levelCount}-level campaign", 38f, FontStyles.Normal, UiTheme.BodyFont);
-            subtitle.color = UiTheme.TextDim;
+            TMP_Text subtitle = NewText("Subtitle", content, $"A SWEET {levelCount}-LEVEL CAMPAIGN", 32f, FontStyles.Bold, UiTheme.BodyFont);
+            subtitle.color = new Color(UiTheme.Gold.r, UiTheme.Gold.g, UiTheme.Gold.b, 0.85f);
+            subtitle.characterSpacing = 4f;
             Anchor(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(900f, 60f));
 
             TMP_Text mapLabel = NewText("MapLabel", content, "L E V E L   M A P", 30f, FontStyles.Bold, UiTheme.BodyFont);
@@ -228,6 +234,16 @@ namespace Match3.UI
         {
             private static readonly Color BadgeDone = new Color(0.16f, 0.55f, 0.35f);
 
+            // Shown on the row that OPENS each chapter (levels 21/41/61) — names
+            // follow the ThemeCurve anchors the chapters drift between.
+            private static readonly string[] ChapterCaptions =
+            {
+                "CHAPTER 1 — PURPLE NIGHT",
+                "CHAPTER 2 — OCEAN TEAL",
+                "CHAPTER 3 — DUSK PLUM",
+                "CHAPTER 4 — EMBER DAWN",
+            };
+
             private readonly GameObject _go;
             private readonly RectTransform _rect;
             private readonly CanvasGroup _group;
@@ -236,6 +252,7 @@ namespace Match3.UI
             private readonly Image _chip;
             private readonly TMP_Text _number;
             private readonly TMP_Text _label;
+            private readonly TMP_Text _chapter;
             private readonly Image[] _pips = new Image[3];
             private readonly Image _badge;
             private readonly TMP_Text _badgeLabel;
@@ -279,22 +296,35 @@ namespace Match3.UI
                 _number = NewText("Number", _chip.transform, string.Empty, 44f, FontStyles.Bold, UiTheme.ButtonFont);
                 Stretch(_number.rectTransform, Vector2.zero, Vector2.one);
 
+                // Stitch card layout: title upper-left, star pips UNDER the title,
+                // status badge / lock on the right edge.
                 _label = NewText("Label", _go.transform, string.Empty, 44f, FontStyles.Bold, UiTheme.BodyFont);
                 _label.alignment = TextAlignmentOptions.MidlineLeft;
                 var labelRect = _label.rectTransform;
-                labelRect.anchorMin = new Vector2(0f, 0f);
-                labelRect.anchorMax = new Vector2(0.6f, 1f);
-                labelRect.offsetMin = new Vector2(150f, 0f);
-                labelRect.offsetMax = Vector2.zero;
+                labelRect.anchorMin = labelRect.anchorMax = new Vector2(0f, 0.5f);
+                labelRect.pivot = new Vector2(0f, 0.5f);
+                labelRect.anchoredPosition = new Vector2(150f, 16f);
+                labelRect.sizeDelta = new Vector2(430f, 52f);
+
+                _chapter = NewText("Chapter", _go.transform, string.Empty, 22f, FontStyles.Bold, UiTheme.BodyFont);
+                _chapter.alignment = TextAlignmentOptions.MidlineLeft;
+                _chapter.color = UiTheme.Gold;
+                _chapter.characterSpacing = 3f;
+                var chapterRect = _chapter.rectTransform;
+                chapterRect.anchorMin = chapterRect.anchorMax = new Vector2(0f, 0.5f);
+                chapterRect.pivot = new Vector2(0f, 0.5f);
+                chapterRect.anchoredPosition = new Vector2(150f, 54f);
+                chapterRect.sizeDelta = new Vector2(430f, 28f);
+                _chapter.gameObject.SetActive(false);
 
                 for (int i = 0; i < 3; i++)
                 {
                     Image pip = NewImage($"Star{i}", _go.transform, UiTheme.StarDim);
                     UiTheme.ApplySprite(pip, UiTheme.StarSprite, UiTheme.StarDim);
                     var pipRect = pip.rectTransform;
-                    pipRect.anchorMin = pipRect.anchorMax = new Vector2(1f, 0.5f);
-                    pipRect.sizeDelta = new Vector2(56f, 56f);
-                    pipRect.anchoredPosition = new Vector2(-52f - (2 - i) * 64f, 0f);
+                    pipRect.anchorMin = pipRect.anchorMax = new Vector2(0f, 0.5f);
+                    pipRect.sizeDelta = new Vector2(44f, 44f);
+                    pipRect.anchoredPosition = new Vector2(172f + i * 50f, -32f);
                     if (pip.sprite == null) // fallback: rotated square reads as a diamond pip
                         pip.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
                     pip.raycastTarget = false;
@@ -307,8 +337,8 @@ namespace Match3.UI
                 UiTheme.ApplySprite(_badge, UiTheme.Pill, UiTheme.Cta);
                 var badgeRect = _badge.rectTransform;
                 badgeRect.anchorMin = badgeRect.anchorMax = new Vector2(1f, 0.5f);
-                badgeRect.sizeDelta = new Vector2(140f, 54f);
-                badgeRect.anchoredPosition = new Vector2(-320f, 0f);
+                badgeRect.sizeDelta = new Vector2(150f, 56f);
+                badgeRect.anchoredPosition = new Vector2(-110f, 0f); // right edge, Stitch-style
                 _badge.raycastTarget = false;
 
                 _badgeLabel = NewText("Label", _badge.transform, string.Empty, 26f, FontStyles.Bold, UiTheme.BodyFont);
@@ -347,6 +377,14 @@ namespace Match3.UI
                 _label.text = $"Level {number}";
                 _label.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
 
+                bool chapterStart = number > 1 && (number - 1) % Match3.Core.ThemeCurve.ChapterLength == 0;
+                _chapter.gameObject.SetActive(chapterStart);
+                if (chapterStart)
+                {
+                    int chapter = (number - 1) / Match3.Core.ThemeCurve.ChapterLength;
+                    _chapter.text = ChapterCaptions[Mathf.Clamp(chapter, 0, ChapterCaptions.Length - 1)];
+                }
+
                 for (int i = 0; i < _pips.Length; i++)
                 {
                     _pips[i].gameObject.SetActive(unlocked);
@@ -373,7 +411,7 @@ namespace Match3.UI
             int next = Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1, catalog != null && catalog.Count > 0 ? catalog.Count : 1);
 
             // primary CTA: jump straight into the furthest unlocked level
-            Button cta = NewButton("ContinueButton", canvas, $"Continue  -  Level {next}", UiTheme.PillPink, Color.white,
+            Button cta = NewButton("ContinueButton", canvas, $"Continue  –  Level {next}  >", UiTheme.PillPink, Color.white,
                 UiTheme.TextPrimary, () => StartLevel(catalog != null ? catalog.Get(next) : null, next));
             Anchor((RectTransform)cta.transform, new Vector2(0.5f, 0f), new Vector2(0f, 260f), new Vector2(720f, 132f));
 
@@ -402,6 +440,40 @@ namespace Match3.UI
             GameSession.SelectedLevel = null;
             GameSession.SelectedLevelIndex = 1;
             SceneManager.LoadScene("Game");
+        }
+
+        /// <summary>
+        /// Five faint, statically-placed candy silhouettes between the gradient and
+        /// the UI — the Stitch backdrop decor. No animation, so zero per-frame cost.
+        /// </summary>
+        private static void BuildFloatingCandies(Transform canvas)
+        {
+            var library = Resources.Load<CandySpriteLibrary>("CandySpriteLibrary");
+            if (library == null)
+                return;
+
+            (Vector2 pos, float size, float angle, int color)[] spots =
+            {
+                (new Vector2(-380f, 620f), 240f, -18f, 0),
+                (new Vector2(420f, 380f), 190f, 24f, 2),
+                (new Vector2(-430f, -240f), 210f, 12f, 3),
+                (new Vector2(400f, -520f), 260f, -28f, 4),
+                (new Vector2(-120f, -760f), 170f, 40f, 1),
+            };
+            foreach ((Vector2 pos, float size, float angle, int color) spot in spots)
+            {
+                Sprite sprite = library.For(spot.color, Match3.Core.TileKind.Normal);
+                if (sprite == null)
+                    continue;
+                Image decor = NewImage($"Decor{spot.color}", canvas, new Color(1f, 1f, 1f, 0.05f));
+                decor.sprite = sprite;
+                decor.raycastTarget = false;
+                var rect = decor.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = Vector2.one * spot.size;
+                rect.anchoredPosition = spot.pos;
+                rect.localRotation = Quaternion.Euler(0f, 0f, spot.angle);
+            }
         }
 
         // ---- Small UI builders --------------------------------------------------------
