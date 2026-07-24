@@ -22,7 +22,8 @@ namespace Match3.UI
         private GameManager _game;
         private GameObject _root;
         private CandySpriteLibrary _candies;
-        private readonly List<(GameObject chip, Image icon, TMP_Text count)> _chips = new List<(GameObject, Image, TMP_Text)>();
+        private readonly List<(GameObject chip, Image icon, TMP_Text count, Image outline)> _chips = new List<(GameObject, Image, TMP_Text, Image)>();
+        private readonly List<int> _visible = new List<int>(); // tracker indices minus the Score goal
 
         public static ObjectiveBarView Attach(Transform parent, GameManager game)
         {
@@ -31,7 +32,7 @@ namespace Match3.UI
             var rect = (RectTransform)host.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -300f);
+            rect.anchoredPosition = new Vector2(0f, -292f); // just under the 250-tall top bar
             rect.sizeDelta = new Vector2(1000f, ChipHeight);
 
             // Same lifecycle trick as LevelResultPanel: construct deactivated so
@@ -91,13 +92,29 @@ namespace Match3.UI
                 return;
             }
 
-            _root.SetActive(true);
-            EnsureChipCount(tracker.Count);
-
+            // The Score goal is OWNED by the HUD's gold progress bar (ScoreProgressBar);
+            // its five-digit counter is exactly what used to wrap inside a pill here.
+            _visible.Clear();
             for (int i = 0; i < tracker.Count; i++)
             {
+                if (tracker.At(i).Type != ObjectiveType.Score)
+                    _visible.Add(i);
+            }
+
+            if (_visible.Count == 0)
+            {
+                _root.SetActive(false);
+                return;
+            }
+
+            _root.SetActive(true);
+            EnsureChipCount(_visible.Count);
+
+            for (int c = 0; c < _visible.Count; c++)
+            {
+                int i = _visible[c];
                 Objective objective = tracker.At(i);
-                (GameObject chipGo, Image icon, TMP_Text count) = _chips[i];
+                (GameObject chipGo, Image icon, TMP_Text count, Image outline) = _chips[c];
 
                 // Re-tint the pill each refresh — the chapter theme drifts per level.
                 if (chipGo.TryGetComponent(out Image pill))
@@ -110,6 +127,12 @@ namespace Match3.UI
                 bool done = tracker.IsComplete(i);
                 count.text = $"{tracker.Progress(i)}/{objective.TargetAmount}";
                 count.color = done ? UiTheme.Gold : UiTheme.TextPrimary;
+                outline.gameObject.SetActive(done); // gold rim on finished goals (Stitch)
+
+                // Pills hug their text: long counters widen the chip instead of wrapping.
+                float textWidth = count.GetPreferredValues(count.text).x;
+                ((RectTransform)chipGo.transform).sizeDelta =
+                    new Vector2(Mathf.Max(196f, 124f + textWidth), ChipHeight);
             }
         }
 
@@ -151,11 +174,11 @@ namespace Match3.UI
                 _chips[i].chip.SetActive(i < needed);
         }
 
-        private (GameObject chip, Image icon, TMP_Text count) BuildChip()
+        private (GameObject chip, Image icon, TMP_Text count, Image outline) BuildChip()
         {
             var chipGo = new GameObject($"Chip{_chips.Count}", typeof(RectTransform), typeof(Image));
             chipGo.transform.SetParent(_root.transform, false);
-            ((RectTransform)chipGo.transform).sizeDelta = new Vector2(250f, ChipHeight);
+            ((RectTransform)chipGo.transform).sizeDelta = new Vector2(196f, ChipHeight);
             var pill = chipGo.GetComponent<Image>();
             UiTheme.ApplySprite(pill, UiTheme.Pill, UiTheme.Slot);
             pill.raycastTarget = false;
@@ -174,16 +197,30 @@ namespace Match3.UI
             var countRect = (RectTransform)countGo.transform;
             countRect.anchorMin = new Vector2(0f, 0f);
             countRect.anchorMax = new Vector2(1f, 1f);
-            countRect.offsetMin = new Vector2(100f, 0f);
-            countRect.offsetMax = new Vector2(-16f, 0f);
+            countRect.offsetMin = new Vector2(96f, 0f);
+            countRect.offsetMax = new Vector2(-20f, 0f);
             var count = countGo.AddComponent<TextMeshProUGUI>();
-            count.fontSize = 40f;
+            count.fontSize = 36f;
             count.fontStyle = FontStyles.Bold;
             count.alignment = TextAlignmentOptions.Center;
+            count.enableWordWrapping = false; // the chip resizes; the counter never breaks
             count.raycastTarget = false;
             UiTheme.ApplyFont(count, UiTheme.ButtonFont);
 
-            return (chipGo, icon, count);
+            // Gold rim, shown only when the goal is complete.
+            var outlineGo = new GameObject("Outline", typeof(RectTransform), typeof(Image));
+            outlineGo.transform.SetParent(chipGo.transform, false);
+            var outlineRect = (RectTransform)outlineGo.transform;
+            outlineRect.anchorMin = Vector2.zero;
+            outlineRect.anchorMax = Vector2.one;
+            outlineRect.offsetMin = Vector2.zero;
+            outlineRect.offsetMax = Vector2.zero;
+            var outline = outlineGo.GetComponent<Image>();
+            UiTheme.ApplySprite(outline, UiTheme.PillOutline, UiTheme.Gold);
+            outline.raycastTarget = false;
+            outlineGo.SetActive(false);
+
+            return (chipGo, icon, count, outline);
         }
     }
 }

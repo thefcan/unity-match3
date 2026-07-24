@@ -120,7 +120,8 @@ namespace Match3.UI
                 return;
 
             _shownTenths = int.MinValue; // the clock label was repurposed — drop its cache
-            timeText.text = $"Moves {movesLeft}";
+            // Bare number: the top bar draws a small "MOVES" caption above this label.
+            timeText.text = movesLeft.ToString();
             timeText.color = movesLeft <= 3 ? lowTimeColor : normalTimeColor;
         }
 
@@ -172,7 +173,7 @@ namespace Match3.UI
 
         private void HandleLevelChanged(int level)
         {
-            levelText.text = $"Level {level}";
+            levelText.text = $"LEVEL {level}"; // small caps caption over the score (top bar)
             if (gameManager.Mode == GameMode.Moves && gameManager.Objectives != null)
                 targetText.text = ObjectiveBarPresent ? string.Empty : ObjectiveSummary(gameManager.Objectives);
             else

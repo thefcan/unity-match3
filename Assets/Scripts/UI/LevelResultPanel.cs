@@ -326,16 +326,18 @@ namespace Match3.UI
             if (safe == null)
                 safe = BuildSafeAreaHost(canvas);
 
-            if (safe.Find("HudTopCard") == null)
-                BuildHudCard(safe);
+            Transform topBar = safe.Find("HudTopCard");
+            if (topBar == null)
+                topBar = BuildTopBar(safe, game);
             if (safe.Find(nameof(ObjectiveBarView)) == null)
                 ObjectiveBarView.Attach(safe, game);
             // The result panel stays OUTSIDE the safe area on purpose: its dim overlay
             // should bleed under the notch, and its card is centred anyway.
             if (canvas.transform.Find(nameof(LevelResultPanel)) == null)
                 LevelResultPanel.Attach(canvas, game);
+            // buttonHost = the top bar: the pause opener docks inside its right edge.
             if (canvas.transform.Find(nameof(SettingsPanel)) == null)
-                SettingsPanel.Attach(canvas, safe, game);
+                SettingsPanel.Attach(canvas, topBar, game);
         }
 
         /// <summary>
@@ -364,21 +366,92 @@ namespace Match3.UI
             return go.transform;
         }
 
-        /// <summary>The design's top-bar card, slid BEHIND the scene-authored HUD labels.</summary>
-        private static void BuildHudCard(Transform parent)
+        /// <summary>
+        /// The Stitch top bar: one rounded card holding the moves/time stat (left),
+        /// level caption + score (centre), the pause opener (right — added by
+        /// SettingsPanel) and a gold score progress bar along its bottom edge.
+        /// The scene-authored HUD labels are adopted INTO the card and re-laid
+        /// from code, so the scene file itself never changes.
+        /// </summary>
+        private static Transform BuildTopBar(Transform safe, GameManager game)
         {
             var go = new GameObject("HudTopCard", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            go.transform.SetAsFirstSibling(); // behind every HUD label
+            go.transform.SetParent(safe, false);
+            go.transform.SetAsFirstSibling(); // behind the banner text and overlays
             var rect = (RectTransform)go.transform;
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.sizeDelta = new Vector2(-40f, 430f);
-            rect.anchoredPosition = new Vector2(0f, -14f);
+            rect.sizeDelta = new Vector2(-32f, 250f);
+            rect.anchoredPosition = new Vector2(0f, -16f);
             var image = go.GetComponent<Image>();
-            UiTheme.ApplySprite(image, UiTheme.Round, new Color(UiTheme.Card.r, UiTheme.Card.g, UiTheme.Card.b, 0.88f));
+            UiTheme.ApplySprite(image, UiTheme.Round, new Color(UiTheme.Card.r, UiTheme.Card.g, UiTheme.Card.b, 0.92f));
             image.raycastTarget = false;
+
+            // Tiny gold caps caption over the left stat block.
+            CreateBarCaption(go.transform, game != null && game.Mode == GameMode.TimeAttack ? "TIME" : "MOVES");
+
+            // Left: the clock/moves value. Centre: level caption over the big score.
+            AdoptLabel(safe, "TimeText", go.transform, new Vector2(0f, 1f), new Vector2(130f, -122f), new Vector2(240f, 96f), 60f);
+            AdoptLabel(safe, "ScoreText", go.transform, new Vector2(0.5f, 1f), new Vector2(0f, -122f), new Vector2(480f, 96f), 72f);
+            TMP_Text level = AdoptLabel(safe, "LevelText", go.transform, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(480f, 40f), 26f);
+            if (level != null)
+            {
+                level.color = UiTheme.TextDim;
+                level.characterSpacing = 6f;
+            }
+
+            // The old target line's info lives in the progress caption now.
+            Transform target = safe.Find("TargetText");
+            if (target != null)
+                target.gameObject.SetActive(false);
+
+            ScoreProgressBar.Attach(go.transform, game);
+            return go.transform;
+        }
+
+        private static void CreateBarCaption(Transform bar, string caption)
+        {
+            var go = new GameObject("ModeCaption", typeof(RectTransform));
+            go.transform.SetParent(bar, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(130f, -46f);
+            rect.sizeDelta = new Vector2(240f, 40f);
+            var text = go.AddComponent<TextMeshProUGUI>();
+            text.text = caption;
+            text.fontSize = 26f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = UiTheme.Gold;
+            text.characterSpacing = 6f;
+            text.raycastTarget = false;
+            UiTheme.ApplyFont(text, UiTheme.BodyFont);
+        }
+
+        /// <summary>Reparents a scene-authored HUD label into the bar and re-styles it in place.</summary>
+        private static TMP_Text AdoptLabel(Transform safe, string name, Transform bar,
+                                           Vector2 anchor, Vector2 position, Vector2 size, float fontSize)
+        {
+            Transform label = safe.Find(name);
+            if (label == null)
+                return null; // a scene without this label — tolerate
+
+            label.SetParent(bar, false);
+            var rect = (RectTransform)label;
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            if (!label.TryGetComponent(out TMP_Text text))
+                return null;
+            text.enableAutoSizing = false;
+            text.fontSize = fontSize;
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            return text;
         }
     }
 }

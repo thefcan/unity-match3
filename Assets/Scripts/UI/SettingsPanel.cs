@@ -209,16 +209,30 @@ namespace Match3.UI
             }
         }
 
-        /// <summary>The opener: a small round "II" (game) / "..." (menu) button, top-right in the safe area.</summary>
+        /// <summary>
+        /// The opener: a small round "II" (game) / "..." (menu) button. In game mode
+        /// <paramref name="buttonHost"/> is the HUD top bar and the button docks inside
+        /// its right edge, centred on the stat row; in menu mode it sits top-right of
+        /// the safe area.
+        /// </summary>
         private void BuildOpenerButton(Transform buttonHost)
         {
             var go = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(buttonHost, false);
             var rect = (RectTransform)go.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(1f, 1f);
-            rect.sizeDelta = new Vector2(88f, 88f);
-            rect.anchoredPosition = new Vector2(-24f, -24f);
+            if (_game != null)
+            {
+                rect.pivot = new Vector2(1f, 0.5f);
+                rect.sizeDelta = new Vector2(96f, 96f);
+                rect.anchoredPosition = new Vector2(-26f, -104f);
+            }
+            else
+            {
+                rect.pivot = new Vector2(1f, 1f);
+                rect.sizeDelta = new Vector2(88f, 88f);
+                rect.anchoredPosition = new Vector2(-24f, -24f);
+            }
 
             var image = go.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.CircleSprite, UiTheme.Slot);
