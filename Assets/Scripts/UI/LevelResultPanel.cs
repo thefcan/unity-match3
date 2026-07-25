@@ -322,6 +322,9 @@ namespace Match3.UI
             if (game == null || canvas == null)
                 return;
 
+            // The scene-authored canvas honours the accessibility text scale too.
+            UiTheme.ApplyUiScale(canvas.GetComponent<UnityEngine.UI.CanvasScaler>());
+
             Transform safe = canvas.transform.Find("SafeArea");
             if (safe == null)
                 safe = BuildSafeAreaHost(canvas);

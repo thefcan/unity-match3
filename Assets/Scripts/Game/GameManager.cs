@@ -29,6 +29,9 @@ namespace Match3.Game
     /// </summary>
     public sealed class GameManager : MonoBehaviour
     {
+        /// <summary>Relaxed mode's move budget — big enough to never run out, small enough to render.</summary>
+        public const int RelaxedMovesLimit = 999;
+
         [SerializeField] private LevelConfig levelConfig;
         [SerializeField] private BoardView boardView;
         [SerializeField] private InputController inputController;
@@ -279,7 +282,9 @@ namespace Match3.Game
                 Resolver = new CascadeResolver(LevelDefinition.ToScoreConfig(), factory, _random);
 
                 Level = GameSession.SelectedLevelIndex;
-                MovesLeft = LevelDefinition.movesLimit;
+                // Relaxed mode: effectively unlimited moves (the HUD shows ∞). Wins
+                // cap at one star (see LevelWonState), so the economy holds.
+                MovesLeft = Prefs.RelaxedOn ? RelaxedMovesLimit : LevelDefinition.movesLimit;
                 Objectives = new ObjectiveTracker(LevelDefinition.ToObjectives());
                 Jelly = LevelDefinition.jellyRows > 0
                     ? JellyGrid.BottomRows(LevelDefinition.width, LevelDefinition.height,

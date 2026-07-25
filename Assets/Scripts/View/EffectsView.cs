@@ -33,18 +33,23 @@ namespace Match3.View
         /// <summary>A small confetti burst in the candy's colour where it popped.</summary>
         public static void TileBurst(Vector3 position, Color color, int count = 12)
         {
+            if (Match3.Game.Prefs.ReducedMotionOn)
+                count = Mathf.Max(1, count / 3);
             Instance.Emit(position, color, count, 2.6f);
         }
 
         /// <summary>A bigger, faster burst for detonation origins.</summary>
         public static void BlastBurst(Vector3 position, Color color)
         {
-            Instance.Emit(position, color, 34, 5f);
+            int count = Match3.Game.Prefs.ReducedMotionOn ? 10 : 34;
+            Instance.Emit(position, color, count, 5f);
         }
 
         /// <summary>Bumps the camera briefly — wrapped blasts, bombs, big combos.</summary>
         public static void Shake(float amplitude = 0.12f, float duration = 0.18f)
         {
+            if (Match3.Game.Prefs.ReducedMotionOn)
+                return; // accessibility: camera stays still
             Instance.StartShake(amplitude, duration);
         }
 

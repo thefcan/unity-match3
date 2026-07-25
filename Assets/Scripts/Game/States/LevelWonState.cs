@@ -37,7 +37,9 @@ namespace Match3.Game
                 }
             }
 
-            int stars = StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores);
+            int stars = StarCalculator.Cap(
+                StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores),
+                Prefs.RelaxedOn);
             ProgressService.RecordWin(Game.Level, stars);
             MetaService.RegisterLevelOutcome(won: true);
 

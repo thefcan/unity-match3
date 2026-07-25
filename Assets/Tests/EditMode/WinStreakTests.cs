@@ -71,4 +71,24 @@ namespace Match3.Tests
             Assert.IsTrue(restored.LevelInProgress);
         }
     }
+
+    /// <summary>Relaxed mode's star economy: completion pays one star, mastery none extra.</summary>
+    public sealed class RelaxedModeTests
+    {
+        [Test]
+        public void RelaxedWins_CapAtOneStar()
+        {
+            Assert.AreEqual(1, StarCalculator.Cap(3, relaxedMode: true));
+            Assert.AreEqual(1, StarCalculator.Cap(2, relaxedMode: true));
+            Assert.AreEqual(1, StarCalculator.Cap(1, relaxedMode: true));
+            Assert.AreEqual(0, StarCalculator.Cap(0, relaxedMode: true));
+        }
+
+        [Test]
+        public void NormalWins_PassThroughUncapped()
+        {
+            Assert.AreEqual(3, StarCalculator.Cap(3, relaxedMode: false));
+            Assert.AreEqual(0, StarCalculator.Cap(0, relaxedMode: false));
+        }
+    }
 }

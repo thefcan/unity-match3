@@ -279,7 +279,7 @@ namespace Match3.EditorTools
             for (char c = ' '; c <= '~'; c++)
                 sb.Append(c); // full printable ASCII
             sb.Append("çğıöşüÇĞİÖŞÜ"); // Turkish
-            sb.Append("★☆×—–’‘“”…");   // typographic extras used by the UI
+            sb.Append("★☆×—–’‘“”…∞");  // typographic extras used by the UI (∞ = Relaxed mode)
             return sb.ToString();
         }
     }

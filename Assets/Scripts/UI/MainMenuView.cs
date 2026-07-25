@@ -78,6 +78,7 @@ namespace Match3.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1080f, 1920f);
             scaler.matchWidthOrHeight = 0.5f;
+            UiTheme.ApplyUiScale(scaler); // accessibility "Big text"
             return canvas;
         }
 

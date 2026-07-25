@@ -16,6 +16,9 @@ namespace Match3.Game
         private const string HapticsKey = "opt_haptics";
         private const string ColorblindKey = "opt_colorblind";
         private const string NotificationsKey = "opt_notifications";
+        private const string RelaxedKey = "opt_relaxed";
+        private const string ReducedMotionKey = "opt_reduced_motion";
+        private const string BigTextKey = "opt_big_text";
 
         /// <summary>Raised after any setting changes. Listeners re-read the properties they use.</summary>
         public static event System.Action Changed;
@@ -48,6 +51,27 @@ namespace Match3.Game
         {
             get => PlayerPrefs.GetInt(NotificationsKey, 1) != 0;
             set => SetBool(NotificationsKey, value);
+        }
+
+        /// <summary>No move limit, wins cap at one star — the chill/no-fail mode.</summary>
+        public static bool RelaxedOn
+        {
+            get => PlayerPrefs.GetInt(RelaxedKey, 0) != 0;
+            set => SetBool(RelaxedKey, value);
+        }
+
+        /// <summary>Accessibility: no camera shake, far fewer particles.</summary>
+        public static bool ReducedMotionOn
+        {
+            get => PlayerPrefs.GetInt(ReducedMotionKey, 0) != 0;
+            set => SetBool(ReducedMotionKey, value);
+        }
+
+        /// <summary>Accessibility: ~10% larger UI via canvas reference resolution.</summary>
+        public static bool BigTextOn
+        {
+            get => PlayerPrefs.GetInt(BigTextKey, 0) != 0;
+            set => SetBool(BigTextKey, value);
         }
 
         private static void SetBool(string key, bool value)

@@ -128,6 +128,15 @@ namespace Match3.UI
                 return;
 
             _shownTenths = int.MinValue; // the clock label was repurposed — drop its cache
+            // Relaxed mode: the budget is effectively infinite — show it as such
+            // (falls back to the number until the ∞ glyph is baked into the font).
+            if (Prefs.RelaxedOn && movesLeft >= 900)
+            {
+                bool hasGlyph = timeText.font != null && timeText.font.HasCharacter('∞');
+                timeText.text = hasGlyph ? "∞" : movesLeft.ToString();
+                timeText.color = normalTimeColor;
+                return;
+            }
             // Bare number: the top bar draws a small "MOVES" caption above this label.
             timeText.text = movesLeft.ToString();
             timeText.color = movesLeft <= 3 ? lowTimeColor : normalTimeColor;

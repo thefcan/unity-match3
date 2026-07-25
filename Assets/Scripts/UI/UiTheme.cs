@@ -109,6 +109,19 @@ namespace Match3.UI
 
         // ---- Helpers --------------------------------------------------------------------
 
+        /// <summary>
+        /// Accessibility "Big text": the whole UI renders ~10% larger by shrinking the
+        /// canvas reference resolution. Called at every canvas creation and re-applied
+        /// live from GameBoot when the pref flips.
+        /// </summary>
+        public static void ApplyUiScale(UnityEngine.UI.CanvasScaler scaler)
+        {
+            if (scaler == null || scaler.uiScaleMode != UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize)
+                return;
+            float scale = Match3.Game.Prefs.BigTextOn ? 1.1f : 1f;
+            scaler.referenceResolution = new Vector2(1080f, 1920f) / scale;
+        }
+
         /// <summary>Applies a theme font when available; silently keeps the default otherwise.</summary>
         public static void ApplyFont(TMP_Text text, TMP_FontAsset font)
         {

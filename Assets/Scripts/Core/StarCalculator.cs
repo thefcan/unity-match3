@@ -19,5 +19,12 @@ namespace Match3.Core
                     stars++;
             return stars;
         }
+
+        /// <summary>
+        /// Relaxed mode caps wins at ONE star: completion counts, but mastery (2-3
+        /// stars, chest fuel) stays a normal-mode prize so the star economy holds.
+        /// </summary>
+        public static int Cap(int stars, bool relaxedMode) =>
+            relaxedMode ? Math.Min(stars, 1) : stars;
     }
 }

@@ -30,6 +30,11 @@ namespace Match3.Game
             AudioManager.SfxEnabled = Prefs.SfxOn;
             Haptics.Enabled = Prefs.HapticsOn;
             CandySpriteLibrary.ColorblindMode = Prefs.ColorblindOn;
+
+            // "Big text" flips live: rescale every canvas that exists right now
+            // (fresh canvases apply the scale themselves at creation).
+            foreach (UnityEngine.UI.CanvasScaler scaler in Object.FindObjectsOfType<UnityEngine.UI.CanvasScaler>())
+                Match3.UI.UiTheme.ApplyUiScale(scaler);
         }
     }
 
