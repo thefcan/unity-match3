@@ -23,9 +23,19 @@ namespace Match3.Game
 
         private IEnumerator Celebrate()
         {
-            int bonus = Game.MovesLeft * Game.LevelDefinition.movesBonusPoints;
-            if (bonus > 0)
-                Game.AddScore(bonus);
+            // Sugar Crush: unused moves become striped candies and everything on the
+            // board fires. The finale's own scoring REPLACES the old flat
+            // moves-remaining bonus — the spectacle IS the bonus now.
+            ResolutionResult finale = Game.Resolver.ResolveFinale(Game.Board, Game.MovesLeft);
+            if (finale.Steps.Count > 0)
+            {
+                Game.RaiseFinaleStarted();
+                foreach (CascadeStep step in finale.Steps)
+                {
+                    yield return Game.BoardView.PlayStep(step);
+                    Game.AddScore(step.Points);
+                }
+            }
 
             int stars = StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores);
             ProgressService.RecordWin(Game.Level, stars);

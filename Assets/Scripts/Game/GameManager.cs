@@ -50,6 +50,8 @@ namespace Match3.Game
         public event Action ObjectivesChanged;
         /// <summary>Moves mode: level won; carries the 0-3 star rating.</summary>
         public event Action<int> LevelWon;
+        /// <summary>Moves mode: the Sugar Crush finale is about to play (banner cue).</summary>
+        public event Action FinaleStarted;
         /// <summary>Moves mode: out of moves with objectives unfinished.</summary>
         public event Action LevelFailed;
 
@@ -400,6 +402,11 @@ namespace Match3.Game
         public void RaiseLevelWon(int stars)
         {
             LevelWon?.Invoke(stars);
+        }
+
+        public void RaiseFinaleStarted()
+        {
+            FinaleStarted?.Invoke();
         }
 
         public void RaiseLevelFailed()

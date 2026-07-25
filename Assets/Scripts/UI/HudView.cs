@@ -75,6 +75,7 @@ namespace Match3.UI
             gameManager.PhaseChanged += HandlePhaseChanged;
             gameManager.MovesChanged += HandleMovesChanged;
             gameManager.ObjectivesChanged += HandleObjectivesChanged;
+            gameManager.FinaleStarted += HandleFinaleStarted;
         }
 
         private void OnDisable()
@@ -87,6 +88,13 @@ namespace Match3.UI
             gameManager.PhaseChanged -= HandlePhaseChanged;
             gameManager.MovesChanged -= HandleMovesChanged;
             gameManager.ObjectivesChanged -= HandleObjectivesChanged;
+            gameManager.FinaleStarted -= HandleFinaleStarted;
+        }
+
+        /// <summary>The Sugar Crush moment — flash the classic banner over the board.</summary>
+        private void HandleFinaleStarted()
+        {
+            SetBanner("SWEET!");
         }
 
         private void Update()

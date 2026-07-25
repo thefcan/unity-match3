@@ -86,7 +86,85 @@ namespace Match3.Core
         public ResolutionResult ResolveSwap(Board board, GridPosition from, GridPosition to) =>
             ResolveInternal(board, from, to);
 
-        private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo)
+        /// <summary>
+        /// The end-of-level "Sugar Crush": unused moves convert normal candies into
+        /// striped ones (four per five moves — Candy Crush's classic rate), then EVERY
+        /// special on the board fires and the cascade runs to rest. Cleared specials
+        /// pay a finale bonus on top of normal scoring (striped 500, wrapped 1000,
+        /// colour bomb 5000). Chocolate never spreads during a finale (the level is
+        /// already won). Returns an empty recording when there is nothing to celebrate.
+        /// </summary>
+        public ResolutionResult ResolveFinale(Board board, int remainingMoves)
+        {
+            if (board == null) throw new ArgumentNullException(nameof(board));
+
+            var steps = new List<CascadeStep>();
+
+            int quota = Math.Max(0, remainingMoves) * 4 / 5;
+            if (_factory != null && quota > 0)
+            {
+                var candidates = new List<GridPosition>();
+                for (int x = 0; x < board.Width; x++)
+                {
+                    for (int y = 0; y < board.Height; y++)
+                    {
+                        var pos = new GridPosition(x, y);
+                        if (board[pos] is { } tile && tile.Kind == TileKind.Normal &&
+                            (_locks == null || !_locks.HasLock(pos)))
+                            candidates.Add(pos);
+                    }
+                }
+
+                var conversions = new List<SpecialCreation>();
+                for (int i = 0; i < quota && candidates.Count > 0; i++)
+                {
+                    int pick = _random != null ? _random.Next(candidates.Count) : 0;
+                    GridPosition pos = candidates[pick];
+                    candidates.RemoveAt(pick);
+
+                    Tile replaced = board[pos].Value;
+                    TileKind kind = _random != null && _random.Next(2) == 0 ? TileKind.StripedV : TileKind.StripedH;
+                    Tile striped = _factory.CreateSpecial(replaced.ColorIndex, kind);
+                    conversions.Add(new SpecialCreation(striped, replaced, pos, new[] { pos }));
+                    board.SetTile(pos, striped);
+                }
+
+                if (conversions.Count > 0)
+                {
+                    // A pure morph step: the view plays the conversions before the
+                    // detonation waves below sweep them all up.
+                    steps.Add(new CascadeStep(0,
+                        Array.Empty<ClearedTile>(), Array.Empty<TileFall>(), Array.Empty<TileSpawn>(),
+                        0, Array.Empty<int>(), conversions, Array.Empty<Detonation>(),
+                        Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
+                        Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>()));
+                }
+            }
+
+            ResolutionResult blast = ResolveInternal(board, null, null, finale: true);
+            steps.AddRange(blast.Steps);
+            return new ResolutionResult(steps);
+        }
+
+        /// <summary>Finale-only bonus for each special candy consumed by the celebration.</summary>
+        private static int FinaleBonus(IReadOnlyList<ClearedTile> cleared)
+        {
+            int bonus = 0;
+            foreach (ClearedTile clear in cleared)
+            {
+                bonus += clear.Tile.Kind switch
+                {
+                    TileKind.StripedH => 500,
+                    TileKind.StripedV => 500,
+                    TileKind.Wrapped => 1000,
+                    TileKind.ColorBomb => 5000,
+                    _ => 0,
+                };
+            }
+            return bonus;
+        }
+
+        private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo, bool finale = false)
         {
             if (board == null) throw new ArgumentNullException(nameof(board));
 
@@ -143,10 +221,28 @@ namespace Match3.Core
                 if (!comboWave)
                 {
                     List<MatchRun> runs = board.FindMatchRuns();
+                    bool seedFinale = finale && cascadeIndex == 0;
                     // A stray ingredient sitting on the bottom row keeps the cascade
                     // alive one more wave so its exit gets processed and recorded.
-                    if (runs.Count == 0 && primedWrapped.Count == 0 && !HasBottomIngredient(board))
+                    if (runs.Count == 0 && primedWrapped.Count == 0 && !seedFinale && !HasBottomIngredient(board))
                         break;
+
+                    // Finale seeding (Sugar Crush): wave 0 throws EVERY special on the
+                    // board into the clear set — the expansion below fires them all.
+                    // Locked cells join too: the lock pass turns those hits into plain
+                    // LockBreaks (the cage pops, the candy survives).
+                    if (seedFinale)
+                    {
+                        for (int x = 0; x < board.Width; x++)
+                        {
+                            for (int y = 0; y < board.Height; y++)
+                            {
+                                var pos = new GridPosition(x, y);
+                                if (board[pos] is { } special && special.IsSpecial)
+                                    clearSet.Add(pos);
+                            }
+                        }
+                    }
 
                     // Union the runs into the set of cells to clear; an L / T shape's
                     // shared corner collapses to one cell, cleared and scored once.
@@ -287,6 +383,8 @@ namespace Match3.Core
                     .Select(pos => new ClearedTile(board[pos].Value, pos))
                     .ToList();
                 int points = _scoreConfig.PointsFor(cleared.Count, cascadeIndex);
+                if (finale)
+                    points += FinaleBonus(cleared);
 
                 // Jelly takes one hit per matched cell — creation cells were matched
                 // too (the special morphs on top of the jelly it just damaged).
