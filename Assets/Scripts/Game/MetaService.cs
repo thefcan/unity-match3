@@ -64,6 +64,24 @@ namespace Match3.Game
             return reward;
         }
 
+        // ---- Win streak -----------------------------------------------------------------
+
+        public static int WinStreak => Current.WinStreak;
+
+        /// <summary>A moves-mode level is starting — an unfinished previous one breaks the streak.</summary>
+        public static void RegisterLevelStart()
+        {
+            WinStreakRules.RegisterStart(Current);
+            Save();
+        }
+
+        /// <summary>The level concluded (won or failed) — advance or reset the streak.</summary>
+        public static void RegisterLevelOutcome(bool won)
+        {
+            WinStreakRules.RegisterOutcome(Current, won);
+            Save();
+        }
+
         // ---- Booster inventory ---------------------------------------------------------
 
         public static int BoosterCount(BoosterKind kind) => Current.BoosterCount(kind);

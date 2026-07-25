@@ -319,6 +319,11 @@ namespace Match3.Game
                 // no-initial-matches board didn't already have.
                 if (MetaService.ConsumePendingReward() is { } boost)
                     ApplyStreakBoost(boost, factory);
+
+                // Butler's Gift: registering the start FIRST breaks the streak if the
+                // previous level was abandoned; then consecutive wins pre-load specials.
+                MetaService.RegisterLevelStart();
+                ApplyWinStreakPreload(factory);
             }
             else
             {
@@ -389,6 +394,20 @@ namespace Match3.Game
                     break;
                 }
             }
+        }
+
+        /// <summary>The win-streak preload ladder: 1 win = striped, 2 = +wrapped, 3+ = +colour bomb.</summary>
+        private void ApplyWinStreakPreload(TileFactory factory)
+        {
+            int tier = WinStreakRules.PreloadCount(MetaService.WinStreak);
+            if (tier <= 0)
+                return;
+
+            ApplyStreakBoost(new StreakReward(StreakRewardKind.StartStriped, 1), factory);
+            if (tier >= 2)
+                ApplyStreakBoost(new StreakReward(StreakRewardKind.StartWrapped, 1), factory);
+            if (tier >= 3)
+                ApplyStreakBoost(new StreakReward(StreakRewardKind.StartColorBomb, 1), factory);
         }
 
         /// <summary>Tints the scene's ambience (camera + HUD card) with the level's chapter theme.</summary>

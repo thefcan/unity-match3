@@ -409,6 +409,25 @@ namespace Match3.UI
                 target.gameObject.SetActive(false);
 
             ScoreProgressBar.Attach(go.transform, game);
+
+            // Win-streak badge (Butler's Gift): bottom-left, mirroring the caption.
+            var streakGo = new GameObject("WinStreak", typeof(RectTransform));
+            streakGo.transform.SetParent(go.transform, false);
+            var streakRect = (RectTransform)streakGo.transform;
+            streakRect.anchorMin = streakRect.anchorMax = new Vector2(0f, 0f);
+            streakRect.pivot = new Vector2(0f, 0f);
+            streakRect.sizeDelta = new Vector2(360f, 34f);
+            streakRect.anchoredPosition = new Vector2(34f, 54f);
+            var streakText = streakGo.AddComponent<TextMeshProUGUI>();
+            streakText.fontSize = 26f;
+            streakText.fontStyle = FontStyles.Bold;
+            streakText.alignment = TextAlignmentOptions.MidlineLeft;
+            streakText.color = UiTheme.Gold;
+            streakText.characterSpacing = 3f;
+            streakText.raycastTarget = false;
+            UiTheme.ApplyFont(streakText, UiTheme.BodyFont);
+            streakGo.AddComponent<WinStreakLabel>().Bind(game, streakText);
+
             return go.transform;
         }
 
@@ -430,6 +449,37 @@ namespace Match3.UI
             text.characterSpacing = 6f;
             text.raycastTarget = false;
             UiTheme.ApplyFont(text, UiTheme.BodyFont);
+        }
+
+        /// <summary>Tiny gold "WIN ×N" indicator driven by the win streak (empty at zero).</summary>
+        internal sealed class WinStreakLabel : MonoBehaviour
+        {
+            private GameManager _game;
+            private TMP_Text _text;
+
+            public void Bind(GameManager game, TMP_Text text)
+            {
+                _game = game;
+                _text = text;
+                _game.LevelChanged += HandleLevelChanged;
+                Refresh();
+            }
+
+            private void OnDestroy()
+            {
+                if (_game != null)
+                    _game.LevelChanged -= HandleLevelChanged;
+            }
+
+            private void HandleLevelChanged(int level) => Refresh();
+
+            private void Refresh()
+            {
+                if (_text == null)
+                    return;
+                int streak = MetaService.WinStreak;
+                _text.text = streak > 0 ? $"WIN ×{streak}" : string.Empty;
+            }
         }
 
         /// <summary>Reparents a scene-authored HUD label into the bar and re-styles it in place.</summary>

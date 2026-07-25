@@ -24,6 +24,8 @@ namespace Match3.Core
             sb.Append("hammers=").Append(state.Hammers).Append('\n');
             sb.Append("freeSwaps=").Append(state.FreeSwaps).Append('\n');
             sb.Append("shuffles=").Append(state.Shuffles).Append('\n');
+            sb.Append("winStreak=").Append(state.WinStreak).Append('\n');
+            sb.Append("levelInProgress=").Append(state.LevelInProgress ? 1 : 0).Append('\n');
             return sb.ToString();
         }
 
@@ -56,6 +58,8 @@ namespace Match3.Core
                     case "hammers": state.Hammers = Math.Max(0, value); break;
                     case "freeSwaps": state.FreeSwaps = Math.Max(0, value); break;
                     case "shuffles": state.Shuffles = Math.Max(0, value); break;
+                    case "winStreak": state.WinStreak = Math.Max(0, value); break;
+                    case "levelInProgress": state.LevelInProgress = value != 0; break;
                     // unknown keys: ignored (forward compatibility);
                     // files from before the booster patch simply keep the
                     // starter-pack defaults — everyone gets the gift once

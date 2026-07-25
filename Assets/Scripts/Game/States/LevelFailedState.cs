@@ -14,6 +14,7 @@ namespace Match3.Game
 
         public override void Enter()
         {
+            MetaService.RegisterLevelOutcome(won: false); // the win streak resets here
             Game.RaiseLevelFailed();
         }
     }

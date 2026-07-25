@@ -25,6 +25,12 @@ namespace Match3.Core
         public int FreeSwaps = 3;
         public int Shuffles = 3;
 
+        /// <summary>Consecutive moves-mode wins (see <see cref="WinStreakRules"/>).</summary>
+        public int WinStreak;
+
+        /// <summary>A level started but never concluded — set at start, cleared on win/fail.</summary>
+        public bool LevelInProgress;
+
         public int BoosterCount(BoosterKind kind)
         {
             switch (kind)
