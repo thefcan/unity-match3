@@ -21,6 +21,9 @@ namespace Match3.Core
             sb.Append("streak=").Append(state.Streak).Append('\n');
             sb.Append("pendingKind=").Append((int)state.PendingKind).Append('\n');
             sb.Append("pendingAmount=").Append(state.PendingAmount).Append('\n');
+            sb.Append("hammers=").Append(state.Hammers).Append('\n');
+            sb.Append("freeSwaps=").Append(state.FreeSwaps).Append('\n');
+            sb.Append("shuffles=").Append(state.Shuffles).Append('\n');
             return sb.ToString();
         }
 
@@ -50,7 +53,12 @@ namespace Match3.Core
                     case "streak": state.Streak = Math.Max(0, value); break;
                     case "pendingKind": state.PendingKind = (StreakRewardKind)value; break;
                     case "pendingAmount": state.PendingAmount = Math.Max(0, value); break;
-                    // unknown keys: ignored (forward compatibility)
+                    case "hammers": state.Hammers = Math.Max(0, value); break;
+                    case "freeSwaps": state.FreeSwaps = Math.Max(0, value); break;
+                    case "shuffles": state.Shuffles = Math.Max(0, value); break;
+                    // unknown keys: ignored (forward compatibility);
+                    // files from before the booster patch simply keep the
+                    // starter-pack defaults — everyone gets the gift once
                 }
             }
             return state;

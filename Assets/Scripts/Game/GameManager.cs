@@ -52,6 +52,8 @@ namespace Match3.Game
         public event Action<int> LevelWon;
         /// <summary>Moves mode: the Sugar Crush finale is about to play (banner cue).</summary>
         public event Action FinaleStarted;
+        /// <summary>Booster inventory or armed state changed (tray refresh).</summary>
+        public event Action BoostersChanged;
         /// <summary>Moves mode: out of moves with objectives unfinished.</summary>
         public event Action LevelFailed;
 
@@ -97,6 +99,7 @@ namespace Match3.Game
         private void OnEnable()
         {
             inputController.SwapRequested += HandleSwapRequested;
+            inputController.TapRequested += HandleTapRequested;
         }
 
         private void OnDisable()
@@ -104,6 +107,7 @@ namespace Match3.Game
             // Always unsubscribe what you subscribe — C# events hold strong references,
             // and a dangling handler on a destroyed object throws on the next invoke.
             inputController.SwapRequested -= HandleSwapRequested;
+            inputController.TapRequested -= HandleTapRequested;
         }
 
         private void Start()
@@ -191,11 +195,60 @@ namespace Match3.Game
 
         public void SetState(GameState next)
         {
+            // Any state change disarms a waiting booster — the states that need the
+            // armed info (hammer target, free-swap pair) receive it via constructor.
+            if (ArmedBooster != null)
+            {
+                ArmedBooster = null;
+                BoostersChanged?.Invoke();
+            }
+
             _currentState?.Exit();
             _currentState = next;
             PhaseChanged?.Invoke(next.Phase);
             next.Enter();
         }
+
+        // ---- Boosters -----------------------------------------------------------------
+
+        /// <summary>Armed booster awaiting its target (Hammer: a tap; FreeSwap: a swap gesture).</summary>
+        public BoosterKind? ArmedBooster { get; private set; }
+
+        /// <summary>
+        /// Tray click. Hammer/FreeSwap arm (or disarm on a second click) and wait for
+        /// the target gesture; Shuffle acts immediately. Moves mode + Playing only —
+        /// boosters never touch time attack (leaderboard purity).
+        /// </summary>
+        public bool ArmBooster(BoosterKind kind)
+        {
+            if (Mode != GameMode.Moves || CurrentPhase != GamePhase.Playing)
+                return false;
+
+            if (kind == BoosterKind.Shuffle)
+            {
+                if (!MetaService.TrySpendBooster(BoosterKind.Shuffle))
+                    return false;
+                BoostersChanged?.Invoke();
+                SetState(new ShuffleState(this, announced: false));
+                return true;
+            }
+
+            if (ArmedBooster == kind)
+            {
+                ArmedBooster = null; // toggle off
+                BoostersChanged?.Invoke();
+                return true;
+            }
+
+            if (MetaService.BoosterCount(kind) <= 0)
+                return false;
+
+            ArmedBooster = kind;
+            BoostersChanged?.Invoke();
+            return true;
+        }
+
+        public void RaiseBoostersChanged() => BoostersChanged?.Invoke();
 
         /// <summary>States are plain C# classes; they borrow MonoBehaviour's coroutine runner via this.</summary>
         public Coroutine RunCoroutine(IEnumerator routine) => StartCoroutine(routine);
@@ -308,6 +361,14 @@ namespace Match3.Game
                 MovesLeft += boost.Amount;
                 return;
             }
+
+            // Booster grants are banked at claim time (MetaService.Claim) and should
+            // never reach here — guard so a stray value can't fall through to the
+            // colour-bomb default below.
+            if (boost.Kind == StreakRewardKind.BoosterHammer ||
+                boost.Kind == StreakRewardKind.BoosterFreeSwap ||
+                boost.Kind == StreakRewardKind.BoosterShuffle)
+                return;
 
             for (int planted = 0; planted < boost.Amount; planted++)
             {
@@ -424,6 +485,12 @@ namespace Match3.Game
             // The current state decides whether input means anything right now.
             // No "isInputLocked" flags anywhere — that's the State pattern's job.
             _currentState?.OnSwapRequested(from, to);
+        }
+
+        private void HandleTapRequested(GridPosition cell)
+        {
+            ClearHint();
+            _currentState?.OnTapRequested(cell);
         }
     }
 }

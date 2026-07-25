@@ -40,7 +40,9 @@ namespace Match3.Game
 
         /// <summary>
         /// Claims today's reward if possible. A broken streak restarts at day 1.
-        /// The reward is stored as PENDING and applied to the next moves-mode level.
+        /// Board rewards (moves / special starts) are stored as PENDING and applied
+        /// to the next moves-mode level; booster grants go STRAIGHT into the
+        /// inventory — there is nothing to defer.
         /// </summary>
         public static StreakReward? Claim()
         {
@@ -51,9 +53,34 @@ namespace Match3.Game
             Current.Streak = status == StreakStatus.Broken ? 1 : Current.Streak + 1;
             Current.LastClaimDay = TodayDayNumber;
             StreakReward reward = DailyStreak.RewardFor(Current.Streak);
-            Current.SetPendingReward(reward);
+            switch (reward.Kind)
+            {
+                case StreakRewardKind.BoosterHammer: Current.AddBoosters(BoosterKind.Hammer, reward.Amount); break;
+                case StreakRewardKind.BoosterFreeSwap: Current.AddBoosters(BoosterKind.FreeSwap, reward.Amount); break;
+                case StreakRewardKind.BoosterShuffle: Current.AddBoosters(BoosterKind.Shuffle, reward.Amount); break;
+                default: Current.SetPendingReward(reward); break;
+            }
             Save();
             return reward;
+        }
+
+        // ---- Booster inventory ---------------------------------------------------------
+
+        public static int BoosterCount(BoosterKind kind) => Current.BoosterCount(kind);
+
+        public static void AddBoosters(BoosterKind kind, int amount)
+        {
+            Current.AddBoosters(kind, amount);
+            Save();
+        }
+
+        /// <summary>Spends one booster and persists; false when the shelf is empty.</summary>
+        public static bool TrySpendBooster(BoosterKind kind)
+        {
+            if (!Current.TrySpendBooster(kind))
+                return false;
+            Save();
+            return true;
         }
 
         /// <summary>Takes the pending reward (if any) — called once per level build.</summary>

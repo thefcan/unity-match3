@@ -338,6 +338,8 @@ namespace Match3.UI
             // buttonHost = the top bar: the pause opener docks inside its right edge.
             if (canvas.transform.Find(nameof(SettingsPanel)) == null)
                 SettingsPanel.Attach(canvas, topBar, game);
+            if (safe.Find(nameof(BoosterTray)) == null)
+                BoosterTray.Attach(safe, game);
         }
 
         /// <summary>

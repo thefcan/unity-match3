@@ -26,7 +26,25 @@ namespace Match3.Game
             if (Game.Board.IsImmobile(from) || Game.Board.IsImmobile(to))
                 return;
 
+            // An armed free-swap turns this gesture into the booster: no match
+            // requirement, no bounce-back, no move spent.
+            if (Game.ArmedBooster == BoosterKind.FreeSwap)
+            {
+                Game.SetState(new FreeSwapResolvingState(Game, from, to));
+                return;
+            }
+
             Game.SetState(new ResolvingState(Game, from, to));
+        }
+
+        public override void OnTapRequested(GridPosition cell)
+        {
+            if (Game.ArmedBooster != BoosterKind.Hammer)
+                return;
+            if (!Game.Board.IsInside(cell))
+                return;
+
+            Game.SetState(new HammerResolvingState(Game, cell));
         }
     }
 }

@@ -16,6 +16,11 @@ namespace Match3.Core
         StartStriped,
         StartWrapped,
         StartColorBomb,
+        // In-level booster grants (added with the booster kit; serialized as ints,
+        // so these must only ever be APPENDED).
+        BoosterHammer,
+        BoosterFreeSwap,
+        BoosterShuffle,
     }
 
     /// <summary>What a daily claim grants — applied to the NEXT moves-mode level.</summary>
@@ -59,12 +64,14 @@ namespace Match3.Core
             int day = ((streakDay - 1) % CycleLength + CycleLength) % CycleLength + 1;
             switch (day)
             {
+                // Odd days keep the original ladder (pinned by tests); the even days
+                // now stock the in-level booster shelf instead of raw moves.
                 case 1: return new StreakReward(StreakRewardKind.ExtraMoves, 2);
-                case 2: return new StreakReward(StreakRewardKind.ExtraMoves, 3);
+                case 2: return new StreakReward(StreakRewardKind.BoosterHammer, 2);
                 case 3: return new StreakReward(StreakRewardKind.StartStriped, 1);
-                case 4: return new StreakReward(StreakRewardKind.ExtraMoves, 4);
+                case 4: return new StreakReward(StreakRewardKind.BoosterFreeSwap, 2);
                 case 5: return new StreakReward(StreakRewardKind.StartWrapped, 1);
-                case 6: return new StreakReward(StreakRewardKind.ExtraMoves, 5);
+                case 6: return new StreakReward(StreakRewardKind.BoosterShuffle, 2);
                 default: return new StreakReward(StreakRewardKind.StartColorBomb, 1);
             }
         }

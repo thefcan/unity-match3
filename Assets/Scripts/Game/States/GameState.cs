@@ -46,5 +46,8 @@ namespace Match3.Game
 
         /// <summary>Called for every swap gesture; only PlayingState acts on it.</summary>
         public virtual void OnSwapRequested(GridPosition from, GridPosition to) { }
+
+        /// <summary>Called for every tap gesture; PlayingState uses it for the armed hammer.</summary>
+        public virtual void OnTapRequested(GridPosition cell) { }
     }
 }

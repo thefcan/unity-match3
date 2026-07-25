@@ -22,6 +22,9 @@ namespace Match3.View
 
         public event Action<GridPosition, GridPosition> SwapRequested;
 
+        /// <summary>Press + release on one cell without crossing the drag threshold (booster targeting).</summary>
+        public event Action<GridPosition> TapRequested;
+
         private Camera _camera;
         private GridPosition? _pressedCell;
         private Vector3 _pressedWorld;
@@ -36,6 +39,12 @@ namespace Match3.View
         {
             if (Input.GetMouseButtonDown(0))
             {
+                // Presses on UI (booster tray, pause button) must not leak onto the
+                // board — an armed hammer would smash whatever sat behind the button.
+                if (UnityEngine.EventSystems.EventSystem.current != null &&
+                    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    return;
+
                 _pressedWorld = PointerWorldPosition();
                 _pressedCell = boardView.WorldToGrid(_pressedWorld);
             }
@@ -54,6 +63,10 @@ namespace Match3.View
             }
             else if (Input.GetMouseButtonUp(0))
             {
+                // A release that never crossed the drag threshold is a TAP.
+                if (_pressedCell is { } cell &&
+                    (PointerWorldPosition() - _pressedWorld).magnitude < dragThreshold)
+                    TapRequested?.Invoke(cell);
                 _pressedCell = null;
             }
         }

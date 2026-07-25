@@ -146,6 +146,22 @@ namespace Match3.Core
             return new ResolutionResult(steps);
         }
 
+        /// <summary>
+        /// Booster: smash ONE cell (the hammer). The hit flows through the normal
+        /// wave machinery, so a special detonates, a lock pops (absorbing the hit),
+        /// jelly under the cell takes damage and chocolate crumbles — while an
+        /// indestructible ingredient shrugs it off, returning an EMPTY recording
+        /// (callers should refund the booster in that case). Never spreads
+        /// chocolate: a booster is not a move.
+        /// </summary>
+        public ResolutionResult ResolveHammer(Board board, GridPosition target)
+        {
+            if (board == null) throw new ArgumentNullException(nameof(board));
+            if (!board.IsInside(target))
+                return new ResolutionResult(Array.Empty<CascadeStep>());
+            return ResolveInternal(board, null, null, hammer: target);
+        }
+
         /// <summary>Finale-only bonus for each special candy consumed by the celebration.</summary>
         private static int FinaleBonus(IReadOnlyList<ClearedTile> cleared)
         {
@@ -164,7 +180,8 @@ namespace Match3.Core
             return bonus;
         }
 
-        private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo, bool finale = false)
+        private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo,
+                                                 bool finale = false, GridPosition? hammer = null)
         {
             if (board == null) throw new ArgumentNullException(nameof(board));
 
@@ -222,10 +239,17 @@ namespace Match3.Core
                 {
                     List<MatchRun> runs = board.FindMatchRuns();
                     bool seedFinale = finale && cascadeIndex == 0;
+                    bool seedHammer = hammer.HasValue && cascadeIndex == 0;
                     // A stray ingredient sitting on the bottom row keeps the cascade
                     // alive one more wave so its exit gets processed and recorded.
-                    if (runs.Count == 0 && primedWrapped.Count == 0 && !seedFinale && !HasBottomIngredient(board))
+                    if (runs.Count == 0 && primedWrapped.Count == 0 && !seedFinale && !seedHammer &&
+                        !HasBottomIngredient(board))
                         break;
+
+                    // Hammer seeding: the smashed cell enters the clear set and the
+                    // machinery below does the rest (detonation, lock, jelly, chocolate).
+                    if (seedHammer)
+                        clearSet.Add(hammer.Value);
 
                     // Finale seeding (Sugar Crush): wave 0 throws EVERY special on the
                     // board into the clear set — the expansion below fires them all.

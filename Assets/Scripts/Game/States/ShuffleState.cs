@@ -12,7 +12,16 @@ namespace Match3.Game
     /// </summary>
     public sealed class ShuffleState : GameState
     {
-        public ShuffleState(GameManager game) : base(game) { }
+        private readonly bool _announced;
+
+        /// <param name="announced">
+        /// True (dead board): show the "No moves!" banner beat first.
+        /// False (shuffle BOOSTER): the player asked for this — skip the drama.
+        /// </param>
+        public ShuffleState(GameManager game, bool announced = true) : base(game)
+        {
+            _announced = announced;
+        }
 
         public override GamePhase Phase => GamePhase.Shuffling;
 
@@ -23,8 +32,11 @@ namespace Match3.Game
 
         private IEnumerator Reshuffle()
         {
-            Game.RaiseShuffleStarted();
-            yield return new WaitForSeconds(0.6f); // let the "No moves!" banner read
+            if (_announced)
+            {
+                Game.RaiseShuffleStarted();
+                yield return new WaitForSeconds(0.6f); // let the "No moves!" banner read
+            }
 
             Game.Board.Shuffle(Game.Random);
             yield return Game.BoardView.AnimateReshuffle();
