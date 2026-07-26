@@ -37,6 +37,9 @@ namespace Match3.View
 
         private void Update()
         {
+            // Deliberately NOT an else-if chain: a press and release can land in the
+            // SAME frame (fast taps, synthetic input) — the chain swallowed the Up
+            // and the tap was lost with _pressedCell left stuck.
             if (Input.GetMouseButtonDown(0))
             {
                 // Presses on UI (booster tray, pause button) must not leak onto the
@@ -48,20 +51,22 @@ namespace Match3.View
                 _pressedWorld = PointerWorldPosition();
                 _pressedCell = boardView.WorldToGrid(_pressedWorld);
             }
-            else if (Input.GetMouseButton(0) && _pressedCell is { } from)
+
+            if (Input.GetMouseButton(0) && _pressedCell is { } from)
             {
                 Vector3 drag = PointerWorldPosition() - _pressedWorld;
-                if (drag.magnitude < dragThreshold)
-                    return;
+                if (drag.magnitude >= dragThreshold)
+                {
+                    GridPosition to = Mathf.Abs(drag.x) > Mathf.Abs(drag.y)
+                        ? from.Offset(drag.x > 0 ? 1 : -1, 0)
+                        : from.Offset(0, drag.y > 0 ? 1 : -1);
 
-                GridPosition to = Mathf.Abs(drag.x) > Mathf.Abs(drag.y)
-                    ? from.Offset(drag.x > 0 ? 1 : -1, 0)
-                    : from.Offset(0, drag.y > 0 ? 1 : -1);
-
-                _pressedCell = null; // one swap per press
-                SwapRequested?.Invoke(from, to);
+                    _pressedCell = null; // one swap per press
+                    SwapRequested?.Invoke(from, to);
+                }
             }
-            else if (Input.GetMouseButtonUp(0))
+
+            if (Input.GetMouseButtonUp(0))
             {
                 // A release that never crossed the drag threshold is a TAP.
                 if (_pressedCell is { } cell &&
