@@ -57,7 +57,9 @@ namespace Match3.UI
             int total = TotalStars();
             MetaState meta = MetaService.Current;
 
-            _starLine.text = $"★ {total}";
+            // No '★' glyph in TMP text — neither bundled TTF carries it (renders as
+            // tofu); the star is drawn as a SPRITE next to this number instead.
+            _starLine.text = total.ToString();
             int into = StarChest.StarsTowardNextChest(total);
             _barFill.anchorMax = new Vector2(Mathf.Clamp01(into / (float)StarChest.StarsPerChest), 1f);
 
@@ -66,7 +68,7 @@ namespace Match3.UI
             _claimLabel.text = pending > 0 ? $"OPEN {pending}" : "CLAIM";
             _nextLine.text = pending > 0
                 ? $"{pending} chest{(pending > 1 ? "s" : "")} ready!"
-                : $"{StarChest.StarsPerChest - into}★ to the next chest";
+                : $"{StarChest.StarsPerChest - into} stars to the next chest";
         }
 
         private void OnClaimClicked()
@@ -123,10 +125,18 @@ namespace Match3.UI
             UiTheme.ApplyFont(title, UiTheme.TitleFont);
             title.text = "STAR CHEST";
 
-            // Big gold star headline.
-            _starLine = CreateText("Stars", content, new Vector2(0f, 250f), 96f, FontStyles.Bold);
+            // Big gold star headline: sprite star + number (no '★' glyph in the fonts).
+            GameObject starGo = CreateRect("StarIcon", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(84f, 84f));
+            starGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(-90f, 250f);
+            var starIcon = starGo.AddComponent<Image>();
+            UiTheme.ApplySprite(starIcon, UiTheme.StarSprite, UiTheme.Gold);
+            starIcon.raycastTarget = false;
+
+            _starLine = CreateText("Stars", content, new Vector2(60f, 250f), 96f, FontStyles.Bold);
             UiTheme.ApplyFont(_starLine, UiTheme.TitleFont);
             _starLine.color = UiTheme.Gold;
+            _starLine.alignment = TextAlignmentOptions.MidlineLeft;
+            _starLine.rectTransform.sizeDelta = new Vector2(300f, 110f);
 
             // Progress bar into the current 20-star window.
             GameObject trackGo = CreateRect("Track", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(620f, 34f));

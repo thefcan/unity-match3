@@ -28,8 +28,23 @@ namespace Match3.Cloud
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            SceneManager.sceneLoaded += (_, _) => TryAttach();
-            TryAttach();
+            // The menu CANVAS is runtime-built in MainMenuView.Start, which runs
+            // AFTER sceneLoaded — a one-shot attach here always missed it and the
+            // RANKS opener never appeared. A tiny persistent poller retries until
+            // the canvas exists; TryAttach's own guards keep it idempotent.
+            var go = new GameObject("LeaderboardBootstrap");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<Bootstrapper>();
+        }
+
+        private sealed class Bootstrapper : MonoBehaviour
+        {
+            private void Update()
+            {
+                if (Time.frameCount % 30 != 0)
+                    return;
+                TryAttach();
+            }
         }
 
         private static void TryAttach()

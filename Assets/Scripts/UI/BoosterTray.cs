@@ -31,10 +31,12 @@ namespace Match3.UI
             var host = new GameObject(nameof(BoosterTray), typeof(RectTransform));
             host.transform.SetParent(safe, false);
             var rect = (RectTransform)host.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(1f, 0.5f);
-            rect.sizeDelta = new Vector2(150f, 3 * 104f + 2 * 14f);
-            rect.anchoredPosition = new Vector2(-16f, -60f); // below the board's midline
+            // Bottom-centre ROW: a side-docked tray overlapped the board's right
+            // column on narrow screens (seen in the standalone test build).
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.sizeDelta = new Vector2(3 * 200f + 2 * 20f, 110f);
+            rect.anchoredPosition = new Vector2(0f, 28f);
 
             host.SetActive(false);
             var tray = host.AddComponent<BoosterTray>();
@@ -93,10 +95,10 @@ namespace Match3.UI
                 var pillGo = new GameObject(Slots[i].label, typeof(RectTransform), typeof(Image), typeof(Button));
                 pillGo.transform.SetParent(transform, false);
                 var pillRect = (RectTransform)pillGo.transform;
-                pillRect.anchorMin = pillRect.anchorMax = new Vector2(0.5f, 1f);
-                pillRect.pivot = new Vector2(0.5f, 1f);
-                pillRect.sizeDelta = new Vector2(150f, 104f);
-                pillRect.anchoredPosition = new Vector2(0f, -i * 118f);
+                pillRect.anchorMin = pillRect.anchorMax = new Vector2(0f, 0.5f);
+                pillRect.pivot = new Vector2(0f, 0.5f);
+                pillRect.sizeDelta = new Vector2(200f, 104f);
+                pillRect.anchoredPosition = new Vector2(i * 220f, 0f);
 
                 var pill = pillGo.GetComponent<Image>();
                 UiTheme.ApplySprite(pill, UiTheme.Pill, UiTheme.ThemeSlot);

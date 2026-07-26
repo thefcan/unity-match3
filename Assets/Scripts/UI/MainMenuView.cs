@@ -100,8 +100,11 @@ namespace Match3.UI
 
             Transform content = BuildSafeAreaHost(canvas);
 
-            TMP_Text title = NewText("Title", content, "Candy Match", 112f, FontStyles.Bold, UiTheme.TitleFont);
-            Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(980f, 150f));
+            // 92pt in a 620-wide box: clears the corner opener pills on both sides
+            // (the 112pt/980 version collided with DAILY and CHEST on device).
+            TMP_Text title = NewText("Title", content, "Candy Match", 92f, FontStyles.Bold, UiTheme.TitleFont);
+            Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(620f, 130f));
+            title.enableWordWrapping = false;
             title.outlineWidth = 0.08f; // soft gold halo, straight from the Stitch logo
             title.outlineColor = new Color32(255, 199, 61, 140);
 

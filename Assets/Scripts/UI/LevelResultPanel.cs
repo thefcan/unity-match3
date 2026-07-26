@@ -405,8 +405,12 @@ namespace Match3.UI
             UiTheme.ApplySprite(image, UiTheme.Round, new Color(UiTheme.Card.r, UiTheme.Card.g, UiTheme.Card.b, 0.92f));
             image.raycastTarget = false;
 
-            // Tiny gold caps caption over the left stat block.
-            CreateBarCaption(go.transform, game != null && game.Mode == GameMode.TimeAttack ? "TIME" : "MOVES");
+            // Tiny gold caps caption over the left stat block. The MODE isn't known
+            // until BuildNewGame runs (after this bootstrap), so the caption re-reads
+            // it on LevelChanged instead of freezing the boot-time default.
+            TMP_Text modeCaption = CreateBarCaption(go.transform, "MOVES");
+            var captionLabel = modeCaption.gameObject.AddComponent<ModeCaptionLabel>();
+            captionLabel.Bind(game, modeCaption);
 
             // Left: the clock/moves value. Centre: level caption over the big score.
             AdoptLabel(safe, "TimeText", go.transform, new Vector2(0f, 1f), new Vector2(130f, -122f), new Vector2(240f, 96f), 60f);
@@ -446,7 +450,33 @@ namespace Match3.UI
             return go.transform;
         }
 
-        private static void CreateBarCaption(Transform bar, string caption)
+        /// <summary>Keeps the stat caption honest once the game mode is actually known.</summary>
+        internal sealed class ModeCaptionLabel : MonoBehaviour
+        {
+            private GameManager _game;
+            private TMP_Text _text;
+
+            public void Bind(GameManager game, TMP_Text text)
+            {
+                _game = game;
+                _text = text;
+                _game.LevelChanged += HandleLevelChanged;
+            }
+
+            private void OnDestroy()
+            {
+                if (_game != null)
+                    _game.LevelChanged -= HandleLevelChanged;
+            }
+
+            private void HandleLevelChanged(int level)
+            {
+                if (_text != null)
+                    _text.text = _game.Mode == GameMode.TimeAttack ? "TIME" : "MOVES";
+            }
+        }
+
+        private static TMP_Text CreateBarCaption(Transform bar, string caption)
         {
             var go = new GameObject("ModeCaption", typeof(RectTransform));
             go.transform.SetParent(bar, false);
@@ -464,6 +494,7 @@ namespace Match3.UI
             text.characterSpacing = 6f;
             text.raycastTarget = false;
             UiTheme.ApplyFont(text, UiTheme.BodyFont);
+            return text;
         }
 
         /// <summary>Tiny gold "WIN ×N" indicator driven by the win streak (empty at zero).</summary>

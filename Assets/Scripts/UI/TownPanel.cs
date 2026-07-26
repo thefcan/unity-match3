@@ -73,7 +73,7 @@ namespace Match3.UI
             _barFill.anchorMax = new Vector2(Mathf.Clamp01(chapterStars / (float)(TownRules.StageCount * TownRules.StarsPerStage)), 1f);
             _nextLine.text = stage >= TownRules.StageCount
                 ? "The town is complete!"
-                : $"Next stage: {TownRules.StarsToNextStage(chapterStars)}★ away";
+                : $"Next stage: {TownRules.StarsToNextStage(chapterStars)} stars away"; // no '★' glyph in the fonts
 
             Sprite sceneSprite = stage > 0 ? Resources.Load<Sprite>($"UI/Town/town_stage{stage}") : null;
             _scene.enabled = sceneSprite != null;
