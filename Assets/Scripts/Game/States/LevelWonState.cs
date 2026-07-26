@@ -34,6 +34,7 @@ namespace Match3.Game
                 {
                     yield return Game.BoardView.PlayStep(step);
                     Game.AddScore(step.Points);
+                    MissionService.ConsumeStep(step); // finale fireworks count too
                 }
             }
 
@@ -42,6 +43,7 @@ namespace Match3.Game
                 Prefs.RelaxedOn);
             ProgressService.RecordWin(Game.Level, stars);
             MetaService.RegisterLevelOutcome(won: true);
+            MissionService.RegisterWin();
 
             yield return Game.BoardView.AnimateHideTiles();
             Game.RaiseLevelWon(stars);

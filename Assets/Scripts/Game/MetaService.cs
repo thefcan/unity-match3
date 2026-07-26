@@ -64,6 +64,37 @@ namespace Match3.Game
             return reward;
         }
 
+        // ---- Star chest -------------------------------------------------------------------
+
+        /// <summary>
+        /// Converts any newly earned stars into chest rewards (repeating 20-star
+        /// chests + milestones), banks them, and advances the counted watermark.
+        /// </summary>
+        public static ChestReward CollectChests(int totalStars, out int chestsOpened)
+        {
+            ChestReward reward = StarChest.Collect(totalStars, Current.LastChestStars, out chestsOpened);
+            if (chestsOpened > 0)
+            {
+                Current.AddBoosters(BoosterKind.Hammer, reward.Hammers);
+                Current.AddBoosters(BoosterKind.FreeSwap, reward.FreeSwaps);
+                Current.AddBoosters(BoosterKind.Shuffle, reward.Shuffles);
+                Current.StreakShields += reward.StreakShields;
+            }
+            Current.LastChestStars = Math.Max(Current.LastChestStars, totalStars);
+            Save();
+            return reward;
+        }
+
+        /// <summary>Grants a mission/chest reward bundle to the inventory (no watermark).</summary>
+        public static void GrantReward(ChestReward reward)
+        {
+            Current.AddBoosters(BoosterKind.Hammer, reward.Hammers);
+            Current.AddBoosters(BoosterKind.FreeSwap, reward.FreeSwaps);
+            Current.AddBoosters(BoosterKind.Shuffle, reward.Shuffles);
+            Current.StreakShields += reward.StreakShields;
+            Save();
+        }
+
         // ---- Win streak -----------------------------------------------------------------
 
         public static int WinStreak => Current.WinStreak;

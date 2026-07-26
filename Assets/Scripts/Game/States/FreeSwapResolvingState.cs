@@ -45,6 +45,7 @@ namespace Match3.Game
                 yield return Game.BoardView.PlayStep(step);
                 Game.AddScore(step.Points);
                 Game.Objectives.Consume(step);
+                MissionService.ConsumeStep(step);
                 Game.RaiseObjectivesChanged();
             }
 

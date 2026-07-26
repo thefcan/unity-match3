@@ -75,6 +75,7 @@ namespace Match3.Game
                 if (Game.Mode == GameMode.Moves)
                 {
                     Game.Objectives.Consume(step);
+                    MissionService.ConsumeStep(step); // daily/weekly missions ride along
                     Game.RaiseObjectivesChanged();
                 }
                 else
