@@ -21,7 +21,7 @@ namespace Match3.Core
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             if (state.LevelInProgress)
-                state.WinStreak = 0; // the last level was abandoned
+                BreakStreak(state); // the last level was abandoned
             state.LevelInProgress = true;
         }
 
@@ -29,8 +29,20 @@ namespace Match3.Core
         public static void RegisterOutcome(MetaState state, bool won)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
-            state.WinStreak = won ? state.WinStreak + 1 : 0;
+            if (won)
+                state.WinStreak++;
+            else
+                BreakStreak(state);
             state.LevelInProgress = false;
+        }
+
+        /// <summary>A shield (chest loot) absorbs one break; otherwise the streak resets.</summary>
+        private static void BreakStreak(MetaState state)
+        {
+            if (state.StreakShields > 0)
+                state.StreakShields--;
+            else
+                state.WinStreak = 0;
         }
 
         /// <summary>How many specials the next board starts with (1 win = striped, 2 = +wrapped, 3+ = +bomb).</summary>

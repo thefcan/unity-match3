@@ -26,6 +26,19 @@ namespace Match3.Core
             sb.Append("shuffles=").Append(state.Shuffles).Append('\n');
             sb.Append("winStreak=").Append(state.WinStreak).Append('\n');
             sb.Append("levelInProgress=").Append(state.LevelInProgress ? 1 : 0).Append('\n');
+            sb.Append("streakShields=").Append(state.StreakShields).Append('\n');
+            sb.Append("lastChestStars=").Append(state.LastChestStars).Append('\n');
+            sb.Append("lastSeenTownStage=").Append(state.LastSeenTownStage).Append('\n');
+            sb.Append("missionDay=").Append(state.MissionDay).Append('\n');
+            for (int i = 0; i < MissionCatalog.DailyCount; i++)
+            {
+                sb.Append("missionProgress").Append(i).Append('=').Append(state.MissionProgress[i]).Append('\n');
+                sb.Append("missionClaimed").Append(i).Append('=').Append(state.MissionClaimed[i] ? 1 : 0).Append('\n');
+            }
+            sb.Append("rerolledSlot=").Append(state.RerolledSlot).Append('\n');
+            sb.Append("missionWeek=").Append(state.MissionWeek).Append('\n');
+            sb.Append("weeklyProgress=").Append(state.WeeklyProgress).Append('\n');
+            sb.Append("weeklyClaimed=").Append(state.WeeklyClaimed ? 1 : 0).Append('\n');
             return sb.ToString();
         }
 
@@ -60,6 +73,20 @@ namespace Match3.Core
                     case "shuffles": state.Shuffles = Math.Max(0, value); break;
                     case "winStreak": state.WinStreak = Math.Max(0, value); break;
                     case "levelInProgress": state.LevelInProgress = value != 0; break;
+                    case "streakShields": state.StreakShields = Math.Max(0, value); break;
+                    case "lastChestStars": state.LastChestStars = Math.Max(0, value); break;
+                    case "lastSeenTownStage": state.LastSeenTownStage = Math.Max(0, value); break;
+                    case "missionDay": state.MissionDay = Math.Max(0, value); break;
+                    case "missionProgress0": state.MissionProgress[0] = Math.Max(0, value); break;
+                    case "missionProgress1": state.MissionProgress[1] = Math.Max(0, value); break;
+                    case "missionProgress2": state.MissionProgress[2] = Math.Max(0, value); break;
+                    case "missionClaimed0": state.MissionClaimed[0] = value != 0; break;
+                    case "missionClaimed1": state.MissionClaimed[1] = value != 0; break;
+                    case "missionClaimed2": state.MissionClaimed[2] = value != 0; break;
+                    case "rerolledSlot": state.RerolledSlot = Math.Max(-1, value); break;
+                    case "missionWeek": state.MissionWeek = Math.Max(0, value); break;
+                    case "weeklyProgress": state.WeeklyProgress = Math.Max(0, value); break;
+                    case "weeklyClaimed": state.WeeklyClaimed = value != 0; break;
                     // unknown keys: ignored (forward compatibility);
                     // files from before the booster patch simply keep the
                     // starter-pack defaults — everyone gets the gift once

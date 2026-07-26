@@ -31,6 +31,26 @@ namespace Match3.Core
         /// <summary>A level started but never concluded — set at start, cleared on win/fail.</summary>
         public bool LevelInProgress;
 
+        /// <summary>Each shield absorbs ONE streak break (fail or abandon). Chest loot.</summary>
+        public int StreakShields;
+
+        /// <summary>Star total already converted into chests (see <see cref="StarChest"/>).</summary>
+        public int LastChestStars;
+
+        /// <summary>Highest Candy Town global stage already celebrated (see <see cref="TownRules"/>).</summary>
+        public int LastSeenTownStage;
+
+        // ---- Daily/weekly missions (definitions regenerate from the day number;
+        // only progress, claims and the one reroll are state) -----------------------
+        public int MissionDay;
+        public readonly int[] MissionProgress = new int[MissionCatalog.DailyCount];
+        public readonly bool[] MissionClaimed = new bool[MissionCatalog.DailyCount];
+        /// <summary>-1 = the daily reroll is still available; otherwise the slot it replaced.</summary>
+        public int RerolledSlot = -1;
+        public int MissionWeek;
+        public int WeeklyProgress;
+        public bool WeeklyClaimed;
+
         public int BoosterCount(BoosterKind kind)
         {
             switch (kind)
