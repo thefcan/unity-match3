@@ -260,6 +260,7 @@ namespace Match3.UI
         {
             TMP_Text text = CreateText(label, parent, new Vector2(0f, y), 44f, FontStyles.Bold);
             UiTheme.ApplyFont(text, UiTheme.BodyFont);
+            text.text = label; // CreateText only names the object — the visible string is set here
             text.alignment = TextAlignmentOptions.MidlineLeft;
             var rect = text.rectTransform;
             rect.sizeDelta = new Vector2(700f, 80f);

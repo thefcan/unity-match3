@@ -318,7 +318,19 @@ namespace Match3.UI
         private static void TryAttach()
         {
             var game = Object.FindObjectOfType<GameManager>();
-            var canvas = Object.FindObjectOfType<Canvas>();
+            // The ROOT canvas, explicitly: HudView adds NESTED canvases to the score
+            // and clock labels (mesh-rebuild isolation), and FindObjectOfType<Canvas>
+            // can return one of those — every panel then builds inside a tiny label
+            // rect (result card squeezed into the top bar, no dim over the board).
+            Canvas canvas = null;
+            foreach (Canvas candidate in Object.FindObjectsOfType<Canvas>())
+            {
+                if (candidate.isRootCanvas)
+                {
+                    canvas = candidate;
+                    break;
+                }
+            }
             if (game == null || canvas == null)
                 return;
 

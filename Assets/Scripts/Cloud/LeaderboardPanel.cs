@@ -37,7 +37,16 @@ namespace Match3.Cloud
             // Menu scene only: it has a MainMenuView and no GameManager.
             if (Object.FindObjectOfType<MainMenuView>() == null)
                 return;
-            var canvas = Object.FindObjectOfType<Canvas>();
+            // Root canvas explicitly — nested label canvases must never host panels.
+            Canvas canvas = null;
+            foreach (Canvas candidate in Object.FindObjectsOfType<Canvas>())
+            {
+                if (candidate.isRootCanvas)
+                {
+                    canvas = candidate;
+                    break;
+                }
+            }
             if (canvas == null || canvas.transform.Find(nameof(LeaderboardPanel)) != null)
                 return;
 
