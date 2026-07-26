@@ -135,6 +135,11 @@ namespace Match3.UI
 
             SettingsPanel.Attach(canvas.GetComponent<Canvas>(), content, null);
             StreakPanel.Attach(canvas.GetComponent<Canvas>(), content);
+            // Day-2 economy: tasks + town stack under DAILY on the left, the chest
+            // docks under the settings/RANKS cluster on the right.
+            TasksPanel.Attach(canvas.GetComponent<Canvas>(), content);
+            TownPanel.Attach(canvas.GetComponent<Canvas>(), content);
+            ChestPanel.Attach(canvas.GetComponent<Canvas>(), content);
         }
 
         private static Transform BuildSafeAreaHost(Transform canvas)

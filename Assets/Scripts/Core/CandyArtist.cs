@@ -355,6 +355,125 @@ namespace Match3.Core
         /// The licorice cage OVERLAY (transparent centre): a rounded frame with three
         /// vertical bars, drawn over the locked candy by the view.
         /// </summary>
+        /// <summary>
+        /// The Candy Town scene, one CUMULATIVE build stage per sprite (1..5: ground
+        /// and houses → lit windows → string lights → rooftops and moon → fireworks).
+        /// Neutral cool-night grays with its own backdrop; the panel can tint it per
+        /// chapter. Stage 0 is never rendered — the town panel shows an empty lot.
+        /// </summary>
+        public static byte[] RenderTownStage(int size, int stage)
+        {
+            var pixels = new byte[size * size * 4];
+            var houses = new (float cx, float hw, float top)[]
+            {
+                (-0.55f, 0.20f, -0.05f),
+                (0.02f, 0.18f, 0.15f),
+                (0.58f, 0.22f, -0.12f),
+            };
+            const float ground = -0.55f;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float lum = 0.10f; // night sky
+                    bool inHouse = false;
+
+                    // Stage 1+ — ground band and dark house bodies.
+                    if (y < ground)
+                        lum = 0.30f;
+                    foreach ((float cx, float hw, float top) h in houses)
+                    {
+                        if (x > h.cx - h.hw && x < h.cx + h.hw && y > ground && y < h.top)
+                        {
+                            inHouse = true;
+                            lum = 0.22f;
+                        }
+                    }
+
+                    // Stage 4 — rooftops and the moon.
+                    if (stage >= 4)
+                    {
+                        foreach ((float cx, float hw, float top) h in houses)
+                        {
+                            const float roofHeight = 0.16f;
+                            if (y >= h.top && y < h.top + roofHeight)
+                            {
+                                float t = (y - h.top) / roofHeight;
+                                if (Math.Abs(x - h.cx) < h.hw * (1f - t))
+                                    lum = 0.42f;
+                            }
+                        }
+                        if (Dist(x, y, 0.72f, 0.78f) < 0.11f)
+                            lum = 0.95f;
+                    }
+
+                    // Stage 2 — lit windows.
+                    if (stage >= 2 && inHouse)
+                    {
+                        foreach ((float cx, float hw, float top) h in houses)
+                        {
+                            for (int wy = 0; wy < 2; wy++)
+                            {
+                                for (int wx = 0; wx < 2; wx++)
+                                {
+                                    float windowX = h.cx + (wx - 0.5f) * h.hw;
+                                    float windowY = ground + 0.14f + wy * 0.18f;
+                                    if (windowY < h.top - 0.05f &&
+                                        Math.Abs(x - windowX) < 0.045f && Math.Abs(y - windowY) < 0.05f)
+                                        lum = 0.98f;
+                                }
+                            }
+                        }
+                    }
+
+                    // Stage 3 — a string of lights across the sky.
+                    if (stage >= 3)
+                    {
+                        for (int i = 0; i < 9; i++)
+                        {
+                            float lightX = -0.85f + i * 0.2125f;
+                            float lightY = 0.42f + 0.07f * (float)Math.Sin(i * 1.9f);
+                            if (Dist(x, y, lightX, lightY) < 0.035f)
+                                lum = 1f;
+                        }
+                    }
+
+                    // Stage 5 — fireworks over the finished town.
+                    if (stage >= 5)
+                    {
+                        lum = Math.Max(lum, FireworkGlow(x, y, -0.45f, 0.68f));
+                        lum = Math.Max(lum, FireworkGlow(x, y, 0.30f, 0.82f));
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, lum, lum * 0.96f, lum * 1.06f, 1f);
+                }
+            }
+
+            return pixels;
+        }
+
+        private static float FireworkGlow(float x, float y, float centerX, float centerY)
+        {
+            float best = 0f;
+            for (int ray = 0; ray < 8; ray++)
+            {
+                double angle = ray * Math.PI / 4.0;
+                for (int step = 1; step <= 3; step++)
+                {
+                    float radius = 0.05f * step;
+                    float px = centerX + (float)Math.Cos(angle) * radius;
+                    float py = centerY + (float)Math.Sin(angle) * radius;
+                    if (Dist(x, y, px, py) < 0.022f)
+                        best = Math.Max(best, 1f - 0.15f * step);
+                }
+            }
+            return best;
+        }
+
         public static byte[] RenderLockCage(int size)
         {
             var pixels = new byte[size * size * 4];

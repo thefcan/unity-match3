@@ -51,6 +51,13 @@ namespace Match3.EditorTools
             Sprite ingredient = WriteSprite("candy_ingredient", CandyArtist.RenderIngredient(Size));
             Sprite lockCage = WriteSprite("candy_lock_cage", CandyArtist.RenderLockCage(Size));
 
+            // Candy Town scenes (the decor meta): five cumulative build stages,
+            // written into Resources so TownPanel can load them by name.
+            const string townFolder = "Assets/Resources/UI/Town";
+            Directory.CreateDirectory(townFolder);
+            for (int stage = 1; stage <= TownRules.StageCount; stage++)
+                WriteSpriteTo(townFolder, $"town_stage{stage}", CandyArtist.RenderTownStage(Size, stage));
+
             var library = AssetDatabase.LoadAssetAtPath<CandySpriteLibrary>(LibraryPath);
             if (library == null)
             {
@@ -90,7 +97,10 @@ namespace Match3.EditorTools
         }
 
         /// <summary>Writes one PNG, imports it as a single 256-PPU sprite, and returns the Sprite asset.</summary>
-        private static Sprite WriteSprite(string name, byte[] topDownRgba)
+        private static Sprite WriteSprite(string name, byte[] topDownRgba) =>
+            WriteSpriteTo(SpriteFolder, name, topDownRgba);
+
+        private static Sprite WriteSpriteTo(string folder, string name, byte[] topDownRgba)
         {
             // CandyArtist emits rows top-down; Texture2D wants bottom-up.
             var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
@@ -104,7 +114,7 @@ namespace Match3.EditorTools
             }
             texture.SetPixels32(flipped);
 
-            string path = $"{SpriteFolder}/{name}.png";
+            string path = $"{folder}/{name}.png";
             File.WriteAllBytes(path, texture.EncodeToPNG());
             Object.DestroyImmediate(texture);
 
