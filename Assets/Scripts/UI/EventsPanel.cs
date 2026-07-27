@@ -189,7 +189,7 @@ namespace Match3.UI
             else if (finished)
                 _racePreview.text = $"{Ordinal(EventService.RacePlacementNow)} PLACE — COLLECT YOUR PRIZE!";
             else
-                _racePreview.text = "1ST: +3 SMASH  +3 SWAP  +2 MIX  +1 SHIELD";
+                _racePreview.text = "1ST: +3 SMASH +3 SWAP +2 MIX +1 SHIELD +1 SAVE";
             _raceClaimGo.SetActive(finished && !meta.EventRaceClaimed);
         }
 

@@ -131,8 +131,14 @@ haptics, and a colorblind sprite mode.
   Activation swaps never bounce back — a bomb is always a legal move.
 - **Chain reactions:** any special caught in a blast goes off too, within the wave.
 - **Win** = all objectives complete (unused moves cash out as bonus points *before*
-  the 1–3 **star rating**); **lose** = out of moves. Stars and unlocks are **saved**
-  (`progress.sav` in `persistentDataPath` — plain `level=stars` lines).
+  the 1–3 **star rating**); **lose** = out of moves (or a bomb goes off). Stars and
+  unlocks are **saved** (`progress.sav` in `persistentDataPath` — plain
+  `level=stars` lines).
+- **Rescues (free continues):** the fail panel can offer *SAVE ME — +5 moves*
+  (on a bomb loss: *DEFUSE* — every short fuse is re-armed too) for one **Rescue**
+  from your shelf. One per attempt, no purchases ever: you start with 2 and earn
+  more from star-chest milestones, weekly missions and weekend-race podiums. A
+  rescued level never counts as a loss — win it and your streak lives on.
 
 ### Time attack (the original endless mode)
 

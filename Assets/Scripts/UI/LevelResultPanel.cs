@@ -31,6 +31,8 @@ namespace Match3.UI
         private TMP_Text _scoreCaption;
         private TMP_Text _scoreValue;
         private TMP_Text _eventLine;
+        private GameObject _rescueButton;
+        private TMP_Text _rescueLabel;
         private Image[] _starPips;
         private TMP_Text _buttonLabel;
         private GameObject _menuButton;
@@ -159,6 +161,32 @@ namespace Match3.UI
             // moves" there reads as a bug (seen in standalone play-testing).
             Show(_game.LastFailWasBomb ? "The Bomb Went Off!" : "Out of Moves!",
                  $"Score {_game.Score}", "Retry", _game.Restart);
+
+            // The second chance, when the shelf has one and this attempt hasn't
+            // used its single continue yet (CanRescue owns both gates).
+            if (_game.CanRescue)
+            {
+                _summary.rectTransform.anchoredPosition = new Vector2(0f, 100f);
+                _rescueLabel.text = _game.LastFailWasBomb
+                    ? $"DEFUSE  +{GameManager.RescueMoves} MOVES  (×{MetaService.Rescues})"
+                    : $"SAVE ME  +{GameManager.RescueMoves} MOVES  (×{MetaService.Rescues})";
+                _rescueButton.SetActive(true);
+            }
+        }
+
+        private void OnRescueClicked()
+        {
+            AudioManager.Play(Sfx.Button);
+            if (_game.TryRescue())
+            {
+                AudioManager.Play(Sfx.Win);
+                Haptics.Medium();
+                // The panel hides itself on the PhaseChanged back to Playing/Shuffling.
+            }
+            else
+            {
+                _rescueButton.SetActive(false); // shelf emptied under us — withdraw the offer
+            }
         }
 
         private void HandleGameEnded()
@@ -170,7 +198,9 @@ namespace Match3.UI
 
         private void HandlePhaseChanged(GamePhase phase)
         {
-            if (phase == GamePhase.Playing || phase == GamePhase.Init)
+            // Shuffling is in the list for the rescue path: a rescued DEAD board
+            // goes through ShuffleState, and the fail card must not sit over it.
+            if (phase == GamePhase.Playing || phase == GamePhase.Init || phase == GamePhase.Shuffling)
                 Hide();
         }
 
@@ -184,6 +214,9 @@ namespace Match3.UI
             _scoreCaption.gameObject.SetActive(false);
             _scoreValue.gameObject.SetActive(false);
             _eventLine.text = string.Empty;
+            // The rescue layout moves the summary up; every Show starts from the default.
+            _summary.rectTransform.anchoredPosition = new Vector2(0f, 10f);
+            _rescueButton.SetActive(false);
             foreach (Image pip in _starPips)
                 pip.gameObject.SetActive(false);
             // The menu button only makes sense when the MainMenu scene is loadable
@@ -290,6 +323,29 @@ namespace Match3.UI
             menuLabel.color = UiTheme.TextDim;
             menuLabel.text = "Level Map";
             Stretch(menuLabel.rectTransform);
+
+            // The rescue offer — built LAST: its rect overlaps the (raycast-inert)
+            // summary/event texts, and sibling order is the raycast defense.
+            _summary.raycastTarget = false;
+            _eventLine.raycastTarget = false;
+            _rescueButton = CreateRect("RescueButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 130f));
+            _rescueButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -10f);
+            var rescueImage = _rescueButton.AddComponent<Image>();
+            UiTheme.ApplySprite(rescueImage, UiTheme.PillPink, Color.white);
+            if (rescueImage.sprite == null)
+                rescueImage.color = ButtonColor;
+            var rescueButton = _rescueButton.AddComponent<Button>();
+            rescueButton.targetGraphic = rescueImage;
+            rescueButton.onClick.AddListener(OnRescueClicked);
+            Image rescueOutline = new GameObject("Outline", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            rescueOutline.transform.SetParent(_rescueButton.transform, false);
+            UiTheme.ApplySprite(rescueOutline, UiTheme.PillOutline, UiTheme.Gold);
+            Stretch(rescueOutline.rectTransform);
+            rescueOutline.raycastTarget = false;
+            _rescueLabel = CreateText("Label", _rescueButton.transform, Vector2.zero, 38f, FontStyles.Bold);
+            UiTheme.ApplyFont(_rescueLabel, UiTheme.ButtonFont);
+            Stretch(_rescueLabel.rectTransform);
+            _rescueButton.SetActive(false);
         }
 
         private static void Stretch(RectTransform rect)
