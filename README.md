@@ -18,6 +18,19 @@ C# core, a thin MonoBehaviour view layer, and classic design patterns used where
 they pull their weight.
 
 <p align="center">
+  <img src="docs/screenshots/menu.png" alt="Main menu — level map, DAILY/TASKS/TOWN and RANKS/CHEST/EVENT openers" width="170">
+  &nbsp;
+  <img src="docs/screenshots/weekend-race.png" alt="Weekend race — five seeded bot racers, the trophy shelf and the podium rewards" width="170">
+  &nbsp;
+  <img src="docs/screenshots/level-100.png" alt="Level 100 — chocolate fountain, licorice swirls and the frosting shelf on one board" width="170">
+  &nbsp;
+  <img src="docs/screenshots/star-chest.png" alt="Star chest — 20 chests opened at once, milestone pips and the payout line" width="170">
+  &nbsp;
+  <img src="docs/screenshots/candy-town.png" alt="Candy Town — the stage-5 night town celebrating a new unlock" width="170">
+</p>
+<p align="center"><sub><i>Straight from the game: the level map, the <b>weekend race</b> with its seeded bot racers, the all-blockers <b>level-100 finale</b>, a 20-chest <b>star-chest</b> payout, and <b>Candy Town</b> at full build.</i></sub></p>
+
+<p align="center">
   <img src="docs/design-main-menu.png" alt="Main menu with the scrollable level map" width="230">
   &nbsp;
   <img src="docs/design-hud.png" alt="In-game HUD with objective chips and the jelly rows" width="230">
@@ -212,13 +225,14 @@ stateDiagram-v2
     Playing --> Resolving : swap gesture
     Resolving --> Playing : nothing happened (bounce back)
     Resolving --> LevelWon : objectives complete (moves mode)
-    Resolving --> LevelFailed : out of moves (moves mode)
+    Resolving --> LevelFailed : out of moves / bomb (moves mode)
     Resolving --> LevelComplete : target reached (time attack)
     Resolving --> Shuffling : no moves left on board
     Resolving --> GameOver : clock ran out (time attack)
     LevelComplete --> Playing : after the celebration beat
     Shuffling --> Playing : board reshuffled
     LevelWon --> Init : Next / Replay
+    LevelFailed --> Playing : Rescue spent (+5 moves, fuses re-armed)
     LevelFailed --> Init : Retry
     GameOver --> Init : Restart
 ```
@@ -278,7 +292,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**265 EditMode tests, all green** — the core is tested without ever opening a scene:
+**420 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -299,11 +313,22 @@ Assets/Tests/EditMode/
 ├── ChocolateTests.cs             adjacent crumbling, deterministic spread, spread suppression,
 │                                 immobility, no spread without a player move
 ├── IngredientTests.cs            fall-and-exit flow, blast immunity, refill injection budget
+├── FishTests.cs                  2×2 shape priority, target priority, the fish combo matrix
+├── BlockerTests.cs               frosting layers, bomb fuses (birth-move grace), swirl beam
+│                                 absorption, fountain revival — and their recordings
+├── Chapter5Tests.cs              level 81-100 landmarks, tutorial lines, 1-80 bit-identical
+├── FinaleTests.cs                Sugar Crush conversions, determinism, finale score bonuses
+├── BoosterTests.cs               inventory roundtrip, hammer/free-swap/shuffle behaviour
+├── WinStreakTests.cs             streak growth/reset, structural abandon, preload ladder
+├── EconomyTests.cs               star chest math, town stages, shields, mission determinism
+├── EventTests.cs                 candy-calendar windows, clock-rollback freeze, race bots,
+│                                 rollover banking, tier claims (the freeze's first real coverage)
+├── RescueTests.cs                rescue mints and spends, fuse re-arming, deferred streak break
 ├── DailyStreakTests.cs           streak rules (rollback-safe), 7-day reward cycle, meta roundtrip
 ├── MusicComposerTests.cs         byte determinism, exact bar lengths, stereo PCM headers
 ├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
-├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 80-level campaign rhythm,
-│                                 chapter-4 blocker acts, chapter 0-2 immutability landmarks
+├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 100-level campaign rhythm,
+│                                 blocker acts, early-chapter immutability landmarks
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
 
@@ -353,8 +378,10 @@ Assets/
 ## Scope cuts (deliberate)
 
 Kept out to leave obvious seams to grow from: **non-rectangular boards**,
-**boosters/economy**, and **account linking** (cloud identity is anonymous-only
-for now). Locks, chocolate and ingredients all landed through the seams the jelly
+**account linking** (cloud identity is anonymous-only for now), and **any form of
+monetization** — no lives, no purchases; the rescue/continue economy is earned,
+never bought. Locks, chocolate, ingredients, the chapter-5 blockers, the booster
+kit, the candy calendar and the rescues all landed through the seams the jelly
 layer established — a state grid or tile kind beside the board, a per-step
-recording list, an `ObjectiveType` — which is exactly how the next mechanic
+recording list, an append-only enum — which is exactly how the next mechanic
 should arrive too.
