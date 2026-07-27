@@ -425,6 +425,24 @@ namespace Match3.View
             return text;
         }
 
+        /// <summary>
+        /// Re-reads every badge from the timers. Badge text normally only changes
+        /// inside ApplyBombTicks, so a rescue's re-armed fuse would keep showing a
+        /// stale red "0" until the next committed move without this.
+        /// </summary>
+        public void RefreshBombBadges()
+        {
+            if (_bombs == null)
+                return;
+            foreach (KeyValuePair<int, TMPro.TextMeshPro> entry in _bombBadges)
+            {
+                if (entry.Value == null || !_bombs.TryGet(entry.Key, out int remaining))
+                    continue;
+                entry.Value.text = remaining.ToString();
+                entry.Value.color = remaining <= 2 ? new Color(1f, 0.35f, 0.3f) : Color.white;
+            }
+        }
+
         private void ClearBombBadges()
         {
             foreach (TMPro.TextMeshPro badge in _bombBadges.Values)

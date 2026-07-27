@@ -82,6 +82,52 @@ namespace Match3.Game
         public bool LastFailWasBomb { get; private set; }
 
         public void NoteBombFail() => LastFailWasBomb = true;
+
+        /// <summary>Moves and re-armed fuses one Rescue buys on the fail panel.</summary>
+        public const int RescueMoves = 5;
+        /// <summary>Every armed fuse is raised to at least this on a rescue — a bomb one
+        /// move from zero must not eat the purchased window on the first swap.</summary>
+        public const int RescueBombFloor = 3;
+
+        /// <summary>One continue per attempt keeps the tension honest. Reset in BuildNewGame.</summary>
+        public bool RescueUsedThisAttempt { get; private set; }
+
+        /// <summary>The fail panel's single source of truth for showing the rescue button.</summary>
+        public bool CanRescue =>
+            Mode == GameMode.Moves && CurrentPhase == GamePhase.LevelFailed
+            && !RescueUsedThisAttempt && MetaService.Rescues > 0;
+
+        /// <summary>
+        /// Spends one Rescue to continue the failed level: +5 moves, every short
+        /// bomb fuse re-armed (fresh, so the rescued move doesn't burn it), and
+        /// back to play. The streak survives because the fail was never
+        /// registered — see LevelFailedState. Returns false when nothing was spent.
+        /// </summary>
+        public bool TryRescue()
+        {
+            if (CurrentPhase != GamePhase.LevelFailed || RescueUsedThisAttempt)
+                return false;
+            if (!MetaService.TrySpendRescue()) // the only persistent mutation — saves inside
+                return false;
+
+            RescueUsedThisAttempt = true;
+            AddMoves(RescueMoves);
+            if (Bombs != null)
+            {
+                foreach (int id in Bombs.ArmedIds())
+                    if (Bombs.TryGet(id, out int remaining) && remaining < RescueBombFloor)
+                        Bombs.Arm(id, remaining == 0 ? RescueMoves : RescueBombFloor);
+                boardView.RefreshBombBadges(); // badge text only updates on ticks otherwise
+            }
+            LastFailWasBomb = false; // the next genuine loss deserves its own headline
+
+            // The fail branches skipped the dead-board check — run it now.
+            if (Board.HasPossibleMove())
+                SetState(new PlayingState(this));
+            else
+                SetState(new ShuffleState(this));
+            return true;
+        }
         public int Score { get; private set; }
         public int Level { get; private set; }
         /// <summary>Score needed to clear the current level (time attack).</summary>
@@ -274,6 +320,7 @@ namespace Match3.Game
         {
             Mode = GameSession.Mode;
             LastFailWasBomb = false;
+            RescueUsedThisAttempt = false;
             LevelDefinition = GameSession.SelectedLevel;
             if (Mode == GameMode.Moves && LevelDefinition == null)
                 LevelDefinition = Resources.Load<LevelDefinition>("Levels/Level_01");
@@ -483,6 +530,13 @@ namespace Match3.Game
         public void SpendMove()
         {
             MovesLeft = Mathf.Max(0, MovesLeft - 1);
+            MovesChanged?.Invoke(MovesLeft);
+        }
+
+        /// <summary>Grants extra moves mid-level (rescues) — the HUD must hear about it.</summary>
+        public void AddMoves(int amount)
+        {
+            MovesLeft += amount;
             MovesChanged?.Invoke(MovesLeft);
         }
 
