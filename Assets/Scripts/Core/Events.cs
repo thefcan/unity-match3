@@ -173,7 +173,8 @@ namespace Match3.Core
         private static int WeekOf(int dayNumber) =>
             (dayNumber - DayOfWeekIndex(dayNumber)) / 7; // numerator is a multiple of 7 → floor for any sign
 
-        internal static uint Hash(uint x)
+        /// <summary>The MissionCatalog xorshift, public so the Game layer can seed bot names.</summary>
+        public static uint Hash(uint x)
         {
             x ^= x << 13;
             x ^= x >> 17;

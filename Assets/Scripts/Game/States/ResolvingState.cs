@@ -76,6 +76,7 @@ namespace Match3.Game
                 {
                     Game.Objectives.Consume(step);
                     MissionService.ConsumeStep(step); // daily/weekly missions ride along
+                    EventService.ConsumeStep(step); // and so does the candy calendar
                     Game.RaiseObjectivesChanged();
                 }
                 else

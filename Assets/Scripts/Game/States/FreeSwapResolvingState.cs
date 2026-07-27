@@ -46,6 +46,7 @@ namespace Match3.Game
                 Game.AddScore(step.Points);
                 Game.Objectives.Consume(step);
                 MissionService.ConsumeStep(step);
+                EventService.ConsumeStep(step);
                 Game.RaiseObjectivesChanged();
             }
 

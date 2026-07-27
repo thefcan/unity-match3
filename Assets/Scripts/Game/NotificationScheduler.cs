@@ -62,6 +62,17 @@ namespace Match3.Game
                 };
                 AndroidNotificationCenter.SendNotification(streakSaver, "daily");
             }
+
+            // One-shot weekend-event opener (Reschedule() rebuilds it, so a plain
+            // "next Friday" is always current). Everything is APPENDED here rather
+            // than in a new method because the CancelAll above wipes the slate.
+            var weekendEvent = new AndroidNotification
+            {
+                Title = "Candy Match",
+                Text = "The weekend race is on — five rivals are waiting!",
+                FireTime = NextWeekday(DayOfWeek.Friday, 18, 0),
+            };
+            AndroidNotificationCenter.SendNotification(weekendEvent, "daily");
 #endif
         }
 
@@ -80,6 +91,15 @@ namespace Match3.Game
             DateTime now = DateTime.Now;
             var candidate = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0);
             return candidate > now ? candidate : candidate.AddDays(1);
+        }
+
+        /// <summary>The next occurrence of a weekday at a local wall-clock time.</summary>
+        private static DateTime NextWeekday(DayOfWeek day, int hour, int minute)
+        {
+            DateTime candidate = NextLocalTime(hour, minute);
+            while (candidate.DayOfWeek != day)
+                candidate = candidate.AddDays(1);
+            return candidate;
         }
 #endif
     }

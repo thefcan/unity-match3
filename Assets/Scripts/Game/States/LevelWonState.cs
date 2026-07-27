@@ -35,6 +35,7 @@ namespace Match3.Game
                     yield return Game.BoardView.PlayStep(step);
                     Game.AddScore(step.Points);
                     MissionService.ConsumeStep(step); // finale fireworks count too
+                    EventService.ConsumeStep(step);
                 }
             }
 
@@ -43,6 +44,9 @@ namespace Match3.Game
                 Prefs.RelaxedOn);
             ProgressService.RecordWin(Game.Level, stars);
             MetaService.RegisterLevelOutcome(won: true);
+            // Event progress writes no file of its own: MissionService.RegisterWin's
+            // save (next line) flushes the shared MetaState — keep this line above it.
+            EventService.RegisterWin(Game.Level, stars);
             MissionService.RegisterWin();
 
             yield return Game.BoardView.AnimateHideTiles();
