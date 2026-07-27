@@ -39,6 +39,23 @@ namespace Match3.Core
             sb.Append("missionWeek=").Append(state.MissionWeek).Append('\n');
             sb.Append("weeklyProgress=").Append(state.WeeklyProgress).Append('\n');
             sb.Append("weeklyClaimed=").Append(state.WeeklyClaimed ? 1 : 0).Append('\n');
+            sb.Append("eventWindowId=").Append(state.EventWindowId).Append('\n');
+            sb.Append("eventKindId=").Append(state.EventKindId).Append('\n');
+            sb.Append("eventParam=").Append(state.EventParam).Append('\n');
+            sb.Append("eventProgress=").Append(state.EventProgress).Append('\n');
+            for (int i = 0; i < EventCalendar.TierCount; i++)
+                sb.Append("eventClaimed").Append(i).Append('=').Append(state.EventTierClaimed[i] ? 1 : 0).Append('\n');
+            sb.Append("eventRaceClaimed=").Append(state.EventRaceClaimed ? 1 : 0).Append('\n');
+            for (int i = 0; i < EventCalendar.RaceTarget; i++)
+                sb.Append("eventRaceLevel").Append(i).Append('=').Append(state.EventRaceLevels[i]).Append('\n');
+            sb.Append("trophyGold=").Append(state.TrophyGold).Append('\n');
+            sb.Append("trophySilver=").Append(state.TrophySilver).Append('\n');
+            sb.Append("trophyBronze=").Append(state.TrophyBronze).Append('\n');
+            sb.Append("eventToastHammers=").Append(state.EventToastHammers).Append('\n');
+            sb.Append("eventToastFreeSwaps=").Append(state.EventToastFreeSwaps).Append('\n');
+            sb.Append("eventToastShuffles=").Append(state.EventToastShuffles).Append('\n');
+            sb.Append("eventToastShields=").Append(state.EventToastShields).Append('\n');
+            sb.Append("eventToastTrophy=").Append(state.EventToastTrophy).Append('\n');
             return sb.ToString();
         }
 
@@ -87,6 +104,32 @@ namespace Match3.Core
                     case "missionWeek": state.MissionWeek = Math.Max(0, value); break;
                     case "weeklyProgress": state.WeeklyProgress = Math.Max(0, value); break;
                     case "weeklyClaimed": state.WeeklyClaimed = value != 0; break;
+                    case "eventWindowId": state.EventWindowId = Math.Max(0, value); break;
+                    case "eventKindId": state.EventKindId = Math.Max(0, value); break;
+                    case "eventParam": state.EventParam = Math.Max(0, value); break;
+                    case "eventProgress": state.EventProgress = Math.Max(0, value); break;
+                    case "eventClaimed0": state.EventTierClaimed[0] = value != 0; break;
+                    case "eventClaimed1": state.EventTierClaimed[1] = value != 0; break;
+                    case "eventClaimed2": state.EventTierClaimed[2] = value != 0; break;
+                    case "eventRaceClaimed": state.EventRaceClaimed = value != 0; break;
+                    case "eventRaceLevel0": state.EventRaceLevels[0] = Math.Max(0, value); break;
+                    case "eventRaceLevel1": state.EventRaceLevels[1] = Math.Max(0, value); break;
+                    case "eventRaceLevel2": state.EventRaceLevels[2] = Math.Max(0, value); break;
+                    case "eventRaceLevel3": state.EventRaceLevels[3] = Math.Max(0, value); break;
+                    case "eventRaceLevel4": state.EventRaceLevels[4] = Math.Max(0, value); break;
+                    case "eventRaceLevel5": state.EventRaceLevels[5] = Math.Max(0, value); break;
+                    case "eventRaceLevel6": state.EventRaceLevels[6] = Math.Max(0, value); break;
+                    case "eventRaceLevel7": state.EventRaceLevels[7] = Math.Max(0, value); break;
+                    case "eventRaceLevel8": state.EventRaceLevels[8] = Math.Max(0, value); break;
+                    case "eventRaceLevel9": state.EventRaceLevels[9] = Math.Max(0, value); break;
+                    case "trophyGold": state.TrophyGold = Math.Max(0, value); break;
+                    case "trophySilver": state.TrophySilver = Math.Max(0, value); break;
+                    case "trophyBronze": state.TrophyBronze = Math.Max(0, value); break;
+                    case "eventToastHammers": state.EventToastHammers = Math.Max(0, value); break;
+                    case "eventToastFreeSwaps": state.EventToastFreeSwaps = Math.Max(0, value); break;
+                    case "eventToastShuffles": state.EventToastShuffles = Math.Max(0, value); break;
+                    case "eventToastShields": state.EventToastShields = Math.Max(0, value); break;
+                    case "eventToastTrophy": state.EventToastTrophy = Math.Max(0, value); break;
                     // unknown keys: ignored (forward compatibility);
                     // files from before the booster patch simply keep the
                     // starter-pack defaults — everyone gets the gift once

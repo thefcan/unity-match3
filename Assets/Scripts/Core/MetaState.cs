@@ -51,6 +51,35 @@ namespace Match3.Core
         public int WeeklyProgress;
         public bool WeeklyClaimed;
 
+        // ---- Time-limited events (the active window's kind/param are SNAPSHOTTED
+        // here at open — see Events.cs — so past windows never re-derive; meta.sav
+        // stores ints only). APPEND: every field below is serialized. ------------
+        /// <summary>Window id the stored event fields belong to; only ever rolls forward.</summary>
+        public int EventWindowId;
+        /// <summary>(int)EventKind snapshot taken when the window opened.</summary>
+        public int EventKindId;
+        /// <summary>CandyRush colour snapshot; 0 for the other kinds.</summary>
+        public int EventParam;
+        /// <summary>Objective count, or race ticks (the kinds are exclusive).</summary>
+        public int EventProgress;
+        public readonly bool[] EventTierClaimed = new bool[EventCalendar.TierCount];
+        public bool EventRaceClaimed;
+        /// <summary>Levels already ticked this race window (0 = empty slot) — each level races once.</summary>
+        public readonly int[] EventRaceLevels = new int[EventCalendar.RaceTarget];
+
+        // Permanent trophy shelf (race podium; a finished midweek tier 3 mints bronze).
+        public int TrophyGold;
+        public int TrophySilver;
+        public int TrophyBronze;
+
+        // One-shot "banked while you were away" toast, cleared once shown.
+        public int EventToastHammers;
+        public int EventToastFreeSwaps;
+        public int EventToastShuffles;
+        public int EventToastShields;
+        /// <summary>0 none, 1 bronze, 2 silver, 3 gold.</summary>
+        public int EventToastTrophy;
+
         public int BoosterCount(BoosterKind kind)
         {
             switch (kind)
