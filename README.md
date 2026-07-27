@@ -106,6 +106,15 @@ haptics, and a colorblind sprite mode.
 - **Daily streak rewards:** a 7-day calendar (menu → DAILY) of extra-moves and
   special-candy head starts, with local "your treat is ready / streak about to
   melt" notifications — fully offline, clock-rollback safe.
+- **Candy Calendar (menu → EVENT):** fully local time-limited events on a weekly
+  beat — Tue–Thu runs a 3-day objective event (Candy Rush / Specialist Week /
+  Blocker Bash / Star Sprint, three claimable reward tiers), Fri–Sun runs the
+  **weekend race**: five seeded bot racers who advance only when you win a
+  distinct level; first to 10 wins takes the podium, and podium finishes mint
+  permanent gold/silver/bronze **trophies**. Mondays are deliberately quiet.
+  Everything derives from the day number (no server): a clock pulled backwards
+  freezes the event, and rewards you earned but never claimed are **auto-banked
+  into your inventory** when the next window opens — generosity over deadlines.
 - **Special candies** from match shapes:
 
   | Shape | Candy | Detonation |
