@@ -78,6 +78,8 @@ namespace Match3.Core
                     _progress[i] += step.JellyHits.Count;
                 else if (_objectives[i].Type == ObjectiveType.CollectIngredients)
                     _progress[i] += step.IngredientExits.Count;
+                else if (_objectives[i].Type == ObjectiveType.ClearFrosting)
+                    _progress[i] += step.FrostingHits.Count;
             }
         }
     }

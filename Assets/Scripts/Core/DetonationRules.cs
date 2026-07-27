@@ -18,8 +18,8 @@ namespace Match3.Core
 
             switch (kind)
             {
-                case TileKind.StripedH: return RowArea(board, origin.Y);
-                case TileKind.StripedV: return ColumnArea(board, origin.X);
+                case TileKind.StripedH: return BeamRowArea(board, origin);
+                case TileKind.StripedV: return BeamColumnArea(board, origin);
                 case TileKind.Wrapped: return BlastArea(board, origin, 1);
                 // A colour bomb set off by a blast (not a swap) has no partner colour
                 // to target, so it clears the board's MOST COMMON colour — deterministic,
@@ -30,7 +30,7 @@ namespace Match3.Core
             }
         }
 
-        /// <summary>Every occupied cell in row <paramref name="y"/>.</summary>
+        /// <summary>Every occupied cell in row <paramref name="y"/> (no beam physics — building block).</summary>
         public static List<GridPosition> RowArea(Board board, int y)
         {
             var area = new List<GridPosition>(board.Width);
@@ -39,13 +39,59 @@ namespace Match3.Core
             return area;
         }
 
-        /// <summary>Every occupied cell in column <paramref name="x"/>.</summary>
+        /// <summary>Every occupied cell in column <paramref name="x"/> (no beam physics — building block).</summary>
         public static List<GridPosition> ColumnArea(Board board, int x)
         {
             var area = new List<GridPosition>(board.Height);
             for (int y = 0; y < board.Height; y++)
                 AddIfOccupied(board, new GridPosition(x, y), area);
             return area;
+        }
+
+        /// <summary>
+        /// A striped candy's actual ROW ray: walks outward from the origin in both
+        /// directions. A licorice swirl ABSORBS the ray — it is hit (included) and
+        /// the ray stops behind it; empty cells don't block. Identical to
+        /// <see cref="RowArea"/> on a swirl-free row.
+        /// </summary>
+        public static List<GridPosition> BeamRowArea(Board board, GridPosition origin)
+        {
+            var area = new List<GridPosition>();
+            if (!TryAddBeamCell(board, origin, area))
+            {
+                for (int x = origin.X - 1; x >= 0; x--)
+                    if (TryAddBeamCell(board, new GridPosition(x, origin.Y), area))
+                        break;
+                for (int x = origin.X + 1; x < board.Width; x++)
+                    if (TryAddBeamCell(board, new GridPosition(x, origin.Y), area))
+                        break;
+            }
+            return area;
+        }
+
+        /// <summary>Column twin of <see cref="BeamRowArea"/>.</summary>
+        public static List<GridPosition> BeamColumnArea(Board board, GridPosition origin)
+        {
+            var area = new List<GridPosition>();
+            if (!TryAddBeamCell(board, origin, area))
+            {
+                for (int y = origin.Y - 1; y >= 0; y--)
+                    if (TryAddBeamCell(board, new GridPosition(origin.X, y), area))
+                        break;
+                for (int y = origin.Y + 1; y < board.Height; y++)
+                    if (TryAddBeamCell(board, new GridPosition(origin.X, y), area))
+                        break;
+            }
+            return area;
+        }
+
+        /// <summary>Adds an occupied cell to the beam; returns true when the ray must stop here (a swirl).</summary>
+        private static bool TryAddBeamCell(Board board, GridPosition pos, List<GridPosition> area)
+        {
+            if (!board.IsInside(pos) || board[pos] is not { } tile)
+                return false;
+            area.Add(pos);
+            return tile.Kind == TileKind.Swirl;
         }
 
         /// <summary>
@@ -88,19 +134,20 @@ namespace Match3.Core
             return area;
         }
 
-        /// <summary>Full row + full column through <paramref name="origin"/> (striped+striped combo).</summary>
+        /// <summary>Row + column beams through <paramref name="origin"/> (striped+striped combo). Swirls absorb each ray.</summary>
         public static List<GridPosition> CrossArea(Board board, GridPosition origin)
         {
-            List<GridPosition> area = RowArea(board, origin.Y);
-            foreach (GridPosition pos in ColumnArea(board, origin.X))
+            List<GridPosition> area = BeamRowArea(board, origin);
+            foreach (GridPosition pos in BeamColumnArea(board, origin))
                 if (pos.Y != origin.Y) // the shared cell is already in the row
                     area.Add(pos);
             return area;
         }
 
         /// <summary>
-        /// Three rows + three columns centred on <paramref name="origin"/>, clamped
-        /// (striped+wrapped combo). De-duplicated like <see cref="CrossArea"/>.
+        /// Three row + three column beams centred on <paramref name="origin"/>, clamped
+        /// (striped+wrapped combo). De-duplicated like <see cref="CrossArea"/>; each of
+        /// the six rays fires from the origin's axis and stops at a swirl.
         /// </summary>
         public static List<GridPosition> TripleCrossArea(Board board, GridPosition origin)
         {
@@ -110,14 +157,14 @@ namespace Match3.Core
             for (int y = origin.Y - 1; y <= origin.Y + 1; y++)
             {
                 if (y < 0 || y >= board.Height) continue;
-                foreach (GridPosition pos in RowArea(board, y))
+                foreach (GridPosition pos in BeamRowArea(board, new GridPosition(origin.X, y)))
                     if (seen.Add(pos))
                         area.Add(pos);
             }
             for (int x = origin.X - 1; x <= origin.X + 1; x++)
             {
                 if (x < 0 || x >= board.Width) continue;
-                foreach (GridPosition pos in ColumnArea(board, x))
+                foreach (GridPosition pos in BeamColumnArea(board, new GridPosition(x, origin.Y)))
                     if (seen.Add(pos))
                         area.Add(pos);
             }

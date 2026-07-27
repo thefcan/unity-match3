@@ -109,15 +109,18 @@ namespace Match3.Core
         }
 
         /// <summary>
-        /// True when the cell can neither move nor be swapped: a locked candy or a
-        /// chocolate block. Immobile cells act as floors for gravity and are pinned
-        /// through shuffles.
+        /// True when the cell can neither move nor be swapped: a locked candy, or a
+        /// planted blocker (chocolate, frosting, a fountain). Immobile cells act as
+        /// floors for gravity and are pinned through shuffles. Swirls are deliberately
+        /// NOT here — they fall and slide like candy.
         /// </summary>
         public bool IsImmobile(GridPosition pos)
         {
             if (_locks != null && _locks.HasLock(pos))
                 return true;
-            return IsInside(pos) && _tiles[pos.X, pos.Y] is { } tile && tile.Kind == TileKind.Chocolate;
+            return IsInside(pos) && _tiles[pos.X, pos.Y] is { } tile &&
+                   (tile.Kind == TileKind.Chocolate || tile.Kind == TileKind.Frosting ||
+                    tile.Kind == TileKind.ChocolateFountain);
         }
 
         /// <summary>

@@ -65,6 +65,24 @@ namespace Match3.Core
         /// <summary>Creates an ingredient (colourless, falls, exits at the bottom row).</summary>
         public Tile CreateIngredient() => new Tile(_nextId++, Tile.NoColor, TileKind.Ingredient);
 
+        /// <summary>Creates a frosting blocker (colourless, immobile; layers live in <see cref="FrostingGrid"/>).</summary>
+        public Tile CreateFrosting() => new Tile(_nextId++, Tile.NoColor, TileKind.Frosting);
+
+        /// <summary>Creates a licorice swirl (colourless, FALLS, absorbs striped beams, one hit).</summary>
+        public Tile CreateSwirl() => new Tile(_nextId++, Tile.NoColor, TileKind.Swirl);
+
+        /// <summary>Creates a chocolate fountain (colourless, immobile, indestructible chocolate source).</summary>
+        public Tile CreateFountain() => new Tile(_nextId++, Tile.NoColor, TileKind.ChocolateFountain);
+
+        /// <summary>Creates a bomb candy: coloured and matchable, with its countdown tracked in <see cref="BombTimers"/>.</summary>
+        public Tile CreateBomb(int colorIndex)
+        {
+            if (colorIndex < 0 || colorIndex >= ColorCount)
+                throw new ArgumentOutOfRangeException(nameof(colorIndex));
+
+            return new Tile(_nextId++, colorIndex, TileKind.Bomb);
+        }
+
         /// <summary>
         /// Creates a tile whose colour is NOT in <paramref name="excludedColors"/>.
         /// Used by the initial board fill to avoid starting with ready-made matches.

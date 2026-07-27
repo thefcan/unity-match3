@@ -20,6 +20,8 @@ namespace Match3.Core
         ClearChocolate,
         /// <summary>Bring <see cref="Objective.TargetAmount"/> ingredients down to the bottom row.</summary>
         CollectIngredients,
+        /// <summary>Peel <see cref="Objective.TargetAmount"/> frosting layers (each hit is one layer).</summary>
+        ClearFrosting,
     }
 
     /// <summary>One goal of a level: the type, the colour it applies to (if any), and how much.</summary>

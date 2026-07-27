@@ -25,12 +25,18 @@ namespace Match3.Core
     {
         private const int MaxIngredientsOnBoard = 2;
 
+        private const int MaxBombsOnBoard = 2;
+
         private readonly ScoreConfig _scoreConfig;
         private readonly TileFactory _factory; // null => classic mode (no special creation)
         private readonly IRandom _random;      // bomb+striped orientations, ingredient columns, chocolate spread
         private JellyGrid _jelly;              // null => level has no jelly
         private LockGrid _locks;               // null => level has no locks
+        private FrostingGrid _frosting;        // null => level has no frosting
+        private BombTimers _bombs;             // null => level has no bomb candies
         private int _ingredientsToSpawn;       // refill injection budget (CollectIngredients levels)
+        private int _bombsToSpawn;             // refill injection budget (bomb levels)
+        private int _bombTimerMoves;           // countdown a freshly dispensed bomb starts with
 
         public CascadeResolver(ScoreConfig scoreConfig)
             : this(scoreConfig, null, null)
@@ -72,6 +78,31 @@ namespace Match3.Core
         public void AttachIngredients(int totalCount)
         {
             _ingredientsToSpawn = Math.Max(0, totalCount);
+        }
+
+        /// <summary>
+        /// Attaches the level's frosting layer ledger. Frosting cells hold a
+        /// <see cref="TileKind.Frosting"/> tile on the board; every adjacent match or
+        /// direct blast peels one layer per wave (<see cref="FrostingHit"/>), and the
+        /// tile itself clears with its last layer.
+        /// </summary>
+        public void AttachFrosting(FrostingGrid frosting)
+        {
+            _frosting = frosting;
+        }
+
+        /// <summary>
+        /// Arms the bomb dispenser: up to <paramref name="totalCount"/> bomb candies
+        /// enter through refills (never more than <see cref="MaxBombsOnBoard"/> in
+        /// play), each starting a <paramref name="timerMoves"/>-move countdown in
+        /// <paramref name="timers"/>. Clearing a bomb defuses it; the GAME layer
+        /// decides which moves tick the survivors (<see cref="ResolveBombTick"/>).
+        /// </summary>
+        public void AttachBombs(BombTimers timers, int totalCount, int timerMoves)
+        {
+            _bombs = timers;
+            _bombsToSpawn = Math.Max(0, totalCount);
+            _bombTimerMoves = Math.Max(1, timerMoves);
         }
 
         /// <summary>Resolves without swap context — cascade-made matches only (and shuffle settling).</summary>
@@ -160,6 +191,46 @@ namespace Match3.Core
             if (!board.IsInside(target))
                 return new ResolutionResult(Array.Empty<CascadeStep>());
             return ResolveInternal(board, null, null, hammer: target);
+        }
+
+        /// <summary>
+        /// Ticks every armed bomb countdown by one and returns the ticks as a single
+        /// recording step (empty when no bomb is armed). Deliberately a SEPARATE
+        /// entry point: the game layer calls it only after moves that actually count
+        /// (a committed swap in Moves mode) — boosters, shuffles and the finale
+        /// leave the fuses frozen. A tick reaching 0 means the bomb exploded; the
+        /// caller reads that off the step and fails the level.
+        /// </summary>
+        public ResolutionResult ResolveBombTick(Board board)
+        {
+            if (board == null) throw new ArgumentNullException(nameof(board));
+            if (_bombs == null || _bombs.Count == 0)
+                return new ResolutionResult(Array.Empty<CascadeStep>());
+
+            var ticks = new List<BombTick>();
+            foreach (int id in _bombs.ArmedIds())
+            {
+                if (FindTilePosition(board, id) is not { } pos || board[pos] is not { } tile)
+                {
+                    // The tile is gone without a recorded clear (defensive) — drop it.
+                    _bombs.Defuse(id);
+                    continue;
+                }
+                ticks.Add(new BombTick(tile, pos, _bombs.Tick(id)));
+            }
+
+            if (ticks.Count == 0)
+                return new ResolutionResult(Array.Empty<CascadeStep>());
+
+            return new ResolutionResult(new[]
+            {
+                new CascadeStep(0,
+                    Array.Empty<ClearedTile>(), Array.Empty<TileFall>(), Array.Empty<TileSpawn>(),
+                    0, Array.Empty<int>(), Array.Empty<SpecialCreation>(), Array.Empty<Detonation>(),
+                    Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
+                    Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>(),
+                    Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), ticks),
+            });
         }
 
         /// <summary>Finale-only bonus for each special candy consumed by the celebration.</summary>
@@ -401,10 +472,10 @@ namespace Match3.Core
                     switch (tile.Kind)
                     {
                         case TileKind.StripedH:
-                            EmitDetonation(tile, pos, DetonationKind.Row, DetonationRules.RowArea(board, pos.Y));
+                            EmitDetonation(tile, pos, DetonationKind.Row, DetonationRules.BeamRowArea(board, pos));
                             break;
                         case TileKind.StripedV:
-                            EmitDetonation(tile, pos, DetonationKind.Column, DetonationRules.ColumnArea(board, pos.X));
+                            EmitDetonation(tile, pos, DetonationKind.Column, DetonationRules.BeamColumnArea(board, pos));
                             break;
                         case TileKind.Wrapped:
                             // First blast: 3x3, but the wrapped itself SURVIVES, primed
@@ -438,19 +509,58 @@ namespace Match3.Core
                     }
                 }
 
-                // ---- 2c. Ingredients are indestructible — pull them out of any blast --
+                // ---- 2c. Indestructibles (ingredients, fountains) shrug off any hit ---
                 foreach (GridPosition pos in clearSet.ToList())
-                    if (board[pos] is { } shielded && shielded.Kind == TileKind.Ingredient)
+                    if (board[pos] is { } shielded &&
+                        (shielded.Kind == TileKind.Ingredient || shielded.Kind == TileKind.ChocolateFountain))
                         clearSet.Remove(pos);
 
-                // ---- 2d. Chocolate next to anything cleared crumbles -------------------
+                // ---- 2c2. Frosting takes DAMAGE instead of clearing --------------------
+                // One layer per wave per cell, whether the hit was a direct blast (the
+                // cell is in the clear set) or an adjacent clear. Cells with layers
+                // left leave the clear set (the tile survives); the last layer lets
+                // the clear through.
+                var frostingHits = new List<FrostingHit>();
+                if (_frosting != null)
+                {
+                    var hitCells = new HashSet<GridPosition>();
+                    var frostingSeeds = new List<GridPosition>();
+                    foreach (GridPosition pos in clearSet)
+                    {
+                        if (board[pos] is { } t && t.Kind == TileKind.Frosting)
+                            hitCells.Add(pos);
+                        else
+                            frostingSeeds.Add(pos);
+                    }
+                    foreach (SpecialCreation creation in creations)
+                        frostingSeeds.Add(creation.Position);
+                    foreach (GridPosition seed in frostingSeeds)
+                    {
+                        foreach (GridPosition n in OrthogonalNeighbors(board, seed))
+                            if (board[n] is { } t && t.Kind == TileKind.Frosting)
+                                hitCells.Add(n);
+                    }
+
+                    foreach (GridPosition pos in hitCells.OrderBy(p => p.X).ThenBy(p => p.Y))
+                    {
+                        _frosting.Damage(pos);
+                        int remaining = _frosting.LayersAt(pos);
+                        frostingHits.Add(new FrostingHit(pos, remaining));
+                        if (remaining > 0)
+                            clearSet.Remove(pos);
+                        else
+                            clearSet.Add(pos);
+                    }
+                }
+
+                // ---- 2d. Chocolate (and swirls) next to anything cleared crumble ------
                 var adjacencySeeds = new List<GridPosition>(clearSet);
                 foreach (SpecialCreation creation in creations)
                     adjacencySeeds.Add(creation.Position); // the morph cell was matched too
                 foreach (GridPosition seed in adjacencySeeds)
                 {
                     foreach (GridPosition n in OrthogonalNeighbors(board, seed))
-                        if (board[n] is { } t && t.Kind == TileKind.Chocolate)
+                        if (board[n] is { } t && (t.Kind == TileKind.Chocolate || t.Kind == TileKind.Swirl))
                             clearSet.Add(n);
                 }
                 foreach (GridPosition pos in clearSet)
@@ -471,8 +581,8 @@ namespace Match3.Core
                         ingredientExits.Add(new IngredientExit(t, pos));
                 }
 
-                if (clearSet.Count == 0 && creations.Count == 0 &&
-                    lockBreaks.Count == 0 && ingredientExits.Count == 0)
+                if (clearSet.Count == 0 && creations.Count == 0 && lockBreaks.Count == 0 &&
+                    ingredientExits.Count == 0 && frostingHits.Count == 0)
                     break; // e.g. a lone primed wrapped that vanished — nothing to do
 
                 // ---- 3. Snapshot + score (on the final clear set) ---------------------
@@ -482,6 +592,14 @@ namespace Match3.Core
                 int points = _scoreConfig.PointsFor(cleared.Count, cascadeIndex);
                 if (finale)
                     points += FinaleBonus(cleared);
+
+                // A cleared bomb is a defused bomb — its countdown dies with it.
+                if (_bombs != null)
+                {
+                    foreach (ClearedTile clear in cleared)
+                        if (clear.Tile.Kind == TileKind.Bomb)
+                            _bombs.Defuse(clear.Tile.Id);
+                }
 
                 // Jelly takes one hit per matched cell — creation cells were matched
                 // too (the special morphs on top of the jelly it just damaged).
@@ -516,11 +634,12 @@ namespace Match3.Core
                 List<TileFall> falls = board.ApplyGravity();
                 List<TileSpawn> spawns = board.Refill();
                 InjectIngredientSpawn(board, spawns);
+                InjectBombSpawn(board, spawns);
 
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
                                           creations, detonations, jellyHits, lockBreaks,
                                           Array.Empty<ChocolateSpread>(), ingredientExits,
-                                          fishStrikes, Array.Empty<FrostingHit>(), Array.Empty<BombTick>()));
+                                          fishStrikes, frostingHits, Array.Empty<BombTick>()));
                 cascadeIndex++;
             }
 
@@ -542,9 +661,11 @@ namespace Match3.Core
         }
 
         /// <summary>
-        /// Picks one (chocolate, victim) pair — victim must be a NORMAL, unlocked
-        /// candy — mutates the board, and reports the spread. Null when no chocolate
-        /// remains or nothing edible borders one. Deterministic via the injected random.
+        /// Picks one (source, victim) pair — the source is a chocolate block OR a
+        /// chocolate fountain (the fountain is why an extinct bloodline revives), the
+        /// victim a NORMAL, unlocked candy — mutates the board, and reports the
+        /// spread. Null when nothing edible borders a source. Deterministic via the
+        /// injected random.
         /// </summary>
         private ChocolateSpread? TrySpreadChocolate(Board board)
         {
@@ -554,7 +675,8 @@ namespace Match3.Core
                 for (int y = 0; y < board.Height; y++)
                 {
                     var pos = new GridPosition(x, y);
-                    if (board[pos] is not { } tile || tile.Kind != TileKind.Chocolate)
+                    if (board[pos] is not { } tile ||
+                        (tile.Kind != TileKind.Chocolate && tile.Kind != TileKind.ChocolateFountain))
                         continue;
 
                     foreach (GridPosition n in OrthogonalNeighbors(board, pos))
@@ -602,6 +724,49 @@ namespace Match3.Core
             board.SetTile(chosen.Position, ingredient);
             spawns[pick] = new TileSpawn(ingredient, chosen.Position, chosen.SpawnHeightOffset);
             _ingredientsToSpawn--;
+        }
+
+        /// <summary>
+        /// Turns one freshly refilled tile into an armed bomb candy while the level
+        /// still owes some and fewer than <see cref="MaxBombsOnBoard"/> are in play —
+        /// at most one per wave, keeping the colour the refill rolled (so the bomb
+        /// can't complete a match the plain candy wouldn't have).
+        /// </summary>
+        private void InjectBombSpawn(Board board, List<TileSpawn> spawns)
+        {
+            if (_bombsToSpawn <= 0 || _factory == null || _bombs == null || spawns.Count == 0)
+                return;
+            if (CountBombs(board) >= MaxBombsOnBoard)
+                return;
+
+            var candidates = new List<int>();
+            for (int i = 0; i < spawns.Count; i++)
+                if (spawns[i].Position.Y == board.Height - 1 && spawns[i].Tile.Kind == TileKind.Normal)
+                    candidates.Add(i);
+            if (candidates.Count == 0)
+                for (int i = 0; i < spawns.Count; i++)
+                    if (spawns[i].Tile.Kind == TileKind.Normal)
+                        candidates.Add(i);
+            if (candidates.Count == 0)
+                return;
+
+            int pick = candidates[_random != null ? _random.Next(candidates.Count) : 0];
+            TileSpawn chosen = spawns[pick];
+            Tile bomb = _factory.CreateBomb(chosen.Tile.ColorIndex);
+            board.SetTile(chosen.Position, bomb);
+            spawns[pick] = new TileSpawn(bomb, chosen.Position, chosen.SpawnHeightOffset);
+            _bombs.Arm(bomb.Id, _bombTimerMoves);
+            _bombsToSpawn--;
+        }
+
+        private static int CountBombs(Board board)
+        {
+            int count = 0;
+            for (int x = 0; x < board.Width; x++)
+                for (int y = 0; y < board.Height; y++)
+                    if (board[new GridPosition(x, y)] is { } tile && tile.Kind == TileKind.Bomb)
+                        count++;
+            return count;
         }
 
         private static bool HasBottomIngredient(Board board)
@@ -772,8 +937,8 @@ namespace Match3.Core
                         emit(partnerTile, target,
                              horizontal ? DetonationKind.Row : DetonationKind.Column,
                              horizontal
-                                 ? DetonationRules.RowArea(board, target.Y)
-                                 : DetonationRules.ColumnArea(board, target.X));
+                                 ? DetonationRules.BeamRowArea(board, target)
+                                 : DetonationRules.BeamColumnArea(board, target));
                     }
                     break;
                 }
