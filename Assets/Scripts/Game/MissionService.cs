@@ -123,6 +123,7 @@ namespace Match3.Game
                 return false;
 
             state.WeeklyClaimed = true;
+            state.Rescues++; // the weekly also mints one continue — BEFORE GrantReward's save
             MetaService.GrantReward(MissionCatalog.WeeklyReward());
             return true;
         }

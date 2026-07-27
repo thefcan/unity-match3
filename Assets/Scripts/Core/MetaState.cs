@@ -25,6 +25,13 @@ namespace Match3.Core
         public int FreeSwaps = 3;
         public int Shuffles = 3;
 
+        /// <summary>
+        /// Fail-panel continues ("+5 moves"): the free game's answer to paid
+        /// continues. Deliberately scarce — milestones, weekly missions and race
+        /// podiums mint them one at a time. Starter pack like the boosters.
+        /// </summary>
+        public int Rescues = 2;
+
         /// <summary>Consecutive moves-mode wins (see <see cref="WinStreakRules"/>).</summary>
         public int WinStreak;
 
@@ -79,6 +86,8 @@ namespace Match3.Core
         public int EventToastShields;
         /// <summary>0 none, 1 bronze, 2 silver, 3 gold.</summary>
         public int EventToastTrophy;
+        /// <summary>Rescues banked from an unclaimed race podium (see Events.cs).</summary>
+        public int EventToastRescues;
 
         public int BoosterCount(BoosterKind kind)
         {

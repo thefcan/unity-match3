@@ -77,7 +77,7 @@ namespace Match3.Game
                 MetaState state = MetaService.Current;
                 if (state.EventToastHammers > 0 || state.EventToastFreeSwaps > 0
                     || state.EventToastShuffles > 0 || state.EventToastShields > 0
-                    || state.EventToastTrophy > 0)
+                    || state.EventToastTrophy > 0 || state.EventToastRescues > 0)
                     return true;
                 if (!EventRules.IsWindowActive(state, MetaService.TodayDayNumber))
                     return false;
@@ -129,10 +129,10 @@ namespace Match3.Game
         }
 
         /// <summary>The one-shot "banked while you were away" toast; saves when taken.</summary>
-        public static bool TryTakeBankedToast(out ChestReward reward, out int trophy)
+        public static bool TryTakeBankedToast(out ChestReward reward, out int trophy, out int rescues)
         {
             EnsureFresh();
-            if (!EventRules.TryTakeBankedToast(MetaService.Current, out reward, out trophy))
+            if (!EventRules.TryTakeBankedToast(MetaService.Current, out reward, out trophy, out rescues))
                 return false;
             MetaService.Save();
             return true;

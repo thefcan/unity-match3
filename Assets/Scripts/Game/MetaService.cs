@@ -70,19 +70,37 @@ namespace Match3.Game
         /// Converts any newly earned stars into chest rewards (repeating 20-star
         /// chests + milestones), banks them, and advances the counted watermark.
         /// </summary>
-        public static ChestReward CollectChests(int totalStars, out int chestsOpened)
+        public static ChestReward CollectChests(int totalStars, out int chestsOpened, out int rescuesGranted)
         {
             ChestReward reward = StarChest.Collect(totalStars, Current.LastChestStars, out chestsOpened);
+            // Milestone chests also mint one fail-panel Rescue each — counted
+            // against the pre-advance watermark, so a re-claim can never re-mint.
+            rescuesGranted = StarChest.MilestonesCrossed(totalStars, Current.LastChestStars);
             if (chestsOpened > 0)
             {
                 Current.AddBoosters(BoosterKind.Hammer, reward.Hammers);
                 Current.AddBoosters(BoosterKind.FreeSwap, reward.FreeSwaps);
                 Current.AddBoosters(BoosterKind.Shuffle, reward.Shuffles);
                 Current.StreakShields += reward.StreakShields;
+                Current.Rescues += rescuesGranted;
             }
             Current.LastChestStars = Math.Max(Current.LastChestStars, totalStars);
             Save();
             return reward;
+        }
+
+        // ---- Rescues (fail-panel continues) ----------------------------------------------
+
+        public static int Rescues => Current.Rescues;
+
+        /// <summary>Spends one Rescue and persists; false when the shelf is empty.</summary>
+        public static bool TrySpendRescue()
+        {
+            if (Current.Rescues <= 0)
+                return false;
+            Current.Rescues--;
+            Save();
+            return true;
         }
 
         /// <summary>Grants a mission/chest reward bundle to the inventory (no watermark).</summary>

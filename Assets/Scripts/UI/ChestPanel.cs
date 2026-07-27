@@ -75,7 +75,7 @@ namespace Match3.UI
         {
             AudioManager.Play(Sfx.Button);
             int total = TotalStars();
-            ChestReward reward = MetaService.CollectChests(total, out int opened);
+            ChestReward reward = MetaService.CollectChests(total, out int opened, out int rescues);
             if (opened == 0)
             {
                 _resultLine.text = "Win levels to fill the chest!";
@@ -87,6 +87,8 @@ namespace Match3.UI
                 string line = $"+{reward.Hammers} SMASH   +{reward.FreeSwaps} SWAP   +{reward.Shuffles} MIX";
                 if (reward.StreakShields > 0)
                     line += $"   +{reward.StreakShields} SHIELD";
+                if (rescues > 0)
+                    line += $"   +{rescues} SAVE";
                 _resultLine.text = line;
             }
             Refresh();

@@ -56,6 +56,8 @@ namespace Match3.Core
             sb.Append("eventToastShuffles=").Append(state.EventToastShuffles).Append('\n');
             sb.Append("eventToastShields=").Append(state.EventToastShields).Append('\n');
             sb.Append("eventToastTrophy=").Append(state.EventToastTrophy).Append('\n');
+            sb.Append("rescues=").Append(state.Rescues).Append('\n');
+            sb.Append("eventToastRescues=").Append(state.EventToastRescues).Append('\n');
             return sb.ToString();
         }
 
@@ -130,6 +132,8 @@ namespace Match3.Core
                     case "eventToastShuffles": state.EventToastShuffles = Math.Max(0, value); break;
                     case "eventToastShields": state.EventToastShields = Math.Max(0, value); break;
                     case "eventToastTrophy": state.EventToastTrophy = Math.Max(0, value); break;
+                    case "rescues": state.Rescues = Math.Max(0, value); break;
+                    case "eventToastRescues": state.EventToastRescues = Math.Max(0, value); break;
                     // unknown keys: ignored (forward compatibility);
                     // files from before the booster patch simply keep the
                     // starter-pack defaults — everyone gets the gift once

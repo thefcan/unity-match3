@@ -84,8 +84,8 @@ namespace Match3.UI
             _card.color = UiTheme.ThemeCard;
             // The banked toast is consumed HERE (not in Refresh) so a claim's
             // refresh two seconds later doesn't wipe the line mid-read.
-            _toast.text = EventService.TryTakeBankedToast(out ChestReward banked, out int trophy)
-                ? ComposeToast(banked, trophy)
+            _toast.text = EventService.TryTakeBankedToast(out ChestReward banked, out int trophy, out int rescues)
+                ? ComposeToast(banked, trophy, rescues)
                 : string.Empty;
             Refresh();
             _root.SetActive(true);
@@ -252,9 +252,10 @@ namespace Match3.UI
             return line.TrimEnd();
         }
 
-        private static string ComposeToast(ChestReward reward, int trophy)
+        private static string ComposeToast(ChestReward reward, int trophy, int rescues)
         {
             string line = "WHILE YOU WERE AWAY:  " + RewardLine(reward);
+            if (rescues > 0) line += $"  +{rescues} SAVE";
             if (trophy == 3) line += "  +GOLD TROPHY";
             else if (trophy == 2) line += "  +SILVER TROPHY";
             else if (trophy == 1) line += "  +BRONZE TROPHY";

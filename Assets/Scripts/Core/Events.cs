@@ -394,23 +394,26 @@ namespace Match3.Core
             placement = RacePlacement(seed, state.EventProgress);
             state.EventRaceClaimed = true;
             ApplyTrophy(state, RaceTrophy(placement, state.EventProgress));
+            state.Rescues += RescueFor(placement, state.EventProgress);
             reward = RaceReward(placement, state.EventProgress);
             return true;
         }
 
         /// <summary>Takes (and clears) the "banked while you were away" toast; false when there is none.</summary>
-        public static bool TryTakeBankedToast(MetaState state, out ChestReward reward, out int trophy)
+        public static bool TryTakeBankedToast(MetaState state, out ChestReward reward, out int trophy, out int rescues)
         {
             reward = new ChestReward(state.EventToastHammers, state.EventToastFreeSwaps,
                                      state.EventToastShuffles, state.EventToastShields);
             trophy = state.EventToastTrophy;
+            rescues = state.EventToastRescues;
             bool any = reward.Hammers > 0 || reward.FreeSwaps > 0 || reward.Shuffles > 0
-                       || reward.StreakShields > 0 || trophy > 0;
+                       || reward.StreakShields > 0 || trophy > 0 || rescues > 0;
             state.EventToastHammers = 0;
             state.EventToastFreeSwaps = 0;
             state.EventToastShuffles = 0;
             state.EventToastShields = 0;
             state.EventToastTrophy = 0;
+            state.EventToastRescues = 0;
             return any;
         }
 
@@ -516,13 +519,21 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// A top-two finish also mints one fail-panel Rescue — behind the same
+        /// 3-win gate as the trophies, so a cold-seeded one-win weekend can't
+        /// stumble into a free continue.
+        /// </summary>
+        public static int RescueFor(int placement, int ticks) =>
+            ticks < 3 ? 0 : placement <= 2 ? 1 : 0;
+
+        /// <summary>
         /// Pays the outgoing window's earned-but-unclaimed rewards into the state
         /// and the toast fields. Reads ONLY stored ints — never the calendar — so
         /// a finished window banks identically no matter when the player returns.
         /// </summary>
         private static void BankOutgoing(MetaState state)
         {
-            int hammers = 0, freeSwaps = 0, shuffles = 0, shields = 0, trophy = 0;
+            int hammers = 0, freeSwaps = 0, shuffles = 0, shields = 0, trophy = 0, rescues = 0;
 
             EventKind kind = KindOf(state);
             if (kind == EventKind.Race)
@@ -537,6 +548,7 @@ namespace Match3.Core
                     shuffles += reward.Shuffles;
                     shields += reward.StreakShields;
                     trophy = RaceTrophy(placement, state.EventProgress);
+                    rescues = RescueFor(placement, state.EventProgress);
                 }
             }
             else
@@ -556,19 +568,21 @@ namespace Match3.Core
                 }
             }
 
-            if (hammers == 0 && freeSwaps == 0 && shuffles == 0 && shields == 0 && trophy == 0)
+            if (hammers == 0 && freeSwaps == 0 && shuffles == 0 && shields == 0 && trophy == 0 && rescues == 0)
                 return;
 
             state.AddBoosters(BoosterKind.Hammer, hammers);
             state.AddBoosters(BoosterKind.FreeSwap, freeSwaps);
             state.AddBoosters(BoosterKind.Shuffle, shuffles);
             state.StreakShields += shields;
+            state.Rescues += rescues;
             ApplyTrophy(state, trophy);
 
             state.EventToastHammers += hammers;
             state.EventToastFreeSwaps += freeSwaps;
             state.EventToastShuffles += shuffles;
             state.EventToastShields += shields;
+            state.EventToastRescues += rescues;
             if (trophy > state.EventToastTrophy)
                 state.EventToastTrophy = trophy;
         }

@@ -419,11 +419,12 @@ namespace Match3.Tests
             state.EventProgress = 60;
             EventRules.EnsureWindow(state, Fri, 100);        // banks the full ladder + bronze
 
-            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out ChestReward reward, out int trophy));
+            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out ChestReward reward, out int trophy, out int rescues));
             Assert.AreEqual(5, reward.Hammers);
             Assert.AreEqual(1, reward.StreakShields);
             Assert.AreEqual(1, trophy);
-            Assert.IsFalse(EventRules.TryTakeBankedToast(state, out ChestReward drained, out int drainedTrophy)); // one-shot
+            Assert.AreEqual(0, rescues); // a midweek bank mints no continues
+            Assert.IsFalse(EventRules.TryTakeBankedToast(state, out ChestReward drained, out int drainedTrophy, out int drainedRescues)); // one-shot
             Assert.AreEqual(0, state.EventToastHammers);
         }
 
