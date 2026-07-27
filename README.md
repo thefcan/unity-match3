@@ -4,14 +4,18 @@
   <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
 </p>
 
-A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (80
-levels in four slowly-shifting chapters — objectives, special candies, jelly,
-licorice locks, spreading chocolate, ingredient drops, star ratings, daily streak
-rewards, saved + cloud-synced progress, generative chapter music) and the original
-**endless time-attack** with an online leaderboard. Deliberately built so the focus
-stays on **code architecture** — an engine-free, unit-tested C# core, a thin
-MonoBehaviour view layer, and classic design patterns used where they pull their
-weight.
+A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (100
+levels in five slowly-shifting chapters — objectives, special candies incl. the
+2×2 **jelly fish**, jelly, licorice locks, spreading chocolate + **fountains**,
+**layered frosting**, **countdown bombs**, beam-eating **swirls**, ingredient
+drops, the **Sugar Crush** finale, in-level **boosters**, win-streak head starts,
+star ratings, a **star chest** + **daily missions** economy, a buildable candy
+town, daily streak rewards, one-line **tutorial overlays**, a relaxed mode +
+accessibility switches, saved + cloud-synced progress, generative chapter music)
+and the original **endless time-attack** with an online leaderboard. Deliberately
+built so the focus stays on **code architecture** — an engine-free, unit-tested
+C# core, a thin MonoBehaviour view layer, and classic design patterns used where
+they pull their weight.
 
 <p align="center">
   <img src="docs/design-main-menu.png" alt="Main menu with the scrollable level map" width="230">
@@ -23,8 +27,9 @@ weight.
 <p align="center"><sub><i>UI design previews (Stitch + Figma) — the game builds this exact language at runtime, no scene wiring.</i></sub></p>
 
 **The ambience drifts with the campaign** — every 20-level chapter slides towards a
-new palette (purple night → ocean teal → dusk plum → warm ember), one gentle step
-per level, and each chapter hums its own **procedurally composed music loop**:
+new palette (purple night → ocean teal → dusk plum → warm ember → golden dawn →
+candy garden), one gentle step per level, and each chapter hums its own
+**procedurally composed music loop**:
 
 <p align="center">
   <img src="docs/design-hud-ocean.png" alt="Chapter 2 ambience — ocean teal" width="230">
@@ -47,10 +52,10 @@ haptics, and a colorblind sprite mode.
 
 ### Moves campaign (Candy Crush style — the main mode)
 
-- **80 authored levels** on a scrollable (virtualized) level map, sequentially
+- **100 authored levels** on a scrollable (virtualized) level map, sequentially
   unlocked, each with a **move limit** and **objectives** shown as icon chips over
   the board: reach a score, collect N candies of a colour, **clear all the jelly**,
-  **crush the chocolate**, or **bring the ingredients home**.
+  **crush the chocolate**, **peel the frosting**, or **bring the ingredients home**.
 - **Chapters that drift, never jump.** Every 20 levels is a chapter with its own
   ambience — purple night → ocean teal → dusk plum → warm ember — and each level
   interpolates 1/20th of the way towards the next palette (`ThemeCurve`, unit-tested
@@ -66,6 +71,38 @@ haptics, and a colorblind sprite mode.
   to any clear, and *eats a neighbouring candy* at the end of every move that
   ignored it; **ingredients** are indestructible colourless pieces that trickle in
   through refills and score when they reach the bottom row.
+- **Chapter 5 blockers** (levels 81–100, same act rhythm): **layered frosting**
+  (1–3 layers; adjacent matches and blasts peel one per wave — the last layer lets
+  the clear through); **countdown bombs** — coloured candies on a move fuse, match
+  them or lose (boosters and shuffles never burn the fuse); **licorice swirls**
+  that fall like candy but *absorb striped beams* (the ray stops, cells behind
+  survive); and the indestructible **chocolate fountain**, which revives the
+  spread even after the last chocolate dies. The finale act runs two moves tighter.
+- **The jelly fish** — the 2×2 square match (a dead shape in most match-3s) mints
+  a fish that darts at the board's most urgent target: jelly → frosting →
+  chocolate → swirl → a random candy. Fish+fish = a school of three; fish+striped
+  and fish+wrapped carry the partner's blast to every target; bomb+fish strikes
+  two rounds.
+- **Sugar Crush finale:** winning converts leftover moves into striped candies
+  (4 per 5 moves) and fires every special on the board — with finale bonuses
+  (striped/fish 500, wrapped 1000, colour bomb 5000) raining into the score.
+- **Boosters** (SMASH hammer / free SWAP / MIX shuffle): tray at the bottom,
+  never cost a move, starter pack of 3 each, refilled by streak days, chests and
+  missions. Hidden in time attack — the leaderboard stays pure.
+- **Win streak ("Butler's Gift"):** consecutive wins pre-load specials on the next
+  board (striped → +wrapped → +colour bomb); abandoning a level breaks the streak,
+  and chest-earned **streak shields** can absorb one loss.
+- **Star chest + daily missions:** every 20 stars opens a booster chest (milestone
+  chests pay more); three deterministic daily missions + one weekly ride along on
+  the cascade recording — no separate counters to desync.
+- **Candy Town:** total stars silently build a five-stage night town per chapter —
+  a decor meta with zero choices to grind.
+- **Tutorial overlays:** each act opener dims the board once, rings the mechanic's
+  cells in pulsing gold and says one short line ("A 2X2 MAKES A FISH"); the first
+  tap dismisses it.
+- **Relaxed mode + accessibility:** effectively unlimited moves (wins cap at one
+  star, so the economy holds), reduced-motion and big-text switches, and the
+  colorblind sprite badges — all in Settings.
 - **Daily streak rewards:** a 7-day calendar (menu → DAILY) of extra-moves and
   special-candy head starts, with local "your treat is ready / streak about to
   melt" notifications — fully offline, clock-rollback safe.
@@ -73,9 +110,10 @@ haptics, and a colorblind sprite mode.
 
   | Shape | Candy | Detonation |
   |---|---|---|
-  | 4 in a line | **Striped** (perpendicular) | clears a full row / column |
+  | 4 in a line | **Striped** (perpendicular) | clears a full row / column (a beam — swirls absorb it) |
   | L or T | **Wrapped** | 3×3 blast — **twice** (survives, falls, re-detonates) |
   | 5 in a line | **Colour bomb** | clears every candy of one colour |
+  | 2×2 square | **Jelly fish** | darts at the most urgent cell (jelly → blockers → random) |
 
 - **Special + special swaps:** striped+striped = cross; striped+wrapped = triple
   cross; wrapped+wrapped = two 5×5 blasts; bomb+normal = that colour wiped;
@@ -127,10 +165,12 @@ re-derives rules, so logic and presentation can't drift apart.
 
 Core rule units, each small and independently tested:
 
-- `Board` — match runs, gravity (immobile cells act as floors), refill, possible
-  moves (incl. activation swaps), immobile-preserving shuffle
-- `JellyGrid` / `LockGrid` — the per-CELL blocker layers; matches damage jelly and
-  break locks, gravity ignores jelly but rests on locks
+- `Board` — match runs **and 2×2 squares**, gravity (immobile cells act as
+  floors), refill, possible moves (incl. activation swaps), immobile-preserving
+  shuffle, a square-free initial fill
+- `JellyGrid` / `LockGrid` / `FrostingGrid` / `BombTimers` — the blocker ledgers;
+  matches damage jelly, break locks and peel frosting layers; bomb countdowns key
+  by tile id (positions go stale under gravity) and tick only on counted moves
 - `SpecialMatchAnalyzer` — match *shape* → which special is born, and in which cell
 - `DetonationRules` — pure blast geometry (rows, columns, blasts, colour/board wipes)
 - `SwapRules` — classifies special+special / bomb swaps
@@ -141,9 +181,9 @@ Core rule units, each small and independently tested:
 - `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` / `ProgressMerger` —
   moves-mode win logic, save, and the conflict-free cloud merge
 - `DailyStreak` / `MetaState` — the login-streak rules and their tolerant save format
-- `LevelCurve` / `ThemeCurve` — the 80-level difficulty curve (chapter-4 blocker
-  acts included) and the per-chapter ambience drift (single source for generated
-  assets and runtime tinting)
+- `LevelCurve` / `ThemeCurve` — the 100-level difficulty curve (chapter-4 and
+  chapter-5 blocker acts + tutorial lines included) and the per-chapter ambience
+  drift (single source for generated assets and runtime tinting)
 - `CandyArtist` / `UiArtist` / `SfxSynth` / `MusicComposer` — procedural candy
   sprites, UI chrome, sounds and loop-perfect chapter music (pure pixel/sample
   math, no engine types; the music wraps note tails around the loop seam)
@@ -198,16 +238,19 @@ variables, fonts and generated sprites, so restyling the game is a one-file edit
 
 Everything visual/audible ships generated, and can be regenerated inside Unity:
 
-- **Match3 → Generate → Candy Sprites** — 44 PNGs drawn by `CandyArtist`: 5 colours
-  × normal/stripedH/stripedV/wrapped, the same set again with **colorblind glyph
-  badges**, the colour bomb, chocolate, the ingredient cherries and the licorice
-  cage. One silhouette per colour so candies stay tellable-apart without colour
-  vision even before the badge mode.
+- **Match3 → Generate → Candy Sprites** — 74 PNGs drawn by `CandyArtist`: 5 colours
+  × normal/stripedH/stripedV/wrapped/**fish**/**bomb**, the same set again with
+  **colorblind glyph badges**, the colour bomb, chocolate, the ingredient
+  cherries, the licorice cage, the **frosting stack (3 thicknesses)**, the
+  **swirl**, the **chocolate fountain** and the five candy-town stages. One
+  silhouette per colour so candies stay tellable-apart without colour vision even
+  before the badge mode.
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
-- **Match3 → Generate → Level Definitions** — the 80 campaign levels + catalog
-  from `LevelCurve` (jelly, locks, chocolate and ingredient counts included).
+- **Match3 → Generate → Level Definitions** — the 100 campaign levels + catalog
+  from `LevelCurve` (jelly, locks, chocolate, frosting, swirls, fountains, bombs,
+  ingredient counts and tutorial lines included).
 - **Match3 → Generate → Sound Effects** — 10 WAVs synthesized by `SfxSynth`.
 - **Match3 → Generate → Music** — one loop-perfect stereo track per chapter from
   `MusicComposer` (deterministic: same chapter, same bytes).
