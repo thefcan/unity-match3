@@ -35,3 +35,7 @@ MonoBehaviour:
   - 9600
   pointsPerTile: 10
   cascadeMultiplierStep: 1
+  tutorialText: CARRY CHERRIES TO THE FLOOR
+  tutorialCells:
+  - {x: 3, y: 0}
+  - {x: 4, y: 0}

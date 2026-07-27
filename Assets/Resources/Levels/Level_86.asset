@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 49865127264e2f4da82483ffcaa029e3, type: 3}
-  m_Name: Level_66
+  m_Name: Level_86
   m_EditorClassIdentifier: 
   width: 8
   height: 8
@@ -19,28 +19,26 @@ MonoBehaviour:
   movesBonusPoints: 30
   objectives:
   - type: 1
-    colorIndex: 1
-    amount: 26
+    colorIndex: 2
+    amount: 28
   - type: 0
     colorIndex: 0
-    amount: 3980
-  - type: 3
-    colorIndex: 0
-    amount: 2
+    amount: 4880
   jellyRows: 0
   jellyLayers: 1
   lockCells: []
-  chocolateCells:
-  - {x: 0, y: 7}
-  - {x: 7, y: 7}
+  chocolateCells: []
   ingredientCount: 0
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  bombCount: 3
+  bombTimerMoves: 10
+  tutorialText: DEFUSE BOMBS BEFORE ZERO
+  tutorialCells: []
   starScores:
-  - 4300
-  - 6450
-  - 8600
+  - 5400
+  - 8100
+  - 10800
   pointsPerTile: 10
   cascadeMultiplierStep: 1
-  tutorialText: STOP THE CHOCOLATE SPREAD
-  tutorialCells:
-  - {x: 0, y: 7}
-  - {x: 7, y: 7}

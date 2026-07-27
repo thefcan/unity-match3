@@ -355,6 +355,9 @@ namespace Match3.UI
                 SettingsPanel.Attach(canvas, topBar, game);
             if (safe.Find(nameof(BoosterTray)) == null)
                 BoosterTray.Attach(safe, game);
+            // The act-opener teaching veil (chapter 3+ levels with tutorialText).
+            if (canvas.transform.Find(nameof(TutorialOverlay)) == null)
+                TutorialOverlay.Attach(canvas, game);
         }
 
         /// <summary>

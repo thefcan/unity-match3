@@ -3,6 +3,19 @@ using System.Collections.Generic;
 
 namespace Match3.Core
 {
+    /// <summary>One frosting slab in a level layout: where it sits and how thick it starts.</summary>
+    public readonly struct FrostingCell
+    {
+        public GridPosition Position { get; }
+        public int Layers { get; }
+
+        public FrostingCell(GridPosition position, int layers)
+        {
+            Position = position;
+            Layers = layers;
+        }
+    }
+
     /// <summary>Everything that defines one authored level, engine-free.</summary>
     public readonly struct LevelParameters
     {
@@ -29,12 +42,39 @@ namespace Match3.Core
         /// <summary>How many ingredients the level dispenses (0 = none).</summary>
         public int IngredientCount { get; }
 
+        /// <summary>Frosting slabs (position + starting layers). Chapter 5 onwards.</summary>
+        public IReadOnlyList<FrostingCell> FrostingCells { get; }
+
+        /// <summary>Cells starting as licorice swirls.</summary>
+        public IReadOnlyList<GridPosition> SwirlCells { get; }
+
+        /// <summary>Cells holding an indestructible chocolate fountain.</summary>
+        public IReadOnlyList<GridPosition> FountainCells { get; }
+
+        /// <summary>How many bomb candies the level dispenses (0 = none).</summary>
+        public int BombCount { get; }
+
+        /// <summary>Moves on a freshly dispensed bomb's countdown.</summary>
+        public int BombTimerMoves { get; }
+
+        /// <summary>One short tutorial line for the level's first look ("" = none).</summary>
+        public string TutorialText { get; }
+
+        /// <summary>Cells highlighted through the tutorial dim.</summary>
+        public IReadOnlyList<GridPosition> TutorialCells { get; }
+
         public LevelParameters(int width, int height, int colorCount, int movesLimit, int movesBonusPoints,
                                IReadOnlyList<Objective> objectives, IReadOnlyList<int> starScores,
                                int jellyRows = 0, int jellyLayers = 1,
                                IReadOnlyList<GridPosition> lockCells = null,
                                IReadOnlyList<GridPosition> chocolateCells = null,
-                               int ingredientCount = 0)
+                               int ingredientCount = 0,
+                               IReadOnlyList<FrostingCell> frostingCells = null,
+                               IReadOnlyList<GridPosition> swirlCells = null,
+                               IReadOnlyList<GridPosition> fountainCells = null,
+                               int bombCount = 0, int bombTimerMoves = 9,
+                               string tutorialText = null,
+                               IReadOnlyList<GridPosition> tutorialCells = null)
         {
             Width = width;
             Height = height;
@@ -48,6 +88,13 @@ namespace Match3.Core
             LockCells = lockCells ?? Array.Empty<GridPosition>();
             ChocolateCells = chocolateCells ?? Array.Empty<GridPosition>();
             IngredientCount = ingredientCount;
+            FrostingCells = frostingCells ?? Array.Empty<FrostingCell>();
+            SwirlCells = swirlCells ?? Array.Empty<GridPosition>();
+            FountainCells = fountainCells ?? Array.Empty<GridPosition>();
+            BombCount = bombCount;
+            BombTimerMoves = bombTimerMoves;
+            TutorialText = tutorialText ?? string.Empty;
+            TutorialCells = tutorialCells ?? Array.Empty<GridPosition>();
         }
     }
 
@@ -65,7 +112,7 @@ namespace Match3.Core
     /// </summary>
     public static class LevelCurve
     {
-        public const int LevelCount = 80;
+        public const int LevelCount = 100;
         public const int ChapterLength = 20;
 
         public static LevelParameters For(int level)
@@ -90,7 +137,7 @@ namespace Match3.Core
                 int primaryColor = (cl - 3 + chapter + colorCount) % colorCount;
                 objectives.Add(new Objective(ObjectiveType.CollectColor, primaryColor, Math.Min(14 + cl, 34) + chapter * 2));
 
-                // Chapter 3 drops the secondary collection: the blocker goals below
+                // Chapters 3+ drop the secondary collection: the blocker goals below
                 // take its slot (and the objective bar stays at four chips max).
                 if (cl >= 6 && chapter < 3)
                 {
@@ -101,17 +148,34 @@ namespace Match3.Core
                     objectives.Add(new Objective(ObjectiveType.Score, 0, scoreTarget));
             }
 
-            // Chapter 3 (levels 61-80) teaches the blocker mechanics in five-level
-            // acts: locks → chocolate → ingredients → the mixed finale.
+            // Chapter 3 (levels 61-80) teaches the first blocker wave in five-level
+            // acts: locks → chocolate → ingredients → the mixed finale. Its layouts
+            // are FROZEN — chapter 4 gets its own act builder below.
             var lockCells = new List<GridPosition>();
             var chocolateCells = new List<GridPosition>();
             int ingredientCount = 0;
-            if (chapter >= 3)
+            if (chapter == 3)
                 BuildBlockerAct(cl, objectives, lockCells, chocolateCells, ref ingredientCount);
+
+            // Chapter 4 (levels 81-100): frosting → bombs+swirls → the fish showcase
+            // fed by fountains → the everything-finale ("almost win" pressure).
+            var frostingCells = new List<FrostingCell>();
+            var swirlCells = new List<GridPosition>();
+            var fountainCells = new List<GridPosition>();
+            int bombCount = 0;
+            int bombTimer = 9;
+            if (chapter >= 4)
+            {
+                BuildChapter5Act(cl, objectives, frostingCells, swirlCells, fountainCells,
+                                 ref bombCount, ref bombTimer);
+                // The finale act runs two moves tighter — near-miss pressure, only here.
+                if (cl >= 16)
+                    movesLimit = Math.Max(15, movesLimit - 2);
+            }
 
             // Jelly arrives at chapter-level 8 (two floor rows), widens to three rows
             // at 13, and doubles its layers from 16 — the late-chapter spike.
-            // Chapter 3 replaces jelly entirely with the blocker mechanics.
+            // Chapters 3+ replace jelly entirely with the blocker mechanics.
             int jellyRows = chapter >= 3 ? 0 : cl < 8 ? 0 : cl < 13 ? 2 : 3;
             int jellyLayers = cl < 16 ? 1 : 2;
             if (jellyRows > 0)
@@ -120,8 +184,122 @@ namespace Match3.Core
             int oneStar = 400 + cl * 100 + chapter * 1100;
             var starScores = new[] { oneStar, oneStar * 3 / 2, oneStar * 2 };
 
+            (string tutorialText, IReadOnlyList<GridPosition> tutorialCells) =
+                TutorialFor(level, lockCells, chocolateCells, frostingCells);
+
             return new LevelParameters(8, 8, colorCount, movesLimit, 30, objectives, starScores,
-                                       jellyRows, jellyLayers, lockCells, chocolateCells, ingredientCount);
+                                       jellyRows, jellyLayers, lockCells, chocolateCells, ingredientCount,
+                                       frostingCells, swirlCells, fountainCells, bombCount, bombTimer,
+                                       tutorialText, tutorialCells);
+        }
+
+        /// <summary>
+        /// Chapter 4's blocker acts on the 8x8 board (y0 = gravity floor):
+        /// frosting shelf → bomb dispenser (+ beam-bending swirls) → fountains feeding
+        /// the fish showcase → the mixed finale.
+        /// </summary>
+        private static void BuildChapter5Act(int cl, List<Objective> objectives,
+                                             List<FrostingCell> frostingCells, List<GridPosition> swirlCells,
+                                             List<GridPosition> fountainCells,
+                                             ref int bombCount, ref int bombTimer)
+        {
+            if (cl <= 5)
+            {
+                // Act 1 — frosting: a widening, thickening shelf across row 5, then a
+                // second low slab. Objective counts LAYERS.
+                int half = Math.Min(cl + 1, 4); // widths 4, 6, 8, 8, 8
+                for (int x = 4 - half; x <= 3 + half; x++)
+                {
+                    int layers = cl >= 3 && x >= 2 && x <= 5 ? 2 : 1;
+                    frostingCells.Add(new FrostingCell(new GridPosition(x, 5), layers));
+                }
+                if (cl >= 4)
+                    for (int x = 2; x <= 5; x++)
+                        frostingCells.Add(new FrostingCell(new GridPosition(x, 2), cl == 5 ? 2 : 1));
+
+                int totalLayers = 0;
+                foreach (FrostingCell cell in frostingCells)
+                    totalLayers += cell.Layers;
+                objectives.Add(new Objective(ObjectiveType.ClearFrosting, 0, totalLayers));
+            }
+            else if (cl <= 10)
+            {
+                // Act 2 — countdown bombs, with swirls arriving to bend the beams.
+                bombCount = cl - 3;               // 3..7 bombs across the level
+                bombTimer = cl <= 7 ? 10 : 9;
+                if (cl >= 7)
+                {
+                    swirlCells.Add(new GridPosition(1, 6));
+                    swirlCells.Add(new GridPosition(6, 6));
+                }
+                if (cl >= 9)
+                {
+                    swirlCells.Add(new GridPosition(3, 3));
+                    swirlCells.Add(new GridPosition(4, 3));
+                }
+            }
+            else if (cl <= 15)
+            {
+                // Act 3 — the fish showcase: fountains keep oozing chocolate, and the
+                // 2x2 fish is the cleanest counter. The objective feeds on the ooze.
+                fountainCells.Add(new GridPosition(0, 7));
+                if (cl >= 14)
+                    fountainCells.Add(new GridPosition(7, 7));
+                objectives.Add(new Objective(ObjectiveType.ClearChocolate, 0, 3 + (cl - 11)));
+            }
+            else
+            {
+                // Act 4 — the mixed finale: frosting core, swirl guards, late bombs,
+                // and one fountain on the very last level.
+                for (int x = 2; x <= 5; x++)
+                    frostingCells.Add(new FrostingCell(new GridPosition(x, 5), 2));
+                swirlCells.Add(new GridPosition(1, 6));
+                swirlCells.Add(new GridPosition(6, 6));
+                if (cl >= 18)
+                {
+                    bombCount = 2;
+                    bombTimer = 9;
+                }
+                if (cl == 20)
+                    fountainCells.Add(new GridPosition(0, 7));
+                objectives.Add(new Objective(ObjectiveType.ClearFrosting, 0, 8));
+            }
+        }
+
+        /// <summary>
+        /// The one-line tutorial for each act opener (chapter 3's retrofits included).
+        /// Highlight cells come from the level's own layout so the overlay always
+        /// points at something real.
+        /// </summary>
+        private static (string text, IReadOnlyList<GridPosition> cells) TutorialFor(
+            int level, List<GridPosition> lockCells, List<GridPosition> chocolateCells,
+            List<FrostingCell> frostingCells)
+        {
+            switch (level)
+            {
+                case 61:
+                    return ("MATCH BESIDE THE CAGES", lockCells.ToArray());
+                case 66:
+                    return ("STOP THE CHOCOLATE SPREAD", chocolateCells.ToArray());
+                case 71:
+                    return ("CARRY CHERRIES TO THE FLOOR",
+                            new[] { new GridPosition(3, 0), new GridPosition(4, 0) });
+                case 81:
+                {
+                    var cells = new List<GridPosition>();
+                    for (int i = 0; i < frostingCells.Count && i < 4; i++)
+                        cells.Add(frostingCells[i].Position);
+                    return ("MATCH BESIDE THE FROSTING", cells);
+                }
+                case 86:
+                    return ("DEFUSE BOMBS BEFORE ZERO", Array.Empty<GridPosition>());
+                case 91:
+                    return ("A 2X2 MAKES A FISH", Array.Empty<GridPosition>());
+                case 96:
+                    return ("EVERY BLOCKER AT ONCE", Array.Empty<GridPosition>());
+                default:
+                    return (string.Empty, Array.Empty<GridPosition>());
+            }
         }
 
         /// <summary>Chapter 3's blocker layouts on the 8x8 board (y0 = gravity floor).</summary>

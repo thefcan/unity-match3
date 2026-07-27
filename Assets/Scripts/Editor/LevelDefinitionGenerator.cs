@@ -55,6 +55,14 @@ namespace Match3.EditorTools
                 level.lockCells = parameters.LockCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
                 level.chocolateCells = parameters.ChocolateCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
                 level.ingredientCount = parameters.IngredientCount;
+                level.frostingCells = parameters.FrostingCells
+                    .Select(c => new Vector3Int(c.Position.X, c.Position.Y, c.Layers)).ToArray();
+                level.swirlCells = parameters.SwirlCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
+                level.fountainCells = parameters.FountainCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
+                level.bombCount = parameters.BombCount;
+                level.bombTimerMoves = parameters.BombTimerMoves;
+                level.tutorialText = parameters.TutorialText;
+                level.tutorialCells = parameters.TutorialCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
                 EditorUtility.SetDirty(level);
 
                 levels.Add(level);

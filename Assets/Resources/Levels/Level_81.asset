@@ -10,37 +10,43 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 49865127264e2f4da82483ffcaa029e3, type: 3}
-  m_Name: Level_66
+  m_Name: Level_81
   m_EditorClassIdentifier: 
   width: 8
   height: 8
   colorCount: 5
-  movesLimit: 21
+  movesLimit: 22
   movesBonusPoints: 30
   objectives:
   - type: 1
-    colorIndex: 1
-    amount: 26
-  - type: 0
+    colorIndex: 2
+    amount: 23
+  - type: 5
     colorIndex: 0
-    amount: 3980
-  - type: 3
-    colorIndex: 0
-    amount: 2
+    amount: 4
   jellyRows: 0
   jellyLayers: 1
   lockCells: []
-  chocolateCells:
-  - {x: 0, y: 7}
-  - {x: 7, y: 7}
+  chocolateCells: []
   ingredientCount: 0
+  frostingCells:
+  - {x: 2, y: 5, z: 1}
+  - {x: 3, y: 5, z: 1}
+  - {x: 4, y: 5, z: 1}
+  - {x: 5, y: 5, z: 1}
+  swirlCells: []
+  fountainCells: []
+  bombCount: 0
+  bombTimerMoves: 9
+  tutorialText: MATCH BESIDE THE FROSTING
+  tutorialCells:
+  - {x: 2, y: 5}
+  - {x: 3, y: 5}
+  - {x: 4, y: 5}
+  - {x: 5, y: 5}
   starScores:
-  - 4300
-  - 6450
-  - 8600
+  - 4900
+  - 7350
+  - 9800
   pointsPerTile: 10
   cascadeMultiplierStep: 1
-  tutorialText: STOP THE CHOCOLATE SPREAD
-  tutorialCells:
-  - {x: 0, y: 7}
-  - {x: 7, y: 7}

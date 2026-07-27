@@ -34,3 +34,7 @@ MonoBehaviour:
   - 7600
   pointsPerTile: 10
   cascadeMultiplierStep: 1
+  tutorialText: MATCH BESIDE THE CAGES
+  tutorialCells:
+  - {x: 3, y: 5}
+  - {x: 4, y: 5}

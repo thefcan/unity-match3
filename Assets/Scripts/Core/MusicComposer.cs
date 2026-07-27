@@ -36,14 +36,16 @@ namespace Match3.Core
             }
         }
 
-        // One entry per campaign chapter (purple night, ocean teal, dusk plum, ember
-        // tail, ...). Chapters beyond the table reuse the last mood.
+        // One entry per campaign chapter (purple night, ocean teal, dusk plum, ember,
+        // candy garden, ...). Chapters beyond the table reuse the last mood. APPEND
+        // ONLY: earlier entries are frozen — their rendered wavs must never change.
         private static readonly ChapterStyle[] Styles =
         {
             new ChapterStyle(45, 84, 0.45f, 0.55f), // A2  — purple night: warm, unhurried
             new ChapterStyle(50, 90, 0.70f, 0.65f), // D3  — ocean teal: brighter, flowing
             new ChapterStyle(42, 86, 0.40f, 0.50f), // F#2 — dusk plum: darker, sparse
-            new ChapterStyle(48, 94, 0.80f, 0.70f), // C3  — ember tail: lively, glinting
+            new ChapterStyle(48, 94, 0.80f, 0.70f), // C3  — ember: lively, glinting
+            new ChapterStyle(52, 96, 0.88f, 0.75f), // E3  — candy garden: airy, playful
         };
 
         /// <summary>Minor-pentatonic offsets — every arp/chime note comes from here.</summary>
