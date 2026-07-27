@@ -1,3 +1,4 @@
+using Match3.Core;
 using Match3.Game;
 using TMPro;
 using UnityEngine;
@@ -29,6 +30,7 @@ namespace Match3.UI
         private TMP_Text _summary;
         private TMP_Text _scoreCaption;
         private TMP_Text _scoreValue;
+        private TMP_Text _eventLine;
         private Image[] _starPips;
         private TMP_Text _buttonLabel;
         private GameObject _menuButton;
@@ -106,6 +108,15 @@ namespace Match3.UI
             _scoreValue.gameObject.SetActive(true);
             _scoreValue.text = _game.Score.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
 
+            // Quiet event-progress toast — the win that just played already counted.
+            if (EventService.IsWindowActive)
+            {
+                EventDef def = EventService.CurrentDef;
+                _eventLine.text = def.Kind == EventKind.Race
+                    ? $"RACE  {EventService.Progress}/{EventCalendar.RaceTarget}"
+                    : $"EVENT  {EventService.Progress}/{def.Tier3}";
+            }
+
             for (int i = 0; i < _starPips.Length; i++)
             {
                 _starPips[i].gameObject.SetActive(true);
@@ -172,6 +183,7 @@ namespace Match3.UI
             _primaryAction = primaryAction;
             _scoreCaption.gameObject.SetActive(false);
             _scoreValue.gameObject.SetActive(false);
+            _eventLine.text = string.Empty;
             foreach (Image pip in _starPips)
                 pip.gameObject.SetActive(false);
             // The menu button only makes sense when the MainMenu scene is loadable
@@ -225,6 +237,13 @@ namespace Match3.UI
             _scoreValue = CreateText("ScoreValue", content, new Vector2(0f, 15f), 96f, FontStyles.Bold);
             UiTheme.ApplyFont(_scoreValue, UiTheme.TitleFont);
             _scoreValue.color = UiTheme.Gold;
+
+            // Win-only Candy Calendar beat, tucked between the score and the button.
+            _eventLine = CreateText("EventLine", content, new Vector2(0f, -68f), 28f, FontStyles.Bold);
+            _eventLine.rectTransform.sizeDelta = new Vector2(780f, 40f);
+            UiTheme.ApplyFont(_eventLine, UiTheme.BodyFont);
+            _eventLine.color = UiTheme.Gold;
+            _eventLine.characterSpacing = 4f;
 
             // The star trio STRADDLES the card's top edge (card is 980 tall, so the
             // edge sits at +490 in card space) — straight from the Stitch mock.

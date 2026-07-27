@@ -91,6 +91,31 @@ namespace Match3.Core
             }, White);
         }
 
+        /// <summary>White trophy cup (the event panel's podium shelf) — tinted gold/silver/bronze.</summary>
+        public static byte[] Trophy(int size)
+        {
+            float unit = size / 24f; // designed on a 24 grid, like Lock
+            return RenderMask(size, (x, y) =>
+            {
+                // bowl
+                if (RoundedRectSdfAt(x, y, 6f * unit, 3f * unit, 12f * unit, 8f * unit, 3f * unit) < 0f)
+                    return true;
+                // handles: half-rings hanging off the bowl rim
+                float dxl = x - 6.5f * unit, dyl = y - 6f * unit;
+                float dl = (float)Math.Sqrt(dxl * dxl + dyl * dyl);
+                if (dl < 4.2f * unit && dl > 2.6f * unit && x < 6.5f * unit)
+                    return true;
+                float dxr = x - 17.5f * unit, dyr = y - 6f * unit;
+                float dr = (float)Math.Sqrt(dxr * dxr + dyr * dyr);
+                if (dr < 4.2f * unit && dr > 2.6f * unit && x > 17.5f * unit)
+                    return true;
+                // stem and base
+                if (x > 10.4f * unit && x < 13.6f * unit && y >= 11f * unit && y < 17f * unit)
+                    return true;
+                return RoundedRectSdfAt(x, y, 7f * unit, 17f * unit, 10f * unit, 4f * unit, 1.5f * unit) < 0f;
+            }, White);
+        }
+
         /// <summary>
         /// The screen background: a NEUTRAL vertical luminance gradient (white top
         /// fading to mid-gray). Kept hueless on purpose — the UI tints it with the

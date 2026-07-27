@@ -90,6 +90,7 @@ namespace Match3.UI
         public static Sprite CircleSprite => LoadSprite("UI/ui_circle");
         public static Sprite StarSprite => LoadSprite("UI/ui_star");
         public static Sprite LockSprite => LoadSprite("UI/ui_lock");
+        public static Sprite TrophySprite => LoadSprite("UI/ui_trophy"); // null until UI Sprites regenerates; callers fall back
         public static Sprite BgGradient => LoadSprite("UI/ui_bg_gradient");
 
         // Cached: these properties are hit on every themed rebuild (level rows, chips,

@@ -143,6 +143,7 @@ namespace Match3.UI
             TasksPanel.Attach(canvas.GetComponent<Canvas>(), content);
             TownPanel.Attach(canvas.GetComponent<Canvas>(), content);
             ChestPanel.Attach(canvas.GetComponent<Canvas>(), content);
+            EventsPanel.Attach(canvas.GetComponent<Canvas>(), content);
         }
 
         private static Transform BuildSafeAreaHost(Transform canvas)

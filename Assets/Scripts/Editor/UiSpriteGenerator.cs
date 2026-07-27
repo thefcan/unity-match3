@@ -27,6 +27,7 @@ namespace Match3.EditorTools
             Write("ui_circle", 128, 128, UiArtist.Circle(128), 0);
             Write("ui_star", 128, 128, UiArtist.Star(128), 0);
             Write("ui_lock", 96, 96, UiArtist.Lock(96), 0);
+            Write("ui_trophy", 96, 96, UiArtist.Trophy(96), 0);
             Write("ui_bg_gradient", 16, 512, UiArtist.BackgroundGradient(16, 512), 0);
 
             AssetDatabase.Refresh();
