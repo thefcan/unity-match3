@@ -77,6 +77,11 @@ namespace Match3.Game
         public FrostingGrid Frosting { get; private set; }
         /// <summary>Moves mode: armed bomb countdowns. Null when the level dispenses no bombs.</summary>
         public BombTimers Bombs { get; private set; }
+
+        /// <summary>True when the current loss came from a bomb, not an empty move counter (fail headline).</summary>
+        public bool LastFailWasBomb { get; private set; }
+
+        public void NoteBombFail() => LastFailWasBomb = true;
         public int Score { get; private set; }
         public int Level { get; private set; }
         /// <summary>Score needed to clear the current level (time attack).</summary>
@@ -268,6 +273,7 @@ namespace Match3.Game
         public void BuildNewGame()
         {
             Mode = GameSession.Mode;
+            LastFailWasBomb = false;
             LevelDefinition = GameSession.SelectedLevel;
             if (Mode == GameMode.Moves && LevelDefinition == null)
                 LevelDefinition = Resources.Load<LevelDefinition>("Levels/Level_01");

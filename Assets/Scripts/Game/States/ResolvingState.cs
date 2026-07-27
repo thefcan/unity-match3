@@ -108,7 +108,10 @@ namespace Match3.Game
                 }
 
                 if (bombExploded)
+                {
+                    Game.NoteBombFail(); // the fail panel words the loss honestly
                     Game.SetState(new LevelFailedState(Game));
+                }
                 else if (Game.MovesLeft <= 0)
                     Game.SetState(new LevelFailedState(Game));
                 else if (!Game.Board.HasPossibleMove())

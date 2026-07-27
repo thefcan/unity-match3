@@ -144,7 +144,10 @@ namespace Match3.UI
         {
             AudioManager.Play(Sfx.Lose);
             MusicManager.Duck();
-            Show("Out of Moves!", $"Score {_game.Score}", "Retry", _game.Restart);
+            // A bomb loss happens with moves still on the counter — saying "out of
+            // moves" there reads as a bug (seen in standalone play-testing).
+            Show(_game.LastFailWasBomb ? "The Bomb Went Off!" : "Out of Moves!",
+                 $"Score {_game.Score}", "Retry", _game.Restart);
         }
 
         private void HandleGameEnded()
