@@ -41,6 +41,10 @@ namespace Match3.Core
     public static class SpecialMatchAnalyzer
     {
         public static List<SpecialPlan> Analyze(Board board, List<MatchRun> runs, GridPosition? swapFrom, GridPosition? swapTo)
+            => Analyze(board, runs, null, swapFrom, swapTo);
+
+        public static List<SpecialPlan> Analyze(Board board, List<MatchRun> runs, List<MatchSquare> squares,
+                                                GridPosition? swapFrom, GridPosition? swapTo)
         {
             if (board == null) throw new ArgumentNullException(nameof(board));
             if (runs == null) throw new ArgumentNullException(nameof(runs));
@@ -102,6 +106,24 @@ namespace Match3.Core
                 }
             }
 
+            // 4. Jelly fish from 2x2 squares — the lowest-priority shape: any square
+            // whose cell already funded a bigger special is spent.
+            if (squares != null)
+            {
+                foreach (MatchSquare square in squares)
+                {
+                    if (square.Positions.Any(consumed.Contains)) continue;
+
+                    GridPosition? position = PickSquarePosition(board, square, swapTo, swapFrom);
+                    if (position is { } pos)
+                    {
+                        plans.Add(new SpecialPlan(pos, TileKind.Fish, SquareColor(board, square), square.Positions));
+                        foreach (GridPosition cell in square.Positions)
+                            consumed.Add(cell);
+                    }
+                }
+            }
+
             return plans;
         }
 
@@ -137,6 +159,29 @@ namespace Match3.Core
         private static int RunColor(Board board, MatchRun run)
         {
             foreach (GridPosition pos in run.Positions)
+                if (board[pos] is { } tile && tile.ColorIndex >= 0)
+                    return tile.ColorIndex;
+            return Tile.NoColor;
+        }
+
+        /// <summary>Square variant of <see cref="PickPosition"/>: swap cells first, then scan order.</summary>
+        private static GridPosition? PickSquarePosition(Board board, MatchSquare square, GridPosition? swapTo, GridPosition? swapFrom)
+        {
+            IEnumerable<GridPosition> candidates = Enumerable.Empty<GridPosition>();
+            if (swapTo is { } to && square.Positions.Contains(to)) candidates = candidates.Append(to);
+            if (swapFrom is { } from && square.Positions.Contains(from)) candidates = candidates.Append(from);
+            candidates = candidates.Concat(square.Positions);
+
+            foreach (GridPosition pos in candidates)
+                if (board[pos] is { } tile && tile.Kind == TileKind.Normal)
+                    return pos;
+
+            return null;
+        }
+
+        private static int SquareColor(Board board, MatchSquare square)
+        {
+            foreach (GridPosition pos in square.Positions)
                 if (board[pos] is { } tile && tile.ColorIndex >= 0)
                     return tile.ColorIndex;
             return Tile.NoColor;

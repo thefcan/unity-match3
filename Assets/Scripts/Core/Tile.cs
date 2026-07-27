@@ -36,17 +36,26 @@ namespace Match3.Core
         }
 
         /// <summary>
-        /// A DETONATING candy (striped/wrapped/bomb). Deliberately not "Kind != Normal":
-        /// chocolate and ingredients are non-detonating board pieces, and the resolver's
-        /// chain expansion must never try to set them off.
+        /// A DETONATING candy (striped/wrapped/bomb/fish). Deliberately not "Kind != Normal":
+        /// chocolate, ingredients and the other blockers are non-detonating board pieces,
+        /// and the resolver's chain expansion must never try to set them off.
         /// </summary>
         public bool IsSpecial => Kind == TileKind.StripedH || Kind == TileKind.StripedV ||
-                                 Kind == TileKind.Wrapped || Kind == TileKind.ColorBomb;
+                                 Kind == TileKind.Wrapped || Kind == TileKind.ColorBomb ||
+                                 Kind == TileKind.Fish;
 
         public bool IsColorBomb => Kind == TileKind.ColorBomb;
         public bool IsStriped => Kind == TileKind.StripedH || Kind == TileKind.StripedV;
         public bool IsChocolate => Kind == TileKind.Chocolate;
         public bool IsIngredient => Kind == TileKind.Ingredient;
+        public bool IsFish => Kind == TileKind.Fish;
+
+        /// <summary>
+        /// Matches and clears like a plain candy (colour runs / squares, normal swap
+        /// rules). Bomb candies deliberately qualify: their countdown is the ONLY
+        /// thing that distinguishes them.
+        /// </summary>
+        public bool IsPlainCandy => Kind == TileKind.Normal || Kind == TileKind.Bomb;
 
         // Identity is the Id alone — a tile never changes colour or kind during its
         // lifetime (a "morphed" tile is a NEW tile minted by the factory).

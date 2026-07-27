@@ -172,12 +172,52 @@ namespace Match3.Core
                 {
                     TileKind.StripedH => 500,
                     TileKind.StripedV => 500,
+                    TileKind.Fish => 500,
                     TileKind.Wrapped => 1000,
                     TileKind.ColorBomb => 5000,
                     _ => 0,
                 };
             }
             return bonus;
+        }
+
+        /// <summary>
+        /// Where a detonating fish darts: the most urgent target wins — jelly first,
+        /// then frosting, chocolate, a swirl, then any plain candy — with the injected
+        /// random picking among equals. Cells already clearing this wave are skipped so
+        /// a school spreads its strikes; indestructibles (ingredients, fountains) are
+        /// never worth a dart. Null when the board offers no target at all.
+        /// </summary>
+        private GridPosition? PickFishTarget(Board board, HashSet<GridPosition> exclude)
+        {
+            var candidates = new List<GridPosition>();
+
+            void Collect(Func<GridPosition, bool> qualifies)
+            {
+                if (candidates.Count > 0)
+                    return;
+                for (int x = 0; x < board.Width; x++)
+                {
+                    for (int y = 0; y < board.Height; y++)
+                    {
+                        var pos = new GridPosition(x, y);
+                        if (!exclude.Contains(pos) && board[pos].HasValue && qualifies(pos))
+                            candidates.Add(pos);
+                    }
+                }
+            }
+
+            Collect(pos => _jelly != null && _jelly.LayersAt(pos) > 0);
+            Collect(pos => board[pos].Value.Kind == TileKind.Frosting);
+            Collect(pos => board[pos].Value.Kind == TileKind.Chocolate);
+            Collect(pos => board[pos].Value.Kind == TileKind.Swirl);
+            Collect(pos => board[pos].Value.IsPlainCandy);
+            Collect(pos => board[pos].Value.Kind != TileKind.Ingredient &&
+                           board[pos].Value.Kind != TileKind.ChocolateFountain);
+
+            if (candidates.Count == 0)
+                return null;
+            return candidates[_random != null ? _random.Next(candidates.Count) : 0];
         }
 
         private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo,
@@ -203,6 +243,7 @@ namespace Match3.Core
                 var processedIds = new HashSet<int>(); // specials already handled this wave
                 var pending = new Queue<GridPosition>(); // specials waiting to detonate
                 var runLengths = new List<int>();
+                var fishStrikes = new List<FishStrike>();
 
                 // Adds a detonation and folds its area into the clear set; any special
                 // the blast reaches is queued, which is what makes chains work.
@@ -221,6 +262,19 @@ namespace Match3.Core
                     }
                 }
 
+                // One fish dart: pick the target, record the flight, hit the cell.
+                // Returns the target so combos can stack their bonus detonation on it.
+                GridPosition? FireFish(Tile fish, GridPosition from)
+                {
+                    GridPosition? target = PickFishTarget(board, clearSet);
+                    if (target is { } to)
+                    {
+                        fishStrikes.Add(new FishStrike(fish, from, to));
+                        EmitDetonation(fish, from, DetonationKind.FishStrike, new List<GridPosition> { to });
+                    }
+                    return target;
+                }
+
                 // ---- 1. Seed the wave: combo swap, or matches + primed second blasts ---
                 bool comboWave = false;
                 if (cascadeIndex == 0 && swapFrom is { } fromPos && swapTo is { } toPos &&
@@ -231,19 +285,23 @@ namespace Match3.Core
                     {
                         comboWave = true;
                         BuildComboWave(board, combo, fromPos, fromTile, toPos, toTile,
-                                       clearSet, creations, processedIds, pending, EmitDetonation);
+                                       clearSet, creations, processedIds, pending, EmitDetonation, FireFish);
                     }
                 }
 
                 if (!comboWave)
                 {
                     List<MatchRun> runs = board.FindMatchRuns();
+                    // 2x2 squares only exist as a match shape in FULL mode — the
+                    // classic resolver must keep its original behaviour bit-for-bit.
+                    List<MatchSquare> squares = _factory != null ? board.FindSquares() : null;
+                    int squareCount = squares?.Count ?? 0;
                     bool seedFinale = finale && cascadeIndex == 0;
                     bool seedHammer = hammer.HasValue && cascadeIndex == 0;
                     // A stray ingredient sitting on the bottom row keeps the cascade
                     // alive one more wave so its exit gets processed and recorded.
-                    if (runs.Count == 0 && primedWrapped.Count == 0 && !seedFinale && !seedHammer &&
-                        !HasBottomIngredient(board))
+                    if (runs.Count == 0 && squareCount == 0 && primedWrapped.Count == 0 &&
+                        !seedFinale && !seedHammer && !HasBottomIngredient(board))
                         break;
 
                     // Hammer seeding: the smashed cell enters the clear set and the
@@ -277,13 +335,25 @@ namespace Match3.Core
                             clearSet.Add(pos);
                     }
 
+                    // Squares clear their four cells too, and count as a 4-length run
+                    // for the big-match bonuses (time attack's clock top-up).
+                    if (squareCount > 0)
+                    {
+                        foreach (MatchSquare square in squares)
+                        {
+                            runLengths.Add(4);
+                            foreach (GridPosition pos in square.Positions)
+                                clearSet.Add(pos);
+                        }
+                    }
+
                     // Match shapes mint special candies. A creation cell MORPHS instead
                     // of clearing, so it leaves the clear set. Classic mode skips this.
-                    if (_factory != null && runs.Count > 0)
+                    if (_factory != null && (runs.Count > 0 || squareCount > 0))
                     {
                         GridPosition? planFrom = cascadeIndex == 0 ? swapFrom : null;
                         GridPosition? planTo = cascadeIndex == 0 ? swapTo : null;
-                        foreach (SpecialPlan plan in SpecialMatchAnalyzer.Analyze(board, runs, planFrom, planTo))
+                        foreach (SpecialPlan plan in SpecialMatchAnalyzer.Analyze(board, runs, squares, planFrom, planTo))
                         {
                             // A locked cell can't host a fresh special — the lock
                             // absorbs the match; its run cells just clear normally.
@@ -347,6 +417,9 @@ namespace Match3.Core
                             // A bomb set off by a blast targets the most common colour.
                             EmitDetonation(tile, pos, DetonationKind.ColorClear,
                                            DetonationRules.AreaFor(board, pos, TileKind.ColorBomb));
+                            break;
+                        case TileKind.Fish:
+                            FireFish(tile, pos);
                             break;
                     }
                 }
@@ -446,7 +519,8 @@ namespace Match3.Core
 
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
                                           creations, detonations, jellyHits, lockBreaks,
-                                          Array.Empty<ChocolateSpread>(), ingredientExits));
+                                          Array.Empty<ChocolateSpread>(), ingredientExits,
+                                          fishStrikes, Array.Empty<FrostingHit>(), Array.Empty<BombTick>()));
                 cascadeIndex++;
             }
 
@@ -563,14 +637,16 @@ namespace Match3.Core
         /// <summary>
         /// Seeds wave 0 for a special+special (or bomb) swap. Both swapped tiles are
         /// consumed by the combo; chains beyond the initial shape are handled by the
-        /// caller's generic detonation expansion.
+        /// caller's generic detonation expansion. <paramref name="fireFish"/> is the
+        /// wave's dart launcher (it records the strike and hits the target cell).
         /// </summary>
         private void BuildComboWave(
             Board board, SwapKind combo,
             GridPosition fromPos, Tile fromTile, GridPosition toPos, Tile toTile,
             HashSet<GridPosition> clearSet, List<SpecialCreation> creations,
             HashSet<int> processedIds, Queue<GridPosition> pending,
-            Action<Tile, GridPosition, DetonationKind, List<GridPosition>> emit)
+            Action<Tile, GridPosition, DetonationKind, List<GridPosition>> emit,
+            Func<Tile, GridPosition, GridPosition?> fireFish)
         {
             switch (combo)
             {
@@ -674,6 +750,59 @@ namespace Match3.Core
                     emit(toTile, toPos, DetonationKind.BoardClear, DetonationRules.BoardArea(board));
                     break;
                 }
+
+                case SwapKind.FishFish:
+                    // A school: both fish are consumed and THREE darts fly.
+                    ConsumeSwappedPair();
+                    for (int i = 0; i < 3; i++)
+                        fireFish(toTile, toPos);
+                    break;
+
+                case SwapKind.FishStriped:
+                {
+                    // Three darts, each detonating a striped beam (random orientation)
+                    // where it lands — the partner's power rides along on every strike.
+                    ConsumeSwappedPair();
+                    var (fishPos, fishTile, partnerTile) = SplitFishPair();
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (fireFish(fishTile, fishPos) is not { } target)
+                            continue;
+                        bool horizontal = _random == null || _random.Next(2) == 0;
+                        emit(partnerTile, target,
+                             horizontal ? DetonationKind.Row : DetonationKind.Column,
+                             horizontal
+                                 ? DetonationRules.RowArea(board, target.Y)
+                                 : DetonationRules.ColumnArea(board, target.X));
+                    }
+                    break;
+                }
+
+                case SwapKind.FishWrapped:
+                {
+                    ConsumeSwappedPair();
+                    var (fishPos, fishTile, partnerTile) = SplitFishPair();
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (fireFish(fishTile, fishPos) is not { } target)
+                            continue;
+                        emit(partnerTile, target, DetonationKind.Blast3x3,
+                             DetonationRules.BlastArea(board, target, 1));
+                    }
+                    break;
+                }
+
+                case SwapKind.BombFish:
+                {
+                    // The school strikes for two rounds: six darts, no extra payload.
+                    var (bombPos, bombTile, fishPos, fishTile) = SplitBombPair();
+                    ConsumeBomb(bombPos, bombTile);
+                    processedIds.Add(fishTile.Id);
+                    clearSet.Add(fishPos);
+                    for (int i = 0; i < 6; i++)
+                        fireFish(fishTile, fishPos);
+                    break;
+                }
             }
 
             void ConsumeSwappedPair()
@@ -694,6 +823,11 @@ namespace Match3.Core
                 fromTile.IsColorBomb
                     ? (fromPos, fromTile, toPos, toTile)
                     : (toPos, toTile, fromPos, fromTile);
+
+            (GridPosition fishPos, Tile fishTile, Tile partnerTile) SplitFishPair() =>
+                fromTile.IsFish
+                    ? (fromPos, fromTile, toTile)
+                    : (toPos, toTile, fromTile);
         }
 
         private static GridPosition? FindTilePosition(Board board, int tileId)

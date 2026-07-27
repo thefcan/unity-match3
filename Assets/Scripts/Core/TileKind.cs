@@ -32,5 +32,34 @@ namespace Match3.Core
         /// destroyed; it "exits" when it reaches the bottom row.
         /// </summary>
         Ingredient,
+        /// <summary>
+        /// Jelly fish: made by a 2x2 square match, coloured, detonates by darting at
+        /// the most urgent target on the board (jelly &gt; blockers &gt; a random candy)
+        /// and hitting that one cell.
+        /// </summary>
+        Fish,
+        /// <summary>
+        /// Blocker: colourless, IMMOBILE, layered (1-3). Each adjacent match or blast
+        /// hit removes one layer (tracked in <see cref="FrostingGrid"/>); the tile
+        /// itself clears when the last layer goes.
+        /// </summary>
+        Frosting,
+        /// <summary>
+        /// Blocker: colourless but MOBILE (falls), never matches, destroyed by one
+        /// hit — and it ABSORBS a striped beam (the ray stops at the swirl).
+        /// </summary>
+        Swirl,
+        /// <summary>
+        /// Blocker: colourless, immobile, INDESTRUCTIBLE. At the end of a move in
+        /// which no chocolate broke, it oozes a fresh chocolate onto a neighbour —
+        /// even when the board's chocolate died out entirely.
+        /// </summary>
+        ChocolateFountain,
+        /// <summary>
+        /// Threat: a coloured candy that matches and falls like a normal one, but
+        /// carries a move countdown (tracked in <see cref="BombTimers"/>). Match it
+        /// before the counter hits zero or the level is lost.
+        /// </summary>
+        Bomb,
     }
 }

@@ -21,6 +21,14 @@ namespace Match3.Core
         BombWrapped,
         /// <summary>Colour bomb + colour bomb: clears the whole board.</summary>
         BombBomb,
+        /// <summary>Fish + fish: a school of three strikes.</summary>
+        FishFish,
+        /// <summary>Fish + striped: three strikes, each detonating a striped beam at its target.</summary>
+        FishStriped,
+        /// <summary>Fish + wrapped: three strikes, each detonating a 3x3 blast at its target.</summary>
+        FishWrapped,
+        /// <summary>Colour bomb + fish: the school strikes for two rounds (six darts).</summary>
+        BombFish,
     }
 
     /// <summary>
@@ -40,10 +48,17 @@ namespace Match3.Core
                 Tile other = a.IsColorBomb ? b : a;
                 if (other.IsStriped) return SwapKind.BombStriped;
                 if (other.Kind == TileKind.Wrapped) return SwapKind.BombWrapped;
+                if (other.IsFish) return SwapKind.BombFish;
                 // A colourless partner (an ingredient) gives the bomb nothing to
                 // target — not an activation swap, so the move bounces back.
                 return other.ColorIndex >= 0 ? SwapKind.BombNormal : SwapKind.None;
             }
+
+            if (a.IsFish && b.IsFish) return SwapKind.FishFish;
+            if ((a.IsFish && b.IsStriped) || (a.IsStriped && b.IsFish)) return SwapKind.FishStriped;
+            if ((a.IsFish && b.Kind == TileKind.Wrapped) ||
+                (a.Kind == TileKind.Wrapped && b.IsFish))
+                return SwapKind.FishWrapped;
 
             if (a.IsStriped && b.IsStriped) return SwapKind.StripedStriped;
 

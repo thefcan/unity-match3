@@ -293,6 +293,35 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// Every 2x2 block of same-coloured tiles — the square shape that mints a
+        /// jelly fish. Reported in scan order (x, then y); overlapping blocks all
+        /// appear and the analyzer's spent-cell rules pick the winners. Kept OUT of
+        /// <see cref="FindMatches"/> / <see cref="WouldSwapMatch"/>: squares only
+        /// clear in the resolver's full mode, and the move search must never call a
+        /// board "alive" for a shape the classic resolver would ignore.
+        /// </summary>
+        public List<MatchSquare> FindSquares()
+        {
+            var squares = new List<MatchSquare>();
+            for (int x = 0; x + 1 < Width; x++)
+            {
+                for (int y = 0; y + 1 < Height; y++)
+                {
+                    if (SameColor(x, y, x + 1, y) && SameColor(x, y, x, y + 1) &&
+                        SameColor(x, y, x + 1, y + 1))
+                    {
+                        squares.Add(new MatchSquare(new[]
+                        {
+                            new GridPosition(x, y), new GridPosition(x + 1, y),
+                            new GridPosition(x, y + 1), new GridPosition(x + 1, y + 1),
+                        }));
+                    }
+                }
+            }
+            return squares;
+        }
+
+        /// <summary>
         /// Every cell that is part of a match, de-duplicated (an L / T shape's shared
         /// corner appears once). Built on <see cref="FindMatchRuns"/> so the two can
         /// never disagree.
@@ -408,8 +437,11 @@ namespace Match3.Core
         /// <summary>
         /// Initial fill that never produces a starting match: filling left-to-right,
         /// bottom-to-top, a new tile can only complete a run with the two cells to its
-        /// left or the two below — so we exclude those colours when they already match.
-        /// At most 2 colours get excluded, hence the 3-colour minimum.
+        /// left / the two below, or a 2x2 SQUARE with its left + below-left + below
+        /// neighbours — so we exclude those colours when they already align. The set
+        /// still never exceeds 2 colours (the square exclusion only fires when its
+        /// three cells agree, and any run exclusion then names the SAME colour),
+        /// hence the unchanged 3-colour minimum.
         /// </summary>
         private void FillWithoutMatches()
         {
@@ -426,6 +458,10 @@ namespace Match3.Core
 
                     if (y >= 2 && SameColor(x, y - 1, x, y - 2))
                         excluded.Add(_tiles[x, y - 1].Value.ColorIndex);
+
+                    if (x >= 1 && y >= 1 && SameColor(x - 1, y, x - 1, y - 1) &&
+                        SameColor(x - 1, y, x, y - 1))
+                        excluded.Add(_tiles[x - 1, y].Value.ColorIndex);
 
                     _tiles[x, y] = excluded.Count == 0
                         ? _factory.Create()

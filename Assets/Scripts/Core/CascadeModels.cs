@@ -24,6 +24,21 @@ namespace Match3.Core
         }
     }
 
+    /// <summary>
+    /// A 2x2 block of same-coloured tiles — the shape that mints a jelly fish.
+    /// Lower priority than every straight-run shape: the analyzer spends a square
+    /// whenever one of its cells already funded a bigger special.
+    /// </summary>
+    public readonly struct MatchSquare
+    {
+        public IReadOnlyList<GridPosition> Positions { get; }
+
+        public MatchSquare(IReadOnlyList<GridPosition> positions)
+        {
+            Positions = positions ?? throw new ArgumentNullException(nameof(positions));
+        }
+    }
+
     /// <summary>A tile that was cleared, and where it stood when it cleared.</summary>
     public readonly struct ClearedTile
     {
@@ -112,6 +127,8 @@ namespace Match3.Core
         ColorClear,
         /// <summary>Bomb+bomb: the full wipe.</summary>
         BoardClear,
+        /// <summary>Jelly fish: a single-cell dart at the picked target.</summary>
+        FishStrike,
     }
 
     /// <summary>
@@ -177,6 +194,61 @@ namespace Match3.Core
         }
     }
 
+    /// <summary>
+    /// One fish darting from its cell to its picked target this wave. The target
+    /// cell also appears in the wave's detonation/clear data; this record exists so
+    /// the view can play the flight itself.
+    /// </summary>
+    public readonly struct FishStrike
+    {
+        public Tile Fish { get; }
+        public GridPosition From { get; }
+        public GridPosition To { get; }
+
+        public FishStrike(Tile fish, GridPosition from, GridPosition to)
+        {
+            Fish = fish;
+            From = from;
+            To = to;
+        }
+    }
+
+    /// <summary>
+    /// One frosting layer coming off a cell this wave. <see cref="RemainingLayers"/>
+    /// is the state AFTER the hit; at 0 the frosting tile itself cleared (it also
+    /// appears in <see cref="CascadeStep.Cleared"/>).
+    /// </summary>
+    public readonly struct FrostingHit
+    {
+        public GridPosition Position { get; }
+        public int RemainingLayers { get; }
+
+        public FrostingHit(GridPosition position, int remainingLayers)
+        {
+            Position = position;
+            RemainingLayers = remainingLayers;
+        }
+    }
+
+    /// <summary>
+    /// A bomb candy's countdown falling by one at the end of a player move.
+    /// <see cref="Remaining"/> is the value AFTER the tick — 0 means it exploded
+    /// and the level is lost.
+    /// </summary>
+    public readonly struct BombTick
+    {
+        public Tile Tile { get; }
+        public GridPosition Position { get; }
+        public int Remaining { get; }
+
+        public BombTick(Tile tile, GridPosition position, int remaining)
+        {
+            Tile = tile;
+            Position = position;
+            Remaining = remaining;
+        }
+    }
+
     /// <summary>One special going off: which tile, from where, what shape, which cells it hit.</summary>
     public readonly struct Detonation
     {
@@ -228,6 +300,15 @@ namespace Match3.Core
 
         /// <summary>Ingredients that reached the bottom row and left the board this wave.</summary>
         public IReadOnlyList<IngredientExit> IngredientExits { get; }
+
+        /// <summary>Fish darts fired this wave (empty when no fish detonated).</summary>
+        public IReadOnlyList<FishStrike> FishStrikes { get; }
+
+        /// <summary>Frosting layers removed this wave.</summary>
+        public IReadOnlyList<FrostingHit> FrostingHits { get; }
+
+        /// <summary>Bomb countdowns ticking (only ever on a move's final, clear-less step).</summary>
+        public IReadOnlyList<BombTick> BombTicks { get; }
 
         public CascadeStep(
             int cascadeIndex,
@@ -283,6 +364,28 @@ namespace Match3.Core
             IReadOnlyList<LockBreak> lockBreaks,
             IReadOnlyList<ChocolateSpread> chocolateSpreads,
             IReadOnlyList<IngredientExit> ingredientExits)
+            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations,
+                   jellyHits, lockBreaks, chocolateSpreads, ingredientExits,
+                   Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), Array.Empty<BombTick>())
+        {
+        }
+
+        public CascadeStep(
+            int cascadeIndex,
+            IReadOnlyList<ClearedTile> cleared,
+            IReadOnlyList<TileFall> falls,
+            IReadOnlyList<TileSpawn> spawns,
+            int points,
+            IReadOnlyList<int> runLengths,
+            IReadOnlyList<SpecialCreation> creations,
+            IReadOnlyList<Detonation> detonations,
+            IReadOnlyList<JellyHit> jellyHits,
+            IReadOnlyList<LockBreak> lockBreaks,
+            IReadOnlyList<ChocolateSpread> chocolateSpreads,
+            IReadOnlyList<IngredientExit> ingredientExits,
+            IReadOnlyList<FishStrike> fishStrikes,
+            IReadOnlyList<FrostingHit> frostingHits,
+            IReadOnlyList<BombTick> bombTicks)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -296,6 +399,9 @@ namespace Match3.Core
             LockBreaks = lockBreaks ?? throw new ArgumentNullException(nameof(lockBreaks));
             ChocolateSpreads = chocolateSpreads ?? throw new ArgumentNullException(nameof(chocolateSpreads));
             IngredientExits = ingredientExits ?? throw new ArgumentNullException(nameof(ingredientExits));
+            FishStrikes = fishStrikes ?? throw new ArgumentNullException(nameof(fishStrikes));
+            FrostingHits = frostingHits ?? throw new ArgumentNullException(nameof(frostingHits));
+            BombTicks = bombTicks ?? throw new ArgumentNullException(nameof(bombTicks));
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
