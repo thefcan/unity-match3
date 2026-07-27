@@ -54,6 +54,24 @@ namespace Match3.Game
         [Tooltip("Ingredients dispensed through refills. Pair with a CollectIngredients objective.")]
         [Min(0)] public int ingredientCount = 0;
 
+        [Header("Blockers (chapter 5 mechanics)")]
+        [Tooltip("Frosting slabs: x = column, y = row from the bottom, z = layers (1-3). Pair with a ClearFrosting objective.")]
+        public Vector3Int[] frostingCells = Array.Empty<Vector3Int>();
+        [Tooltip("Cells starting as licorice swirls (they fall and absorb striped beams).")]
+        public Vector2Int[] swirlCells = Array.Empty<Vector2Int>();
+        [Tooltip("Cells holding an indestructible chocolate fountain.")]
+        public Vector2Int[] fountainCells = Array.Empty<Vector2Int>();
+        [Tooltip("Bomb candies dispensed through refills (0 = none). Each must be matched before its countdown ends.")]
+        [Min(0)] public int bombCount = 0;
+        [Tooltip("Moves on a freshly dispensed bomb's countdown.")]
+        [Min(1)] public int bombTimerMoves = 9;
+
+        [Header("Tutorial (optional)")]
+        [Tooltip("One short line shown over a dimmed board on the level's first look. Empty = no tutorial.")]
+        public string tutorialText = "";
+        [Tooltip("Cells highlighted through the tutorial dim (x = column, y = row from the bottom).")]
+        public Vector2Int[] tutorialCells = Array.Empty<Vector2Int>();
+
         [Header("Stars (ascending score thresholds)")]
         public int[] starScores = { 600, 900, 1300 };
 

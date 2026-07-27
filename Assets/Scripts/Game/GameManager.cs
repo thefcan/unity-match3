@@ -73,6 +73,10 @@ namespace Match3.Game
         public JellyGrid Jelly { get; private set; }
         /// <summary>Moves mode: the level's licorice locks. Null when the level has none.</summary>
         public LockGrid Locks { get; private set; }
+        /// <summary>Moves mode: the level's frosting layer ledger. Null when the level has none.</summary>
+        public FrostingGrid Frosting { get; private set; }
+        /// <summary>Moves mode: armed bomb countdowns. Null when the level dispenses no bombs.</summary>
+        public BombTimers Bombs { get; private set; }
         public int Score { get; private set; }
         public int Level { get; private set; }
         /// <summary>Score needed to clear the current level (time attack).</summary>
@@ -316,6 +320,44 @@ namespace Match3.Game
                 if (LevelDefinition.ingredientCount > 0)
                     Resolver.AttachIngredients(LevelDefinition.ingredientCount);
 
+                // Chapter-5 blockers. Frosting/fountains replace candies in place
+                // (colourless — can't create a match); swirls likewise; the bomb
+                // dispenser arms the refill injector like ingredients do.
+                Frosting = null;
+                if (LevelDefinition.frostingCells is { Length: > 0 })
+                {
+                    Frosting = new FrostingGrid(Board.Width, Board.Height);
+                    foreach (Vector3Int cell in LevelDefinition.frostingCells)
+                    {
+                        var pos = new GridPosition(cell.x, cell.y);
+                        if (!Board.IsInside(pos))
+                            continue;
+                        Board.SetTile(pos, factory.CreateFrosting());
+                        Frosting.Set(pos, Mathf.Clamp(cell.z, 1, FrostingGrid.MaxLayers));
+                    }
+                }
+                Resolver.AttachFrosting(Frosting);
+
+                foreach (Vector2Int cell in LevelDefinition.swirlCells ?? Array.Empty<Vector2Int>())
+                {
+                    var pos = new GridPosition(cell.x, cell.y);
+                    if (Board.IsInside(pos))
+                        Board.SetTile(pos, factory.CreateSwirl());
+                }
+                foreach (Vector2Int cell in LevelDefinition.fountainCells ?? Array.Empty<Vector2Int>())
+                {
+                    var pos = new GridPosition(cell.x, cell.y);
+                    if (Board.IsInside(pos))
+                        Board.SetTile(pos, factory.CreateFountain());
+                }
+
+                Bombs = null;
+                if (LevelDefinition.bombCount > 0)
+                {
+                    Bombs = new BombTimers();
+                    Resolver.AttachBombs(Bombs, LevelDefinition.bombCount, LevelDefinition.bombTimerMoves);
+                }
+
                 CurrentTarget = 0;
                 TimeLeft = 0f;
 
@@ -343,6 +385,8 @@ namespace Match3.Game
                 Objectives = null;
                 Jelly = null;
                 Locks = null;
+                Frosting = null;
+                Bombs = null;
                 Board.AttachLocks(null);
                 CurrentTarget = levelConfig.TargetScoreForLevel(Level);
                 TimeLeft = levelConfig.timeLimit;
@@ -356,7 +400,7 @@ namespace Match3.Game
             ApplyAmbience();
             MusicManager.PlayForLevel(Mode == GameMode.Moves ? Level : 1);
 
-            boardView.Initialize(Board, levelConfig, Jelly, Locks);
+            boardView.Initialize(Board, levelConfig, Jelly, Locks, Frosting, Bombs);
 
             ScoreChanged?.Invoke(Score);
             LevelChanged?.Invoke(Level);

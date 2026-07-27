@@ -90,7 +90,25 @@ namespace Match3.Game
             {
                 // Objectives first: completing them ON the final move is a win.
                 if (Game.Objectives.AllComplete)
+                {
                     Game.SetState(new LevelWonState(Game));
+                    yield break;
+                }
+
+                // The move is spent — bomb fuses burn down now. Only committed swaps
+                // tick them (boosters, shuffles and the finale leave them frozen),
+                // and a fuse reaching zero loses the level on the spot.
+                bool bombExploded = false;
+                foreach (CascadeStep tick in Game.Resolver.ResolveBombTick(Game.Board).Steps)
+                {
+                    yield return Game.BoardView.PlayStep(tick);
+                    foreach (BombTick bomb in tick.BombTicks)
+                        if (bomb.Remaining == 0)
+                            bombExploded = true;
+                }
+
+                if (bombExploded)
+                    Game.SetState(new LevelFailedState(Game));
                 else if (Game.MovesLeft <= 0)
                     Game.SetState(new LevelFailedState(Game));
                 else if (!Game.Board.HasPossibleMove())

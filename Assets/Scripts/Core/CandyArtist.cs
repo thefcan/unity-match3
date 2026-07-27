@@ -352,6 +352,315 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// The jelly fish: a plump body facing left, a fan tail, an eye and a gill
+        /// stripe — tinted with its candy colour so it reads as matchable.
+        /// </summary>
+        public static byte[] RenderFish(int size, Rgb color)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    // Body: an ellipse; tail: a right-opening triangle overlapping it.
+                    float bx = (x + 0.14f) / 0.58f;
+                    float by = y / 0.42f;
+                    float body = ((float)Math.Sqrt(bx * bx + by * by) - 1f) * 0.42f;
+                    float tail = Math.Max(Math.Max(0.4f - x, x - 0.86f), Math.Abs(y) - (x - 0.3f) * 0.62f);
+                    float d = Math.Min(body, tail);
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    float shade = Lerp(0.75f, 1.12f, (y + 1f) * 0.5f);
+                    float r = color.R * shade, g = color.G * shade, b = color.B * shade;
+
+                    // The tail and a gill stripe sit a notch darker than the body.
+                    if (tail < body || Math.Abs(x - 0.3f) < 0.045f)
+                    {
+                        r *= 0.72f; g *= 0.72f; b *= 0.72f;
+                    }
+
+                    // Pale belly.
+                    if (body < 0f && y < -0.08f)
+                    {
+                        float belly = Clamp01((-y - 0.08f) / 0.3f) * 0.35f;
+                        r = Lerp(r, 1f, belly); g = Lerp(g, 1f, belly); b = Lerp(b, 1f, belly);
+                    }
+
+                    float rim = Clamp01((d + 0.1f) / 0.1f);
+                    float rimMul = Lerp(1f, 0.66f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    // Eye: dark iris with a white glint.
+                    float eye = Dist(x, y, -0.46f, 0.1f);
+                    if (eye < 0.09f)
+                    {
+                        r = 0.12f; g = 0.1f; b = 0.14f;
+                        float glint = Dist(x, y, -0.485f, 0.13f);
+                        if (glint < 0.03f) { r = g = b = 0.95f; }
+                    }
+
+                    float hd = Dist(x, y, -0.3f, 0.28f);
+                    if (hd < 0.22f)
+                    {
+                        float shine = (1f - hd / 0.22f) * 0.4f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>Colorblind fish: the same sprite plus the colour's glyph badge.</summary>
+        public static byte[] RenderFishColorblind(int size, Rgb color, int shapeIndex)
+        {
+            byte[] pixels = RenderFish(size, color);
+            StampGlyphBadge(pixels, size, shapeIndex);
+            return pixels;
+        }
+
+        /// <summary>
+        /// The frosting slab at a given remaining-layer count (1-3): an icy white-blue
+        /// tile that grows seams and sparkle as layers stack — the view swaps sprites
+        /// as layers peel, so each hit visibly thins the block.
+        /// </summary>
+        public static byte[] RenderFrosting(int size, int layers)
+        {
+            int stack = Math.Min(Math.Max(layers, 1), 3);
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            // Fixed sparkle points (normalized coords) — deterministic, no randomness.
+            var sparks = new (float x, float y)[] { (-0.4f, 0.5f), (0.35f, 0.18f), (-0.15f, -0.35f), (0.5f, -0.5f) };
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float d = ShapeSdf(1, x, y); // the rounded-square silhouette
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    float shade = Lerp(0.82f, 1.05f, (y + 1f) * 0.5f);
+                    float r = 0.88f * shade, g = 0.93f * shade, b = 1f * shade;
+
+                    // One seam per extra layer makes the stack height readable.
+                    if (stack >= 2 && Math.Abs(y + 0.18f) < 0.035f) { r *= 0.72f; g *= 0.76f; b *= 0.84f; }
+                    if (stack >= 3 && Math.Abs(y - 0.22f) < 0.035f) { r *= 0.72f; g *= 0.76f; b *= 0.84f; }
+
+                    float rim = Clamp01((d + 0.12f) / 0.12f);
+                    float rimMul = Lerp(1f, 0.7f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    foreach ((float sx, float sy) in sparks)
+                    {
+                        float sd = Dist(x, y, sx, sy);
+                        if (sd < 0.06f)
+                        {
+                            float glow = (1f - sd / 0.06f) * 0.8f;
+                            r = Lerp(r, 1f, glow); g = Lerp(g, 1f, glow); b = Lerp(b, 1f, glow);
+                        }
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>The licorice swirl: a glossy black-and-white spiral disc.</summary>
+        public static byte[] RenderSwirl(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float radius = (float)Math.Sqrt(x * x + y * y);
+                    float d = radius - 0.85f;
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    // Archimedean bands: position along the spiral alternates licorice
+                    // black and cream white with a soft edge.
+                    float angle = (float)Math.Atan2(y, x);
+                    float band = radius * 2.4f - angle / (2f * (float)Math.PI);
+                    band -= (float)Math.Floor(band);
+                    float mix = Clamp01((Math.Abs(band - 0.5f) - 0.22f) / 0.06f);
+
+                    float shade = Lerp(0.8f, 1.1f, (y + 1f) * 0.5f);
+                    float r = Lerp(0.94f, 0.16f, mix) * shade;
+                    float g = Lerp(0.92f, 0.13f, mix) * shade;
+                    float b = Lerp(0.88f, 0.18f, mix) * shade;
+
+                    float rim = Clamp01((d + 0.1f) / 0.1f);
+                    float rimMul = Lerp(1f, 0.6f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    float hd = Dist(x, y, -0.3f, 0.38f);
+                    if (hd < 0.22f)
+                    {
+                        float shine = (1f - hd / 0.22f) * 0.35f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>
+        /// The chocolate fountain: a dark basin with a stem, an upper bowl and
+        /// bubbling chocolate on top — clearly machinery, not a candy.
+        /// </summary>
+        public static byte[] RenderFountain(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+            var bubbles = new (float x, float y, float rad)[] { (-0.2f, 0.62f, 0.16f), (0.12f, 0.72f, 0.13f), (0.32f, 0.58f, 0.11f) };
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float basin = BoxSdf(x, y + 0.55f, 0.66f, 0.26f);
+                    float stem = BoxSdf(x, y + 0.05f, 0.17f, 0.28f);
+                    float bowl = BoxSdf(x, y - 0.34f, 0.44f, 0.14f);
+                    float d = Math.Min(basin, Math.Min(stem, bowl));
+
+                    float bubble = float.MaxValue;
+                    foreach ((float bxp, float byp, float rad) in bubbles)
+                        bubble = Math.Min(bubble, Dist(x, y, bxp, byp) - rad);
+                    d = Math.Min(d, bubble);
+
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    float shade = Lerp(0.72f, 1.05f, (y + 1f) * 0.5f);
+                    float r, g, b;
+                    if (bubble < Math.Min(basin, Math.Min(stem, bowl)))
+                    {
+                        // Molten chocolate on top: lighter, glossy.
+                        r = 0.52f * shade; g = 0.32f * shade; b = 0.17f * shade;
+                    }
+                    else
+                    {
+                        r = 0.3f * shade; g = 0.18f * shade; b = 0.1f * shade;
+                    }
+
+                    // Basin lip highlight.
+                    if (basin < 0f && y > -0.36f)
+                    {
+                        r = Lerp(r, 0.6f, 0.3f); g = Lerp(g, 0.4f, 0.3f); b = Lerp(b, 0.22f, 0.3f);
+                    }
+
+                    float rim = Clamp01((d + 0.1f) / 0.1f);
+                    float rimMul = Lerp(1f, 0.62f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    float hd = Dist(x, y, -0.34f, 0.7f);
+                    if (hd < 0.2f)
+                    {
+                        float shine = (1f - hd / 0.2f) * 0.35f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>
+        /// The bomb candy: a round candy in its colour with a dark counter plate
+        /// (the view's TMP countdown sits on it) and a lit fuse.
+        /// </summary>
+        public static byte[] RenderBomb(int size, Rgb color)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    float body = ShapeSdf(0, x, y); // circle silhouette
+                    float fuse = SegmentSdf(x, y, 0.06f, 0.66f, 0.26f, 0.9f) - 0.05f;
+                    float d = Math.Min(body, fuse);
+                    float alpha = Clamp01(0.5f - d / aa);
+
+                    float shade = Lerp(0.75f, 1.1f, (y + 1f) * 0.5f);
+                    float r = color.R * shade, g = color.G * shade, b = color.B * shade;
+
+                    if (fuse < body)
+                    {
+                        r = 0.32f; g = 0.24f; b = 0.16f; // rope fuse
+                    }
+
+                    float rim = Clamp01((body + 0.12f) / 0.12f);
+                    float rimMul = Lerp(1f, 0.66f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    // The counter plate: a deep dark disc with a pale ring.
+                    float plate = Dist(x, y, 0f, -0.08f);
+                    if (plate < 0.4f)
+                    {
+                        float ring = Clamp01((0.4f - plate) / 0.05f);
+                        r = Lerp(r, 0.95f, ring); g = Lerp(g, 0.93f, ring); b = Lerp(b, 0.88f, ring);
+                        if (plate < 0.34f)
+                        {
+                            r = 0.13f; g = 0.11f; b = 0.16f;
+                        }
+                    }
+
+                    // Spark at the fuse tip.
+                    float spark = Dist(x, y, 0.28f, 0.92f);
+                    if (spark < 0.1f && alpha > 0f)
+                    {
+                        float glow = 1f - spark / 0.1f;
+                        r = Lerp(r, 1f, glow); g = Lerp(g, 0.8f, glow); b = Lerp(b, 0.2f, glow);
+                    }
+
+                    float hd = Dist(x, y, -0.34f, 0.4f);
+                    if (hd < 0.24f)
+                    {
+                        float shine = (1f - hd / 0.24f) * 0.35f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>Colorblind bomb: the same sprite plus the colour's glyph badge.</summary>
+        public static byte[] RenderBombColorblind(int size, Rgb color, int shapeIndex)
+        {
+            byte[] pixels = RenderBomb(size, color);
+            StampGlyphBadge(pixels, size, shapeIndex);
+            return pixels;
+        }
+
+        /// <summary>
         /// The licorice cage OVERLAY (transparent centre): a rounded frame with three
         /// vertical bars, drawn over the locked candy by the view.
         /// </summary>

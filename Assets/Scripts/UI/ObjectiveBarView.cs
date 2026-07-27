@@ -158,6 +158,13 @@ namespace Match3.UI
                         ? (ingredient, Color.white)
                         : (UiTheme.CircleSprite, new Color(0.92f, 0.30f, 0.28f));
                 }
+                case ObjectiveType.ClearFrosting:
+                {
+                    Sprite frosting = _candies != null ? _candies.For(0, TileKind.Frosting) : null;
+                    return frosting != null
+                        ? (frosting, Color.white)
+                        : (UiTheme.Round, new Color(0.85f, 0.9f, 1f));
+                }
                 default:
                     Sprite candy = _candies != null ? _candies.For(objective.ColorIndex, TileKind.Normal) : null;
                     return candy != null

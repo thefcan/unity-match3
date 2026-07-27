@@ -20,6 +20,8 @@ namespace Match3.Game
             public Sprite stripedH;
             public Sprite stripedV;
             public Sprite wrapped;
+            public Sprite fish;
+            public Sprite bomb;
         }
 
         [SerializeField] private ColorSet[] colors;
@@ -28,9 +30,26 @@ namespace Match3.Game
         [SerializeField] private Sprite chocolate;
         [SerializeField] private Sprite ingredient;
         [SerializeField] private Sprite lockCage;
+        [SerializeField] private Sprite frosting1;
+        [SerializeField] private Sprite frosting2;
+        [SerializeField] private Sprite frosting3;
+        [SerializeField] private Sprite swirl;
+        [SerializeField] private Sprite fountain;
 
         /// <summary>The licorice-cage overlay sprite (drawn over a locked candy). Null until generated.</summary>
         public Sprite LockCage => lockCage;
+
+        /// <summary>
+        /// The frosting slab for a remaining-layer count (1-3). The view swaps sprites
+        /// as layers peel; falls back down the stack (then to null → tint fallback)
+        /// until the sprite menu has been re-run.
+        /// </summary>
+        public Sprite FrostingSprite(int layers)
+        {
+            if (layers >= 3 && frosting3 != null) return frosting3;
+            if (layers >= 2 && frosting2 != null) return frosting2;
+            return frosting1;
+        }
 
         /// <summary>
         /// Accessibility switch (Settings → Colorblind mode): when true, For() serves
@@ -48,6 +67,12 @@ namespace Match3.Game
                 return chocolate;
             if (kind == TileKind.Ingredient)
                 return ingredient;
+            if (kind == TileKind.Frosting)
+                return FrostingSprite(3); // generic entry — the view rebinds per layer
+            if (kind == TileKind.Swirl)
+                return swirl;
+            if (kind == TileKind.ChocolateFountain)
+                return fountain;
             if (colors == null || colorIndex < 0 || colorIndex >= colors.Length)
                 return null;
 
@@ -66,6 +91,10 @@ namespace Match3.Game
                 case TileKind.StripedH: return set.stripedH;
                 case TileKind.StripedV: return set.stripedV;
                 case TileKind.Wrapped: return set.wrapped;
+                // Until the sprite menu is re-run the new kinds fall back to the plain
+                // candy of their colour — the board never blanks.
+                case TileKind.Fish: return set.fish != null ? set.fish : set.normal;
+                case TileKind.Bomb: return set.bomb != null ? set.bomb : set.normal;
                 default: return set.normal;
             }
         }
@@ -81,6 +110,17 @@ namespace Match3.Game
             chocolate = chocolateSprite;
             ingredient = ingredientSprite;
             lockCage = lockCageSprite;
+        }
+
+        /// <summary>Editor-only: the chapter-5 blocker sprites (frosting stack, swirl, fountain).</summary>
+        public void EditorSetBlockerSprites(Sprite frostingOne, Sprite frostingTwo, Sprite frostingThree,
+                                            Sprite swirlSprite, Sprite fountainSprite)
+        {
+            frosting1 = frostingOne;
+            frosting2 = frostingTwo;
+            frosting3 = frostingThree;
+            swirl = swirlSprite;
+            fountain = fountainSprite;
         }
 #endif
     }

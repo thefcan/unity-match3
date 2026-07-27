@@ -36,6 +36,8 @@ namespace Match3.EditorTools
                     stripedH = WriteSprite($"candy{color}_stripedH", CandyArtist.Render(Size, palette[color], color, TileKind.StripedH)),
                     stripedV = WriteSprite($"candy{color}_stripedV", CandyArtist.Render(Size, palette[color], color, TileKind.StripedV)),
                     wrapped = WriteSprite($"candy{color}_wrapped", CandyArtist.Render(Size, palette[color], color, TileKind.Wrapped)),
+                    fish = WriteSprite($"candy{color}_fish", CandyArtist.RenderFish(Size, palette[color])),
+                    bomb = WriteSprite($"candy{color}_bombfuse", CandyArtist.RenderBomb(Size, palette[color])),
                 };
                 // Accessibility set: same candies with a per-colour glyph badge.
                 colorblindSets[color] = new CandySpriteLibrary.ColorSet
@@ -44,12 +46,19 @@ namespace Match3.EditorTools
                     stripedH = WriteSprite($"candy{color}_stripedH_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.StripedH)),
                     stripedV = WriteSprite($"candy{color}_stripedV_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.StripedV)),
                     wrapped = WriteSprite($"candy{color}_wrapped_cb", CandyArtist.RenderColorblind(Size, palette[color], color, TileKind.Wrapped)),
+                    fish = WriteSprite($"candy{color}_fish_cb", CandyArtist.RenderFishColorblind(Size, palette[color], color)),
+                    bomb = WriteSprite($"candy{color}_bombfuse_cb", CandyArtist.RenderBombColorblind(Size, palette[color], color)),
                 };
             }
             Sprite bomb = WriteSprite("candy_bomb", CandyArtist.RenderColorBomb(Size, palette));
             Sprite chocolate = WriteSprite("candy_chocolate", CandyArtist.RenderChocolate(Size));
             Sprite ingredient = WriteSprite("candy_ingredient", CandyArtist.RenderIngredient(Size));
             Sprite lockCage = WriteSprite("candy_lock_cage", CandyArtist.RenderLockCage(Size));
+            Sprite frosting1 = WriteSprite("candy_frosting1", CandyArtist.RenderFrosting(Size, 1));
+            Sprite frosting2 = WriteSprite("candy_frosting2", CandyArtist.RenderFrosting(Size, 2));
+            Sprite frosting3 = WriteSprite("candy_frosting3", CandyArtist.RenderFrosting(Size, 3));
+            Sprite swirl = WriteSprite("candy_swirl", CandyArtist.RenderSwirl(Size));
+            Sprite fountain = WriteSprite("candy_fountain", CandyArtist.RenderFountain(Size));
 
             // Candy Town scenes (the decor meta): five cumulative build stages,
             // written into Resources so TownPanel can load them by name.
@@ -65,10 +74,11 @@ namespace Match3.EditorTools
                 AssetDatabase.CreateAsset(library, LibraryPath);
             }
             library.EditorSetSprites(colorSets, colorblindSets, bomb, chocolate, ingredient, lockCage);
+            library.EditorSetBlockerSprites(frosting1, frosting2, frosting3, swirl, fountain);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 8 + 4} sprites (colorblind set + blockers) and refreshed {LibraryPath}.");
+            Debug.Log($"CandySpriteGenerator: wrote {palette.Length * 12 + 9} sprites (colorblind set + blockers + fish/bombs) and refreshed {LibraryPath}.");
         }
 
         private static CandyArtist.Rgb[] LoadPalette()

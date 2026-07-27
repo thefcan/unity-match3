@@ -44,14 +44,19 @@ namespace Match3.View
         private readonly Dictionary<int, TileView> _viewsById = new Dictionary<int, TileView>();
         private Board _board;
         private LevelConfig _config;
+        private FrostingGrid _frosting; // layer ledger — drives per-layer sprite swaps
+        private BombTimers _bombs;      // countdown source for the badge overlays
         private TileView _hintA;
         private TileView _hintB;
 
         /// <summary>Spawns a view for every tile. Safe to call again on restart — old views return to the pool.</summary>
-        public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null, LockGrid locks = null)
+        public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null, LockGrid locks = null,
+                               FrostingGrid frosting = null, BombTimers bombs = null)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
             _config = config != null ? config : throw new ArgumentNullException(nameof(config));
+            _frosting = frosting;
+            _bombs = bombs;
 
             if (spriteLibrary == null)
                 spriteLibrary = Resources.Load<CandySpriteLibrary>("CandySpriteLibrary");
@@ -59,6 +64,7 @@ namespace Match3.View
             foreach (TileView view in _viewsById.Values)
                 tilePool.Release(view);
             _viewsById.Clear();
+            ClearBombBadges();
 
             BuildBackdrop(board);
             BuildJellyOverlay(jelly);
@@ -71,6 +77,34 @@ namespace Match3.View
                     var pos = new GridPosition(x, y);
                     if (board[pos] is { } tile)
                         SpawnView(tile, GridToWorld(pos));
+                }
+            }
+
+            RebindFrostingSprites();
+        }
+
+        /// <summary>
+        /// Frosting renders per remaining LAYER (thicker stack = taller-looking slab).
+        /// The generic sprite path only knows the kind, so frosting tiles get their
+        /// layer-accurate sprite in a second pass — and again after every hit.
+        /// </summary>
+        private void RebindFrostingSprites()
+        {
+            if (_frosting == null || spriteLibrary == null)
+                return;
+
+            for (int x = 0; x < _board.Width; x++)
+            {
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (_board[pos] is { } tile && tile.Kind == TileKind.Frosting &&
+                        _viewsById.TryGetValue(tile.Id, out TileView view))
+                    {
+                        Sprite sprite = spriteLibrary.FrostingSprite(_frosting.LayersAt(pos));
+                        if (sprite != null)
+                            view.Bind(tile, sprite, Color.white);
+                    }
                 }
             }
         }
@@ -298,6 +332,136 @@ namespace Match3.View
             }
         }
 
+        private static readonly Color FrostingBurst = new Color(0.85f, 0.92f, 1f);
+
+        /// <summary>
+        /// Surviving frosting swaps to its thinner sprite with an ice burst; a cell
+        /// that lost its last layer is in Cleared and pops through the normal path.
+        /// </summary>
+        private void ApplyFrostingHits(CascadeStep step)
+        {
+            if (step.FrostingHits.Count == 0)
+                return;
+
+            foreach (FrostingHit hit in step.FrostingHits)
+            {
+                EffectsView.TileBurst(GridToWorld(hit.Position), FrostingBurst, 10);
+                if (hit.RemainingLayers <= 0)
+                    continue;
+
+                if (_board[hit.Position] is { } tile && tile.Kind == TileKind.Frosting &&
+                    _viewsById.TryGetValue(tile.Id, out TileView view) && spriteLibrary != null)
+                {
+                    Sprite sprite = spriteLibrary.FrostingSprite(hit.RemainingLayers);
+                    if (sprite != null)
+                        view.Bind(tile, sprite, Color.white);
+                }
+            }
+            AudioManager.Play(Sfx.Pop, 0.6f);
+        }
+
+        // ---- Bomb countdown badges ---------------------------------------------------
+        // A little dark plate with the remaining-move number rides ON the bomb candy.
+        // Badges live under their own root and chase the tile views in LateUpdate, so
+        // pooling never leaks a badge onto a reused candy view.
+
+        private readonly Dictionary<int, TMPro.TextMeshPro> _bombBadges = new Dictionary<int, TMPro.TextMeshPro>();
+        private Transform _bombBadgeRoot;
+
+        private void LateUpdate()
+        {
+            if (_bombs == null)
+                return;
+
+            foreach (KeyValuePair<int, TileView> entry in _viewsById)
+            {
+                if (!_bombs.TryGet(entry.Key, out int remaining))
+                    continue;
+
+                if (!_bombBadges.TryGetValue(entry.Key, out TMPro.TextMeshPro badge) || badge == null)
+                {
+                    badge = CreateBombBadge();
+                    badge.text = remaining.ToString();
+                    _bombBadges[entry.Key] = badge;
+                }
+                badge.transform.position = entry.Value.transform.position + new Vector3(0f, -0.03f, 0f);
+            }
+
+            // Views that vanished (popped, exited) take their badges with them.
+            List<int> stale = null;
+            foreach (int id in _bombBadges.Keys)
+                if (!_viewsById.ContainsKey(id) || !_bombs.TryGet(id, out _))
+                    (stale ??= new List<int>()).Add(id);
+            if (stale != null)
+            {
+                foreach (int id in stale)
+                {
+                    if (_bombBadges[id] != null)
+                        Destroy(_bombBadges[id].gameObject);
+                    _bombBadges.Remove(id);
+                }
+            }
+        }
+
+        private TMPro.TextMeshPro CreateBombBadge()
+        {
+            if (_bombBadgeRoot == null)
+            {
+                _bombBadgeRoot = new GameObject("BombBadges").transform;
+                _bombBadgeRoot.SetParent(transform, false);
+            }
+
+            var go = new GameObject("BombBadge");
+            go.transform.SetParent(_bombBadgeRoot, false);
+            var text = go.AddComponent<TMPro.TextMeshPro>();
+            Match3.UI.UiTheme.ApplyFont(text, Match3.UI.UiTheme.ButtonFont);
+            text.fontSize = 4.2f;
+            text.fontStyle = TMPro.FontStyles.Bold;
+            text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.color = Color.white;
+            text.sortingOrder = 6; // over the candy and the cage overlays
+            var rect = text.rectTransform;
+            rect.sizeDelta = new Vector2(1f, 1f);
+            return text;
+        }
+
+        private void ClearBombBadges()
+        {
+            foreach (TMPro.TextMeshPro badge in _bombBadges.Values)
+                if (badge != null)
+                    Destroy(badge.gameObject);
+            _bombBadges.Clear();
+        }
+
+        /// <summary>Countdown numbers refresh; a zero flashes red and rattles the board.</summary>
+        private void ApplyBombTicks(CascadeStep step)
+        {
+            bool exploded = false;
+            foreach (BombTick tick in step.BombTicks)
+            {
+                if (_bombBadges.TryGetValue(tick.Tile.Id, out TMPro.TextMeshPro badge) && badge != null)
+                {
+                    badge.text = Mathf.Max(0, tick.Remaining).ToString();
+                    if (tick.Remaining <= 2)
+                        badge.color = new Color(1f, 0.35f, 0.3f);
+                }
+                if (tick.Remaining == 0)
+                {
+                    exploded = true;
+                    EffectsView.BlastBurst(GridToWorld(tick.Position), new Color(1f, 0.4f, 0.2f));
+                }
+            }
+
+            if (step.BombTicks.Count > 0)
+                AudioManager.Play(Sfx.Button, 0.5f); // a dry tick under the countdown
+            if (exploded)
+            {
+                AudioManager.Play(Sfx.ColorBomb);
+                EffectsView.Shake(0.3f, 0.35f);
+                Haptics.Heavy();
+            }
+        }
+
         /// <summary>
         /// Shrinks every tile away (the level-transition wipe). Positions are untouched,
         /// so <see cref="AnimateShowTiles"/> brings the exact same arrangement back.
@@ -439,6 +603,7 @@ namespace Match3.View
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
+            ApplyBombTicks(step); // countdown-only steps carry nothing else
             ApplyLockBreaks(step); // cages shatter first — their candies stay
             PlayDetonationJuice(step);
             if (step.Cleared.Count > 0)
@@ -458,16 +623,27 @@ namespace Match3.View
                         convergeTargets[source] = GridToWorld(creation.Position);
             }
 
+            // A detonating fish DARTS to its (first) target instead of popping in
+            // place — the strike recording carries the flight path.
+            var fishFlights = new Dictionary<int, Vector3>();
+            foreach (FishStrike strike in step.FishStrikes)
+                if (!fishFlights.ContainsKey(strike.Fish.Id))
+                    fishFlights[strike.Fish.Id] = GridToWorld(strike.To);
+
             var clears = new List<IEnumerator>();
             foreach (ClearedTile cleared in step.Cleared)
             {
-                clears.Add(convergeTargets.TryGetValue(cleared.Position, out Vector3 target)
-                    ? ConvergeAndRelease(cleared, target)
-                    : PopAndRelease(cleared, delays.TryGetValue(cleared.Position, out float delay) ? delay : 0f));
+                if (fishFlights.TryGetValue(cleared.Tile.Id, out Vector3 dartTarget))
+                    clears.Add(FlyAndRelease(cleared, dartTarget));
+                else if (convergeTargets.TryGetValue(cleared.Position, out Vector3 target))
+                    clears.Add(ConvergeAndRelease(cleared, target));
+                else
+                    clears.Add(PopAndRelease(cleared, delays.TryGetValue(cleared.Position, out float delay) ? delay : 0f));
             }
             yield return RunAll(clears);
 
             ApplyJellyHits(step);
+            ApplyFrostingHits(step);
 
             if (step.Points > 0 && step.Cleared.Count > 0)
                 ScorePopup.Spawn(Centroid(step.Cleared), step.Points, Color.white);
@@ -611,6 +787,11 @@ namespace Match3.View
                         EffectsView.Shake(0.22f, 0.3f);
                         if (!haptic) { haptic = true; Haptics.Heavy(); }
                         break;
+
+                    case DetonationKind.FishStrike:
+                        if (playSound) AudioManager.Play(Sfx.Swap, 1.4f); // a light "whoosh"
+                        EffectsView.TileBurst(origin, new Color(0.55f, 0.85f, 1f), 8);
+                        break;
                 }
             }
         }
@@ -629,6 +810,19 @@ namespace Match3.View
                 yield break;
 
             yield return view.MoveTo(target, convergeDuration);
+
+            _viewsById.Remove(cleared.Tile.Id);
+            tilePool.Release(view);
+        }
+
+        /// <summary>The fish darts to its target cell, splashes and is gone.</summary>
+        private IEnumerator FlyAndRelease(ClearedTile cleared, Vector3 target)
+        {
+            if (!_viewsById.TryGetValue(cleared.Tile.Id, out TileView view))
+                yield break;
+
+            yield return view.MoveTo(target, 0.22f);
+            EffectsView.TileBurst(target, new Color(0.55f, 0.85f, 1f), 14);
 
             _viewsById.Remove(cleared.Tile.Id);
             tilePool.Release(view);
@@ -687,6 +881,12 @@ namespace Match3.View
                 return new Color(0.36f, 0.22f, 0.12f);
             if (tile.Kind == TileKind.Ingredient)
                 return new Color(0.95f, 0.88f, 0.72f);
+            if (tile.Kind == TileKind.Frosting)
+                return new Color(0.85f, 0.9f, 1f);
+            if (tile.Kind == TileKind.Swirl)
+                return new Color(0.2f, 0.17f, 0.22f);
+            if (tile.Kind == TileKind.ChocolateFountain)
+                return new Color(0.26f, 0.15f, 0.08f);
 
             Color baseColor = _config.tileColors[tile.ColorIndex];
             switch (tile.Kind)
@@ -696,6 +896,10 @@ namespace Match3.View
                     return Color.Lerp(baseColor, Color.white, 0.45f);
                 case TileKind.Wrapped:
                     return Color.Lerp(baseColor, Color.black, 0.35f);
+                case TileKind.Fish:
+                    return Color.Lerp(baseColor, new Color(0.6f, 0.9f, 1f), 0.35f);
+                case TileKind.Bomb:
+                    return Color.Lerp(baseColor, Color.black, 0.25f);
                 default:
                     return baseColor;
             }
