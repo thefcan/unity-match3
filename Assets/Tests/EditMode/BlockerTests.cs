@@ -325,6 +325,9 @@ namespace Match3.Tests
             timers.Arm(7, 3);
             timers.Arm(9, 1);
 
+            Assert.That(timers.Tick(7), Is.EqualTo(3), "the birth move never burns the fuse");
+            Assert.That(timers.Tick(9), Is.EqualTo(1));
+
             Assert.That(timers.Tick(7), Is.EqualTo(2));
             Assert.That(timers.Tick(9), Is.EqualTo(0), "zero means exploded");
 
@@ -380,10 +383,13 @@ namespace Match3.Tests
             ResolutionResult first = resolver.ResolveBombTick(board);
             Assert.That(first.Steps.Count, Is.EqualTo(1));
             Assert.That(first.Steps[0].BombTicks[0].Position, Is.EqualTo(cell));
-            Assert.That(first.Steps[0].BombTicks[0].Remaining, Is.EqualTo(1));
+            Assert.That(first.Steps[0].BombTicks[0].Remaining, Is.EqualTo(2), "the arming move is free");
 
             ResolutionResult second = resolver.ResolveBombTick(board);
-            Assert.That(second.Steps[0].BombTicks[0].Remaining, Is.EqualTo(0), "boom");
+            Assert.That(second.Steps[0].BombTicks[0].Remaining, Is.EqualTo(1));
+
+            ResolutionResult third = resolver.ResolveBombTick(board);
+            Assert.That(third.Steps[0].BombTicks[0].Remaining, Is.EqualTo(0), "boom");
         }
 
         [Test]

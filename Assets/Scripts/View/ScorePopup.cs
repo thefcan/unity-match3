@@ -20,7 +20,17 @@ namespace Match3.View
 
         public static void Spawn(Vector3 position, int points, Color color)
         {
-            ScorePopup popup = Pool.Count > 0 ? Pool.Pop() : Create();
+            // The static pool OUTLIVES scene loads while its pooled objects do not:
+            // popups parked during a game scene are destroyed with it, and popping a
+            // dead one froze the cascade coroutine mid-PlayStep (caught by standalone
+            // play-testing on the third menu→game transition). Unity's overloaded ==
+            // reports destroyed instances as null — drain those and build a live one.
+            ScorePopup popup = null;
+            while (Pool.Count > 0 && popup == null)
+                popup = Pool.Pop();
+            if (popup == null)
+                popup = Create();
+
             popup.transform.position = position;
             popup._text.text = $"+{points}";
             popup._text.color = color;
