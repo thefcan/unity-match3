@@ -127,7 +127,10 @@ namespace Match3.UI
             TMP_Text subtitle = NewText("Subtitle", content, $"A SWEET {levelCount}-LEVEL CAMPAIGN", 32f, FontStyles.Bold, UiTheme.BodyFont);
             subtitle.color = new Color(UiTheme.Gold.r, UiTheme.Gold.g, UiTheme.Gold.b, 0.85f);
             subtitle.characterSpacing = 4f;
-            Anchor(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(900f, 60f));
+            // 560 wide (was 900): with four opener pills per corner column, the
+            // wide box's centered glyphs drifted into the columns under Big-text's
+            // 10% squeeze — same collision class the 620-wide title fix solved.
+            Anchor(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(560f, 60f));
 
             TMP_Text mapLabel = NewText("MapLabel", content, "L E V E L   M A P", 30f, FontStyles.Bold, UiTheme.BodyFont);
             mapLabel.color = UiTheme.TextDim;
@@ -144,6 +147,7 @@ namespace Match3.UI
             TownPanel.Attach(canvas.GetComponent<Canvas>(), content);
             ChestPanel.Attach(canvas.GetComponent<Canvas>(), content);
             EventsPanel.Attach(canvas.GetComponent<Canvas>(), content);
+            AlbumPanel.Attach(canvas.GetComponent<Canvas>(), content);
         }
 
         private static Transform BuildSafeAreaHost(Transform canvas)

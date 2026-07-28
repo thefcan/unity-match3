@@ -42,15 +42,7 @@ namespace Match3.UI
             return panel;
         }
 
-        private static int TotalStars()
-        {
-            var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
-            int count = catalog != null ? catalog.Count : 0;
-            int total = 0;
-            for (int level = 1; level <= count; level++)
-                total += ProgressService.Current.StarsFor(level);
-            return total;
-        }
+        private static int TotalStars() => ProgressService.Current.TotalStars;
 
         private void Refresh()
         {
