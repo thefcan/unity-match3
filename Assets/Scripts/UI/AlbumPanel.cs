@@ -288,9 +288,9 @@ namespace Match3.UI
                 glow.raycastTarget = false;
                 _rowOutlines[page].SetActive(false);
 
-                TMP_Text caption = CreateText($"PageName{page}", content, new Vector2(-345f, y), 22f, FontStyles.Bold);
+                TMP_Text caption = CreateText($"PageName{page}", content, new Vector2(-348f, y), 20f, FontStyles.Bold);
                 UiTheme.ApplyFont(caption, UiTheme.BodyFont);
-                caption.rectTransform.sizeDelta = new Vector2(110f, 44f);
+                caption.rectTransform.sizeDelta = new Vector2(120f, 44f); // "BLOCKERS" must fit un-clipped
                 caption.alignment = TextAlignmentOptions.MidlineLeft;
                 caption.color = UiTheme.TextDim;
                 caption.text = AlbumCatalog.PageName(page);

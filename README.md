@@ -27,8 +27,10 @@ they pull their weight.
   <img src="docs/screenshots/star-chest.png" alt="Star chest — 20 chests opened at once, milestone pips and the payout line" width="170">
   &nbsp;
   <img src="docs/screenshots/candy-town.png" alt="Candy Town — the stage-5 night town celebrating a new unlock" width="170">
+  &nbsp;
+  <img src="docs/screenshots/album.png" alt="Sticker album — six pages of the game's own bestiary, filled by opening earned packs" width="170">
 </p>
-<p align="center"><sub><i>Straight from the game: the level map, the <b>weekend race</b> with its seeded bot racers, the all-blockers <b>level-100 finale</b>, a 20-chest <b>star-chest</b> payout, and <b>Candy Town</b> at full build.</i></sub></p>
+<p align="center"><sub><i>Straight from the game: the level map, the <b>weekend race</b> with its seeded bot racers, the all-blockers <b>level-100 finale</b>, a 20-chest <b>star-chest</b> payout, <b>Candy Town</b> at full build, and the <b>sticker album</b>.</i></sub></p>
 
 <p align="center">
   <img src="docs/design-main-menu.png" alt="Main menu with the scrollable level map" width="230">
@@ -147,6 +149,13 @@ haptics, and a colorblind sprite mode.
   the 1–3 **star rating**); **lose** = out of moves (or a bomb goes off). Stars and
   unlocks are **saved** (`progress.sav` in `persistentDataPath` — plain
   `level=stars` lines).
+- **Sticker album (menu → ALBUM):** a six-page collection of the game's own
+  bestiary — candies, specials, fish, blockers, the town, the trophy — filled by
+  opening **packs** earned from stars (one per ten, retroactively — veterans get
+  a launch splash), chests, weekly missions and event podiums. Deterministic
+  per-save rolls with a **pity ladder** that guarantees completion; dupes pay
+  boosters; page completions pay bundles and finishing everything earns the
+  permanent **golden cover**. No purchases, ever.
 - **Rescues (free continues):** the fail panel can offer *SAVE ME — +5 moves*
   (on a bomb loss: *DEFUSE* — every short fuse is re-armed too) for one **Rescue**
   from your shelf. One per attempt, no purchases ever: you start with 2 and earn
