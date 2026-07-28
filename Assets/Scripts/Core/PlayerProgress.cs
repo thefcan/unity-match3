@@ -34,6 +34,10 @@ namespace Match3.Core
         }
 
         /// <summary>Completed levels and their stars, ordered by level (for serialization).</summary>
+        /// <summary>Sum of best stars across every completed level — the album's
+        /// pack watermark source (no catalog dependency, O(completed levels)).</summary>
+        public int TotalStars => _starsByLevel.Values.Sum();
+
         public IEnumerable<KeyValuePair<int, int>> Entries =>
             _starsByLevel.OrderBy(entry => entry.Key);
     }

@@ -58,6 +58,15 @@ namespace Match3.Core
             sb.Append("eventToastTrophy=").Append(state.EventToastTrophy).Append('\n');
             sb.Append("rescues=").Append(state.Rescues).Append('\n');
             sb.Append("eventToastRescues=").Append(state.EventToastRescues).Append('\n');
+            sb.Append("albumSalt=").Append(state.AlbumSalt).Append('\n');
+            sb.Append("albumPacks=").Append(state.AlbumPacks).Append('\n');
+            sb.Append("albumPacksOpened=").Append(state.AlbumPacksOpened).Append('\n');
+            sb.Append("albumStarsCounted=").Append(state.AlbumStarsCounted).Append('\n');
+            sb.Append("albumPity=").Append(state.AlbumPity).Append('\n');
+            for (int page = 0; page < AlbumCatalog.PageCount; page++)
+                sb.Append("albumPage").Append(page).Append('=').Append(state.AlbumPageOwned[page]).Append('\n');
+            sb.Append("albumPagesRewarded=").Append(state.AlbumPagesRewarded).Append('\n');
+            sb.Append("eventToastPacks=").Append(state.EventToastPacks).Append('\n');
             return sb.ToString();
         }
 
@@ -134,6 +143,21 @@ namespace Match3.Core
                     case "eventToastTrophy": state.EventToastTrophy = Math.Max(0, value); break;
                     case "rescues": state.Rescues = Math.Max(0, value); break;
                     case "eventToastRescues": state.EventToastRescues = Math.Max(0, value); break;
+                    case "albumSalt": state.AlbumSalt = Math.Max(0, value); break;
+                    case "albumPacks": state.AlbumPacks = Math.Max(0, value); break;
+                    case "albumPacksOpened": state.AlbumPacksOpened = Math.Max(0, value); break;
+                    case "albumStarsCounted": state.AlbumStarsCounted = Math.Max(0, value); break;
+                    case "albumPity": state.AlbumPity = Math.Max(0, value); break;
+                    // Masks clamp Max FIRST then &63 — the other order would turn a
+                    // negative into fabricated ownership ((-5) & 63 == 59).
+                    case "albumPage0": state.AlbumPageOwned[0] = Math.Max(0, value) & 63; break;
+                    case "albumPage1": state.AlbumPageOwned[1] = Math.Max(0, value) & 63; break;
+                    case "albumPage2": state.AlbumPageOwned[2] = Math.Max(0, value) & 63; break;
+                    case "albumPage3": state.AlbumPageOwned[3] = Math.Max(0, value) & 63; break;
+                    case "albumPage4": state.AlbumPageOwned[4] = Math.Max(0, value) & 63; break;
+                    case "albumPage5": state.AlbumPageOwned[5] = Math.Max(0, value) & 63; break;
+                    case "albumPagesRewarded": state.AlbumPagesRewarded = Math.Max(0, value) & 63; break;
+                    case "eventToastPacks": state.EventToastPacks = Math.Max(0, value); break;
                     // unknown keys: ignored (forward compatibility);
                     // files from before the booster patch simply keep the
                     // starter-pack defaults — everyone gets the gift once

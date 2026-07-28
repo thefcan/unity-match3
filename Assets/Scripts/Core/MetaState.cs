@@ -89,6 +89,29 @@ namespace Match3.Core
         /// <summary>Rescues banked from an unclaimed race podium (see Events.cs).</summary>
         public int EventToastRescues;
 
+        // ---- Sticker album (Album.cs) — APPEND; ids/masks are persisted, the
+        // catalog table is frozen. NOTE: progress.sav cloud-syncs but meta.sav
+        // does not, so each device settles its own star-pack watermark.
+        /// <summary>0 = not rolled yet; always positive once set (the serializer's
+        /// Math.Max clamp must never zero it — see AlbumRules.EnsureSalt).</summary>
+        public int AlbumSalt;
+        /// <summary>Unopened packs. Starts at 1 so the OPEN PACK button is never dead.</summary>
+        public int AlbumPacks = 1;
+        /// <summary>Lifetime packs opened — the pack roll's ordinal seed.</summary>
+        public int AlbumPacksOpened;
+        /// <summary>Star-pack watermark (total stars already converted to packs).</summary>
+        public int AlbumStarsCounted;
+        public int AlbumPity;
+        /// <summary>One 6-bit ownership mask per page (bit = slot). Masks instead of
+        /// the house per-index keys: 36 booleans would bloat meta.sav; reads clamp
+        /// each mask to 0..63.</summary>
+        public readonly int[] AlbumPageOwned = new int[AlbumCatalog.PageCount];
+        /// <summary>6-bit page-reward ledger; 63 == the permanent golden cover
+        /// (page rewards auto-grant inside OpenPack — never a claim button).</summary>
+        public int AlbumPagesRewarded;
+        /// <summary>Packs banked from an unclaimed race podium (display-only toast).</summary>
+        public int EventToastPacks;
+
         public int BoosterCount(BoosterKind kind)
         {
             switch (kind)
