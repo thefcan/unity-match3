@@ -83,6 +83,7 @@ namespace Match3.Game
                 Current.AddBoosters(BoosterKind.Shuffle, reward.Shuffles);
                 Current.StreakShields += reward.StreakShields;
                 Current.Rescues += rescuesGranted;
+                Current.AlbumPacks += chestsOpened; // every chest carries a sticker pack
             }
             Current.LastChestStars = Math.Max(Current.LastChestStars, totalStars);
             Save();

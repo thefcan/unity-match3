@@ -123,7 +123,8 @@ namespace Match3.Game
                 return false;
 
             state.WeeklyClaimed = true;
-            state.Rescues++; // the weekly also mints one continue — BEFORE GrantReward's save
+            state.Rescues++;    // the weekly also mints one continue — BEFORE GrantReward's save
+            state.AlbumPacks++; // — and one sticker pack, same single-write rule
             MetaService.GrantReward(MissionCatalog.WeeklyReward());
             return true;
         }

@@ -86,7 +86,7 @@ namespace Match3.Tests
             Assert.AreEqual(2 + expected, state.Rescues);
             Assert.AreEqual(expected, state.EventToastRescues);
 
-            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out _, out _, out int rescues));
+            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out _, out _, out int rescues, out _));
             Assert.AreEqual(expected, rescues);
             Assert.AreEqual(0, state.EventToastRescues);
         }

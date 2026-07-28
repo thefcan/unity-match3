@@ -403,5 +403,64 @@ namespace Match3.Tests
             Assert.AreEqual(63, overflow.AlbumPageOwned[2]);
         }
 
+        // ---- Event mint symmetry (claim and bank must always agree) ------------------
+
+        private const int Tue = 939; // window 268, midweek objective event
+        private const int Fri = 942; // window 269, weekend race (EventTests anchors)
+
+        [Test]
+        public void TierThreePack_ClaimAndBankAgree()
+        {
+            MetaState claimed = MidweekAtTierThree();
+            Assert.IsTrue(EventRules.TryClaimTier(claimed, Tue, EventCalendar.TierCount - 1, out _));
+
+            MetaState banked = MidweekAtTierThree();
+            Assert.IsTrue(EventRules.EnsureWindow(banked, 946, 100)); // next Tuesday banks it
+
+            // Tier 1-2 bundles carry no packs, so the pack ledgers must match exactly.
+            Assert.AreEqual(claimed.AlbumPacks, banked.AlbumPacks);
+            Assert.AreEqual(1, banked.EventToastPacks); // display mirror on the bank path only
+        }
+
+        [Test]
+        public void RacePodiumPack_GatedLikeRescues_ClaimAndBankAgree()
+        {
+            // A finished race: claim and bank must mint the identical pack count.
+            MetaState claimed = FinishedRace();
+            Assert.IsTrue(EventRules.TryClaimRace(claimed, Fri, out _, out int placement));
+            int expected = AlbumRules.PackForRace(placement, EventCalendar.RaceTarget);
+            Assert.AreEqual(1 + expected, claimed.AlbumPacks); // starter 1 + podium mint
+
+            MetaState banked = FinishedRace();
+            Assert.IsTrue(EventRules.EnsureWindow(banked, 946, 100));
+            Assert.AreEqual(1 + expected, banked.AlbumPacks);
+            Assert.AreEqual(expected, banked.EventToastPacks);
+
+            // The 3-win gate: a single-tick weekend can never leak a pack via the bank.
+            var lucky = new MetaState();
+            EventRules.EnsureWindow(lucky, Fri, 100);
+            EventRules.RegisterWin(lucky, Fri, 1, 2); // one tick, whatever the placement
+            EventRules.EnsureWindow(lucky, 946, 100);
+            Assert.AreEqual(1, lucky.AlbumPacks); // still just the starter pack
+            Assert.AreEqual(0, lucky.EventToastPacks);
+        }
+
+        private static MetaState MidweekAtTierThree()
+        {
+            var state = new MetaState();
+            EventRules.EnsureWindow(state, Tue, 100);
+            EventDef def = EventCalendar.DefForKind((EventKind)state.EventKindId, state.EventParam);
+            state.EventProgress = def.TierTarget(EventCalendar.TierCount - 1);
+            return state;
+        }
+
+        private static MetaState FinishedRace()
+        {
+            var state = new MetaState();
+            EventRules.EnsureWindow(state, Fri, 100);
+            for (int level = 1; level <= 20; level++)
+                EventRules.RegisterWin(state, Fri, level, 2);
+            return state;
+        }
     }
 }

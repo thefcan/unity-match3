@@ -84,8 +84,8 @@ namespace Match3.UI
             _card.color = UiTheme.ThemeCard;
             // The banked toast is consumed HERE (not in Refresh) so a claim's
             // refresh two seconds later doesn't wipe the line mid-read.
-            _toast.text = EventService.TryTakeBankedToast(out ChestReward banked, out int trophy, out int rescues)
-                ? ComposeToast(banked, trophy, rescues)
+            _toast.text = EventService.TryTakeBankedToast(out ChestReward banked, out int trophy, out int rescues, out int packs)
+                ? ComposeToast(banked, trophy, rescues, packs)
                 : string.Empty;
             Refresh();
             _root.SetActive(true);
@@ -143,7 +143,8 @@ namespace Match3.UI
             {
                 TierRow row = _tiers[tier];
                 row.Description.text = $"TIER {tier + 1} — {def.TierTarget(tier)}";
-                row.Reward.text = RewardLine(EventRules.TierReward(tier));
+                row.Reward.text = RewardLine(EventRules.TierReward(tier))
+                    + (tier == EventCalendar.TierCount - 1 ? "  +1 PACK" : string.Empty);
 
                 bool done = progress >= def.TierTarget(tier);
                 bool claimed = meta.EventTierClaimed[tier];
@@ -252,10 +253,11 @@ namespace Match3.UI
             return line.TrimEnd();
         }
 
-        private static string ComposeToast(ChestReward reward, int trophy, int rescues)
+        private static string ComposeToast(ChestReward reward, int trophy, int rescues, int packs)
         {
             string line = "WHILE YOU WERE AWAY:  " + RewardLine(reward);
             if (rescues > 0) line += $"  +{rescues} SAVE";
+            if (packs > 0) line += $"  +{packs} PACK";
             if (trophy == 3) line += "  +GOLD TROPHY";
             else if (trophy == 2) line += "  +SILVER TROPHY";
             else if (trophy == 1) line += "  +BRONZE TROPHY";

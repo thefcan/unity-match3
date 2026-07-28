@@ -419,12 +419,13 @@ namespace Match3.Tests
             state.EventProgress = 60;
             EventRules.EnsureWindow(state, Fri, 100);        // banks the full ladder + bronze
 
-            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out ChestReward reward, out int trophy, out int rescues));
+            Assert.IsTrue(EventRules.TryTakeBankedToast(state, out ChestReward reward, out int trophy, out int rescues, out int packs));
             Assert.AreEqual(5, reward.Hammers);
             Assert.AreEqual(1, reward.StreakShields);
             Assert.AreEqual(1, trophy);
             Assert.AreEqual(0, rescues); // a midweek bank mints no continues
-            Assert.IsFalse(EventRules.TryTakeBankedToast(state, out ChestReward drained, out int drainedTrophy, out int drainedRescues)); // one-shot
+            Assert.AreEqual(1, packs);   // — but the banked tier 3 mints its sticker pack
+            Assert.IsFalse(EventRules.TryTakeBankedToast(state, out ChestReward drained, out int drainedTrophy, out int drainedRescues, out int drainedPacks)); // one-shot
             Assert.AreEqual(0, state.EventToastHammers);
         }
 
