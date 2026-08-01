@@ -34,14 +34,27 @@ için tamamen derleme dışıdır).
 
 ## 4. Cloud Code script'ini yayınla
 
-İki yol:
+**Önce ortamı seç:** Project Settings → Services → **Environments** → *Editor
+Environment* = `production`. Bu ayar yapılmadan Deployment penceresi "No
+deployment environment set" der ve dosyayı listelemez. ("Doğrudan production'a
+deploy" uyarısı canlı oyuncusu olan takımlar içindir; tek ortamlı projede
+görmezden gelinir.)
 
-**A) Editörden (önerilen):** Window → **Deployment** penceresi →
-`Assets/CloudCode/submit_score.js` görünür → işaretle → **Deploy**.
+**A) Editörden:** Window → **Deployment** → `Assets/CloudCode/submit_score.js`
+işaretle → **Deploy Selected**.
 
-**B) Dashboard'dan:** Cloud Code → Scripts → Create Script → adı `submit_score`,
-parametreler `score: Numeric`, `duration: Numeric` → dosyanın içeriğini yapıştır
-→ Publish.
+**B) Dashboard'dan (A başarısız olursa):** 2026-08-01 kurulumunda editör yolu
+`Received unexpected status code from cloud code server: 0 0` ile düştü —
+dashboard yolu sorunsuz çalıştı:
+Cloud Code → **JS Scripts** → Create → adı `submit_score` → **Details**
+sekmesinde parametreleri tanımla (`score`: Numeric, `duration`: Numeric, ikisi de
+Required) → `submit_score.js` içeriğini kod alanına yapıştır → **Save Script** →
+**Publish Version** (yayınlanmadan çağrılamaz; başlık altında "Last published on:
+…" görünmeli).
+
+> Dashboard'daki **Run** düğmesi `code 1003 / "JWT cannot be empty"` verirse bu
+> script hatası DEĞİLDİR — panelde Player ID boş olduğu içindir. Gerçek testi
+> oyundan yap (aşağıdaki doğrulama).
 
 > Script yayınlanana kadar oyun otomatik olarak doğrudan leaderboard yazımına
 > düşer (hile koruması olmadan ama çalışır). Yayınlandıktan sonra tüm skorlar

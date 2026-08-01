@@ -38,9 +38,9 @@ Material:
     - _OutlineSoftness: 0
     - _OutlineWidth: 0
     - _PerspectiveFilter: 0.875
-    - _ScaleRatioA: 1
+    - _ScaleRatioA: 0.8888889
     - _ScaleRatioB: 1
-    - _ScaleRatioC: 1
+    - _ScaleRatioC: 0.7222222
     - _ScaleX: 1
     - _ScaleY: 1
     - _ShaderFlags: 0
@@ -126,9 +126,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}
   m_Name: Nunito-Bold SDF
   m_EditorClassIdentifier: 
-  hashCode: 0
+  hashCode: -771558338
   material: {fileID: -9071156520653243882}
-  materialHashCode: -2006316128
+  materialHashCode: 1340222046
   m_Version: 1.1.0
   m_SourceFontFileGUID: 16ab0a9056ef6479880cdf19f16e8ccd
   m_SourceFontFile_EditorRef: {fileID: 12800000, guid: 16ab0a9056ef6479880cdf19f16e8ccd, type: 3}
