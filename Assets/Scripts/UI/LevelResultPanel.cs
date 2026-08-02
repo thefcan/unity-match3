@@ -38,6 +38,8 @@ namespace Match3.UI
         private GameObject _menuButton;
         private System.Action _primaryAction;
         private Coroutine _starPop;
+        private Coroutine _countUp;
+        private UiConfetti _confetti;
 
         /// <summary>Builds the (hidden) panel under <paramref name="canvas"/> and hooks the game's outcome events.</summary>
         public static LevelResultPanel Attach(Canvas canvas, GameManager game)
@@ -105,10 +107,14 @@ namespace Match3.UI
             }
 
             // The win layout (from the Stitch design): FINAL SCORE caption + big gold
-            // number instead of the plain summary line.
+            // number instead of the plain summary line. The number counts up once
+            // the card has settled; confetti rides the same beat.
             _scoreCaption.gameObject.SetActive(true);
             _scoreValue.gameObject.SetActive(true);
-            _scoreValue.text = _game.Score.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+            _scoreValue.text = "0";
+            if (_countUp != null)
+                StopCoroutine(_countUp);
+            _countUp = StartCoroutine(WinCelebration(_game.Score));
 
             // Quiet event-progress toast — the win that just played already counted.
             if (EventService.IsWindowActive)
@@ -137,20 +143,21 @@ namespace Match3.UI
 
             for (int i = 0; i < _starPips.Length; i++)
             {
-                Transform pip = _starPips[i].transform;
                 if (i < stars)
                     AudioManager.Play(Sfx.Pop, 1f + 0.18f * i);
-
-                for (float t = 0f; t < 1f; t += Time.deltaTime / 0.22f)
-                {
-                    // overshoot to 1.25 then settle — a squash-free pop
-                    float scale = t < 0.7f ? Mathf.Lerp(0f, 1.25f, t / 0.7f) : Mathf.Lerp(1.25f, 1f, (t - 0.7f) / 0.3f);
-                    pip.localScale = Vector3.one * scale;
-                    yield return null;
-                }
-                pip.localScale = Vector3.one;
+                yield return UiTween.ScalePop(_starPips[i].transform, 0.22f);
             }
             _starPop = null;
+        }
+
+        /// <summary>Win beat two: the card settles (0.2s), confetti flies, the score counts up.</summary>
+        private System.Collections.IEnumerator WinCelebration(int score)
+        {
+            for (float t = 0f; t < 0.2f; t += Time.unscaledDeltaTime)
+                yield return null;
+            _confetti.Burst(_card.rectTransform);
+            yield return UiTween.CountUp(_scoreValue, 0, score, 0.8f);
+            _countUp = null;
         }
 
         private void HandleLevelFailed()
@@ -222,10 +229,18 @@ namespace Match3.UI
             // The menu button only makes sense when the MainMenu scene is loadable
             // (i.e. registered in the build scene list).
             _menuButton.SetActive(Application.CanStreamedLevelBeLoaded("MainMenu"));
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform); // fail cards get the fade+pop too
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide()
+        {
+            if (_countUp != null)
+            {
+                StopCoroutine(_countUp);
+                _countUp = null;
+            }
+            UiTween.ClosePanel(this, _root);
+        }
 
         private void OnButtonClicked()
         {
@@ -236,7 +251,7 @@ namespace Match3.UI
         private static void OnMenuClicked()
         {
             AudioManager.Play(Sfx.Button);
-            SceneManager.LoadScene("MainMenu");
+            ScreenFader.LoadScene("MainMenu");
         }
 
         // ---- Runtime UI construction --------------------------------------------------
@@ -349,6 +364,10 @@ namespace Match3.UI
             UiTheme.ApplyFont(_rescueLabel, UiTheme.ButtonFont);
             Stretch(_rescueLabel.rectTransform);
             _rescueButton.SetActive(false);
+
+            // Confetti last: it renders over everything on the card, and living
+            // inside the overlay means Hide() kills a burst mid-flight.
+            _confetti = UiConfetti.Attach(_root.transform);
         }
 
         private static void Stretch(RectTransform rect)

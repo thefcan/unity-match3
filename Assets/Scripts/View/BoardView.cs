@@ -687,6 +687,12 @@ namespace Match3.View
         }
 
         /// <summary>
+        /// World centroid of the last wave's cleared cells — the launch pad for the
+        /// objective bar's fly-to-chip sparks. View bookkeeping only, no rules.
+        /// </summary>
+        public Vector3 LastClearCentroid { get; private set; }
+
+        /// <summary>
         /// Plays one cascade wave: clear the popped tiles (staggered outward from any
         /// detonation origin; match tiles that fund a special converge into its cell),
         /// morph the newly created specials, then animate falls and spawns together.
@@ -698,10 +704,11 @@ namespace Match3.View
             PlayDetonationJuice(step);
             if (step.Cleared.Count > 0)
             {
+                LastClearCentroid = Centroid(step.Cleared);
                 AudioManager.Play(Sfx.Pop, 1f + 0.08f * step.CascadeIndex); // combos climb in pitch
                 string banner = BannerPopup.TextFor(step.CascadeIndex);
                 if (banner != null)
-                    BannerPopup.Spawn(BannerAnchor(Centroid(step.Cleared)), banner); // fire-and-forget
+                    BannerPopup.Spawn(BannerAnchor(LastClearCentroid), banner); // fire-and-forget
             }
 
             Dictionary<GridPosition, float> delays = BuildDetonationDelays(step);

@@ -446,7 +446,7 @@ namespace Match3.UI
             GameSession.Mode = GameMode.Moves;
             GameSession.SelectedLevel = definition;
             GameSession.SelectedLevelIndex = number;
-            SceneManager.LoadScene("Game");
+            ScreenFader.LoadScene("Game");
         }
 
         private void StartTimeAttack()
@@ -455,7 +455,7 @@ namespace Match3.UI
             GameSession.Mode = GameMode.TimeAttack;
             GameSession.SelectedLevel = null;
             GameSession.SelectedLevelIndex = 1;
-            SceneManager.LoadScene("Game");
+            ScreenFader.LoadScene("Game");
         }
 
         /// <summary>

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Match3.Core;
 using Match3.Game;
@@ -24,6 +25,15 @@ namespace Match3.UI
         private CandySpriteLibrary _candies;
         private readonly List<(GameObject chip, Image icon, TMP_Text count, Image outline)> _chips = new List<(GameObject, Image, TMP_Text, Image)>();
         private readonly List<int> _visible = new List<int>(); // tracker indices minus the Score goal
+
+        // Fly-to-chip sparks: last shown progress per tracker index (the delta
+        // detector), a small flyer pool, and the board/canvas handles for the
+        // world → canvas conversion. Counters always show tracker truth — the
+        // flyers are decoration launched AFTER the number already updated.
+        private readonly Dictionary<int, int> _seenProgress = new Dictionary<int, int>();
+        private readonly Stack<Image> _flyerPool = new Stack<Image>();
+        private Match3.View.BoardView _boardView;
+        private Canvas _rootCanvas;
 
         public static ObjectiveBarView Attach(Transform parent, GameManager game)
         {
@@ -81,7 +91,11 @@ namespace Match3.UI
             _root.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
-        private void HandleLevelChanged(int level) => Refresh();
+        private void HandleLevelChanged(int level)
+        {
+            _seenProgress.Clear(); // new level — next refresh sets the baseline, no flyers
+            Refresh();
+        }
 
         private void Refresh()
         {
@@ -125,9 +139,16 @@ namespace Match3.UI
                 icon.color = tint;
 
                 bool done = tracker.IsComplete(i);
-                count.text = $"{tracker.Progress(i)}/{objective.TargetAmount}";
+                int progress = tracker.Progress(i);
+                count.text = $"{progress}/{objective.TargetAmount}";
                 count.color = done ? UiTheme.Gold : UiTheme.TextPrimary;
                 outline.gameObject.SetActive(done); // gold rim on finished goals (Stitch)
+
+                // Sparks only on an INCREASE seen while the chip was already on
+                // screen — the first refresh of a level just sets the baseline.
+                if (_seenProgress.TryGetValue(i, out int seen) && progress > seen)
+                    LaunchFlyers(Mathf.Min(progress - seen, 3), c);
+                _seenProgress[i] = progress;
 
                 // Pills hug their text: long counters widen the chip instead of wrapping.
                 float textWidth = count.GetPreferredValues(count.text).x;
@@ -228,6 +249,94 @@ namespace Match3.UI
             outlineGo.SetActive(false);
 
             return (chipGo, icon, count, outline);
+        }
+
+        // ---- Fly-to-chip sparks (pure decoration; scaled time on purpose so they
+        // freeze WITH the board under pause) ------------------------------------
+
+        private void LaunchFlyers(int count, int chipIndex)
+        {
+            if (Prefs.ReducedMotionOn)
+                return;
+            if (_boardView == null)
+                _boardView = FindObjectOfType<Match3.View.BoardView>();
+            if (_boardView == null)
+                return; // no board in this scene — nothing to launch from
+
+            Vector3 start = BoardToCanvas(_boardView.LastClearCentroid);
+            for (int n = 0; n < count; n++)
+                StartCoroutine(Fly(start, chipIndex, n * 0.05f));
+        }
+
+        private Vector3 BoardToCanvas(Vector3 world)
+        {
+            if (_rootCanvas == null)
+                _rootCanvas = GetComponentInParent<Canvas>().rootCanvas;
+            Camera cam = Camera.main;
+            Vector3 screen = cam != null
+                ? cam.WorldToScreenPoint(world)
+                : new Vector3(Screen.width * 0.5f, Screen.height * 0.5f);
+            if (_rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                return new Vector3(screen.x, screen.y, 0f); // overlay canvas: world == screen pixels
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                (RectTransform)_rootCanvas.transform, screen, _rootCanvas.worldCamera, out Vector3 point);
+            return point;
+        }
+
+        private IEnumerator Fly(Vector3 from, int chipIndex, float delay)
+        {
+            for (float w = 0f; w < delay; w += Time.deltaTime)
+                yield return null;
+            if (chipIndex >= _chips.Count)
+                yield break;
+            (GameObject chipGo, Image icon, _, _) = _chips[chipIndex];
+
+            Image flyer = GetFlyer();
+            flyer.sprite = icon.sprite;
+            flyer.color = icon.color;
+            flyer.transform.position = from;
+            flyer.gameObject.SetActive(true);
+
+            float arc = 40f * (_rootCanvas != null ? _rootCanvas.scaleFactor : 1f);
+            Transform target = icon.transform; // chased live — chips can resize mid-flight
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.35f)
+            {
+                float s = Mathf.SmoothStep(0f, 1f, t);
+                flyer.transform.position = Vector3.Lerp(from, target.position, s)
+                                           + Vector3.up * (arc * Mathf.Sin(t * Mathf.PI));
+                yield return null;
+            }
+            flyer.gameObject.SetActive(false);
+            _flyerPool.Push(flyer);
+
+            AudioManager.Play(Sfx.Pop, 1.3f, 0.5f);
+            StartCoroutine(ChipPop(chipGo.transform));
+        }
+
+        private Image GetFlyer()
+        {
+            Image flyer = null;
+            while (_flyerPool.Count > 0 && flyer == null)
+                flyer = _flyerPool.Pop(); // drain destroyed instances
+            if (flyer == null)
+            {
+                var go = new GameObject("Flyer", typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(transform, false); // after Chips — renders over them
+                ((RectTransform)go.transform).sizeDelta = new Vector2(56f, 56f);
+                flyer = go.GetComponent<Image>();
+                flyer.raycastTarget = false;
+            }
+            return flyer;
+        }
+
+        private IEnumerator ChipPop(Transform chip)
+        {
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.16f)
+            {
+                chip.localScale = Vector3.one * (1f + 0.15f * Mathf.Sin(t * Mathf.PI));
+                yield return null;
+            }
+            chip.localScale = Vector3.one;
         }
     }
 }

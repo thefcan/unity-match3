@@ -143,10 +143,11 @@ namespace Match3.UI
         private static void OnLevelMapClicked()
         {
             AudioManager.Play(Sfx.Button);
-            // Scene load skips PausedState.Exit — restore time/audio by hand.
+            // Scene load skips PausedState.Exit — restore time/audio by hand,
+            // BEFORE the fade so the curtain never runs on frozen time.
             Time.timeScale = 1f;
             AudioListener.pause = false;
-            SceneManager.LoadScene("MainMenu");
+            ScreenFader.LoadScene("MainMenu");
         }
 
         private void OnCloseClicked()
