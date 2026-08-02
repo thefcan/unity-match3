@@ -70,6 +70,32 @@ namespace Match3.Core
                 }
             }
 
+            // The creation cell was matched too — it morphed instead of clearing, so
+            // it is missing from Cleared (mirrors the resolver's jelly compensation).
+            // Conversions consumed in their own wave (bomb+striped) already counted
+            // via Cleared: their Position appears there, so they are skipped.
+            foreach (SpecialCreation creation in step.Creations)
+            {
+                bool consumedSameWave = false;
+                foreach (ClearedTile cleared in step.Cleared)
+                {
+                    if (cleared.Position.Equals(creation.Position))
+                    {
+                        consumedSameWave = true;
+                        break;
+                    }
+                }
+                if (consumedSameWave)
+                    continue;
+
+                for (int i = 0; i < _objectives.Length; i++)
+                {
+                    if (_objectives[i].Type == ObjectiveType.CollectColor &&
+                        creation.Replaced.ColorIndex == _objectives[i].ColorIndex)
+                        _progress[i]++;
+                }
+            }
+
             for (int i = 0; i < _objectives.Length; i++)
             {
                 if (_objectives[i].Type == ObjectiveType.Score)

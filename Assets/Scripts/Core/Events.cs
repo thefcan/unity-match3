@@ -258,6 +258,8 @@ namespace Match3.Core
             {
                 case EventKind.CandyRush:
                 {
+                    // Cleared-only on purpose — same finale double-count trap as
+                    // MissionCatalog.CountFor's ClearColor; see the note there.
                     int count = 0;
                     foreach (ClearedTile cleared in step.Cleared)
                         if (cleared.Tile.ColorIndex == param)

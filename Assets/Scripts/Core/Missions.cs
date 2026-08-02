@@ -104,6 +104,10 @@ namespace Match3.Core
             {
                 case MissionType.ClearColor:
                 {
+                    // Deliberately Cleared-only (no creation-cell credit, unlike
+                    // ObjectiveTracker): finale steps flow through here, and their
+                    // pure-morph conversions are cleared by later blast waves —
+                    // crediting the morph too would double-count.
                     int count = 0;
                     foreach (ClearedTile cleared in step.Cleared)
                         if (cleared.Tile.ColorIndex == def.Param)

@@ -126,5 +126,81 @@ namespace Match3.Tests
         {
             Assert.That(StarCalculator.Calculate(9999, new[] { 1, 2, 3, 4, 5 }), Is.EqualTo(3));
         }
+
+        [Test]
+        public void CollectColor_CountsTheCreationCell()
+        {
+            // A 4-match that mints a striped clears 3 tiles and morphs the 4th —
+            // the player matched four, the counter must say four.
+            var factory = TestFactories.Scripted(5);
+            Tile replaced = factory.Create(A);
+            Tile striped = factory.CreateSpecial(A, TileKind.StripedV);
+            var creationCell = new GridPosition(1, 0);
+
+            var step = new CascadeStep(0,
+                new List<ClearedTile>
+                {
+                    new ClearedTile(factory.Create(A), new GridPosition(0, 0)),
+                    new ClearedTile(factory.Create(A), new GridPosition(2, 0)),
+                    new ClearedTile(factory.Create(A), new GridPosition(3, 0)),
+                },
+                new List<TileFall>(), new List<TileSpawn>(), 40, new List<int> { 4 },
+                new List<SpecialCreation> { new SpecialCreation(striped, replaced, creationCell, new[] { creationCell }) },
+                new List<Detonation>(), new List<JellyHit>(), Array.Empty<LockBreak>(),
+                Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>());
+
+            var tracker = new ObjectiveTracker(new[] { new Objective(ObjectiveType.CollectColor, A, 4) });
+            tracker.Consume(step);
+
+            Assert.That(tracker.Progress(0), Is.EqualTo(4));
+            Assert.That(tracker.AllComplete, Is.True);
+        }
+
+        [Test]
+        public void CollectColor_SkipsConversionsConsumedInTheirOwnWave()
+        {
+            // A bomb+striped conversion both creates AND clears at the same cell in
+            // one wave: the Cleared entry already counted it, the creation must not.
+            var factory = TestFactories.Scripted(5);
+            Tile replaced = factory.Create(A);
+            Tile striped = factory.CreateSpecial(A, TileKind.StripedH);
+            var cell = new GridPosition(1, 1);
+
+            var step = new CascadeStep(0,
+                new List<ClearedTile> { new ClearedTile(striped, cell) },
+                new List<TileFall>(), new List<TileSpawn>(), 10, new List<int>(),
+                new List<SpecialCreation> { new SpecialCreation(striped, replaced, cell, new[] { cell }) },
+                new List<Detonation>(), new List<JellyHit>(), Array.Empty<LockBreak>(),
+                Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>());
+
+            var tracker = new ObjectiveTracker(new[] { new Objective(ObjectiveType.CollectColor, A, 4) });
+            tracker.Consume(step);
+
+            Assert.That(tracker.Progress(0), Is.EqualTo(1), "one tile, one credit — never two");
+        }
+
+        [Test]
+        public void FourRunResolve_CreditsAllFourTiles()
+        {
+            // End to end: resolver output (not a hand-built step) must complete a
+            // "collect 4" objective from a single 4-match.
+            TileFactory factory = TestFactories.Scripted(5, D, E, D, C);
+            Board board = Board.FromLayout(new[,]
+            {
+                { B, C, D, B },
+                { C, D, B, C },
+                { D, B, C, D },
+                { A, A, A, A },
+            }, factory);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SequenceRandom());
+            ResolutionResult result = resolver.Resolve(board);
+
+            var tracker = new ObjectiveTracker(new[] { new Objective(ObjectiveType.CollectColor, A, 4) });
+            foreach (CascadeStep step in result.Steps)
+                tracker.Consume(step);
+
+            Assert.That(tracker.AllComplete, Is.True, "a 4-match must bank four, not three");
+        }
     }
 }
