@@ -336,6 +336,7 @@ namespace Match3.Game
                 int colorCount = Mathf.Clamp(LevelDefinition.colorCount, 3, levelConfig.ColorCount);
                 var factory = new TileFactory(colorCount, _random);
                 Board = new Board(LevelDefinition.width, LevelDefinition.height, factory);
+                Board.SetSquaresLive(true); // full resolver honors 2x2s — hints/shuffle must too
                 Resolver = new CascadeResolver(LevelDefinition.ToScoreConfig(), factory, _random);
 
                 Level = GameSession.SelectedLevelIndex;
@@ -429,6 +430,7 @@ namespace Match3.Game
             {
                 var factory = new TileFactory(levelConfig.ColorCount, _random);
                 Board = new Board(levelConfig.width, levelConfig.height, factory);
+                Board.SetSquaresLive(true); // time attack runs the full resolver too
                 // Factory + random unlock the resolver's special-candy mode: match shapes
                 // mint striped/wrapped/colour-bomb tiles and combos detonate.
                 Resolver = new CascadeResolver(levelConfig.ToScoreConfig(), factory, _random);

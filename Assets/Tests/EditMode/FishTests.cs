@@ -175,6 +175,97 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void SquareOnlySwap_Commits_InFullMode()
+        {
+            // Dragging the top A down forms ONLY a 2x2 — no straight run anywhere.
+            // The full resolver must accept it: a move is spent, a fish is born on
+            // the cell the player touched.
+            TileFactory factory = TestFactories.Scripted(5, D, E, D);
+            Board board = Board.FromLayout(new[,]
+            {
+                { C, A, C },
+                { A, B, D },
+                { A, A, B },
+            }, factory);
+            var from = new GridPosition(1, 2);
+            var to = new GridPosition(1, 1);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SequenceRandom());
+            board.Swap(from, to);
+            ResolutionResult result = resolver.ResolveSwap(board, from, to);
+
+            Assert.That(result.HadMatches, Is.True, "the resolver honors square-only swaps in full mode");
+            CascadeStep step = result.Steps[0];
+            Assert.That(step.Creations.Count, Is.EqualTo(1));
+            Assert.That(step.Creations[0].Created.Kind, Is.EqualTo(TileKind.Fish));
+            Assert.That(step.Creations[0].Created.ColorIndex, Is.EqualTo(A));
+            Assert.That(step.Creations[0].Position, Is.EqualTo(to), "the fish lands where the player dropped");
+            Assert.That(step.Cleared.Count, Is.EqualTo(3));
+            Assert.That(step.RunLengths, Is.EquivalentTo(new[] { 4 }));
+        }
+
+        [Test]
+        public void SquareOnlySwap_Bounces_InClassicMode()
+        {
+            TileFactory factory = TestFactories.Scripted(5);
+            Board board = Board.FromLayout(new[,]
+            {
+                { C, A, C },
+                { A, B, D },
+                { A, A, B },
+            }, factory);
+            var from = new GridPosition(1, 2);
+            var to = new GridPosition(1, 1);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1));
+            board.Swap(from, to);
+            ResolutionResult result = resolver.ResolveSwap(board, from, to);
+
+            Assert.That(result.HadMatches, Is.False, "classic mode still treats squares as dead");
+            Assert.That(result.Steps, Is.Empty);
+        }
+
+        [Test]
+        public void SquareOnlyBoard_DeadByDefault_AliveWhenSquaresLive()
+        {
+            // A lock and a chocolate close off every run-making swap; the ONE move
+            // left forms a 2x2. Default (classic purity): dead. SquaresLive: alive,
+            // and the move search hands hints the square pair.
+            TileFactory factory = TestFactories.Scripted(5);
+            Board board = Board.FromLayout(new[,]
+            {
+                { _, A, C },
+                { A, B, D },
+                { A, A, C },
+            }, factory);
+            board.SetTile(new GridPosition(0, 2), factory.CreateChocolate());
+            board.AttachLocks(LockGrid.FromCells(3, 3, new[] { new GridPosition(0, 1) }));
+            var squareSwap = (new GridPosition(1, 1), new GridPosition(1, 2));
+
+            Assert.That(board.HasPossibleMove(), Is.False, "square-blind by default — classic resolvers ignore 2x2s");
+            Assert.That(board.WouldSwapMatch(squareSwap.Item1, squareSwap.Item2), Is.False);
+
+            board.SetSquaresLive(true);
+
+            Assert.That(board.HasPossibleMove(), Is.True);
+            Assert.That(board.WouldSwapMatch(squareSwap.Item1, squareSwap.Item2), Is.True);
+            Assert.That(board.FindPossibleMove(), Is.EqualTo(squareSwap));
+        }
+
+        [Test]
+        public void Shuffle_WithSquaresLive_DealsNoFormedSquare([Range(0, 9)] int seed)
+        {
+            var board = new Board(6, 6, TestFactories.Seeded(5, seed));
+            board.SetSquaresLive(true);
+
+            board.Shuffle(new SystemRandom(seed + 2000));
+
+            Assert.That(board.FindMatches(), Is.Empty);
+            Assert.That(board.FindSquares(), Is.Empty, "a dealt board must never contain a pre-formed 2x2");
+            Assert.That(board.HasPossibleMove(), Is.True);
+        }
+
+        [Test]
         public void TwoByThreeBlock_MintsOneFish_AndPaysNoDoubleBigMatch()
         {
             // A 2x3 monochrome blob = two 3-runs + two overlapping squares. One fish

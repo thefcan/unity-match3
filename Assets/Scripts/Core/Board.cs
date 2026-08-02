@@ -137,15 +137,46 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// True when 2x2 squares count as matches for the move search
+        /// (<see cref="WouldSwapMatch"/> / <see cref="FindPossibleMove"/>) and for
+        /// <see cref="Shuffle"/>'s acceptance test. Set by the game layer when the
+        /// board is paired with a FULL-mode resolver (factory + random), which
+        /// clears squares and mints fish from them. Defaults to false: the classic
+        /// resolver ignores squares, and the move search must never call a board
+        /// "alive" for a shape its resolver ignores.
+        /// </summary>
+        public bool SquaresLive { get; private set; }
+
+        public void SetSquaresLive(bool live) => SquaresLive = live;
+
+        /// <summary>
         /// Tries the swap, checks for matches, then reverts. Lets the game layer
-        /// validate a move without committing to it.
+        /// validate a move without committing to it. With <see cref="SquaresLive"/>
+        /// a square formed BY the swap counts too — matching the resolver's commit
+        /// rule, so hints can point at fish moves and square-only boards aren't
+        /// falsely shuffled.
         /// </summary>
         public bool WouldSwapMatch(GridPosition a, GridPosition b)
         {
             Swap(a, b);
-            bool matches = FindMatches().Count > 0;
+            bool matches = FindMatches().Count > 0 || (SquaresLive && SwapFormedSquare(a, b));
             Swap(a, b);
             return matches;
+        }
+
+        /// <summary>
+        /// True when a 2x2 square containing one of the swapped cells exists after
+        /// the swap. Restricted to the swapped cells on purpose: a stale square
+        /// elsewhere must not legalise an unrelated dud swap (post-shuffle boards
+        /// are square-free by invariant, so this equals the resolver's rule).
+        /// </summary>
+        private bool SwapFormedSquare(GridPosition a, GridPosition b)
+        {
+            foreach (MatchSquare square in FindSquares())
+                foreach (GridPosition pos in square.Positions)
+                    if (pos.Equals(a) || pos.Equals(b))
+                        return true;
+            return false;
         }
 
         /// <summary>
@@ -236,10 +267,17 @@ namespace Match3.Core
                 for (int i = 0; i < cells.Count; i++)
                     _tiles[cells[i].X, cells[i].Y] = tiles[i];
 
-                if (FindMatches().Count == 0 && HasPossibleMove())
+                // With squares live, a dealt board must also be square-free (the
+                // FillWithoutMatches invariant) — a pre-formed square would clear
+                // itself on the next resolve with no player input.
+                if (FindMatches().Count == 0 &&
+                    (!SquaresLive || FindSquares().Count == 0) &&
+                    HasPossibleMove())
                     return;
             }
-            // Degenerate fallback (e.g. far too few colours): accept the last permutation.
+            // Degenerate fallback (e.g. far too few colours): accept the last
+            // permutation — in full mode that can concede a formed square, which
+            // the resolver then clears on the next settle (self-healing).
         }
 
         /// <summary>
