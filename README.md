@@ -272,6 +272,33 @@ turned into TMP font assets at runtime). The whole language lives in one code
 surface — [`UiTheme`](Assets/Scripts/UI/UiTheme.cs) mirrors the Figma colour
 variables, fonts and generated sprites, so restyling the game is a one-file edit.
 
+## Game feel — the juice layer
+
+All animation is hand-rolled coroutine tweening (no DOTween, no packages), built
+on a small shared vocabulary — swap 0.18s, pop 0.25s, overshoot-to-1.25 pops,
+SmoothStep easing, pitch ladders that climb with cascade depth:
+
+- **Board feel** — candies *fall* with a quadratic ease-in and land with a squash
+  + overshoot; touched tiles press down and pop back; an invalid swap answers
+  with a low-pitch thunk and a head-shake wiggle. Special candies breathe with a
+  phase-offset shimmer (transform-only: zero extra draw calls); deep cascades pop
+  **SWEET! → TASTY! → DIVINE! → DELICIOUS!** banners; striped blasts sweep lane
+  beams whose tip rides the same stagger as the cell pops, wrapped blasts ring,
+  colour bombs crackle tendrils to their victims.
+- **Screens** — panels fade + soft-pop open through one kit
+  ([`UiTween`](Assets/Scripts/UI/UiTween.cs), all unscaled time so the pause
+  panel animates at `timeScale 0`), every runtime button squeezes on press, the
+  HUD score bar glides, levels open with a diagonal grow-in curtain, and scene
+  changes ride a `ScreenFader` curtain that eats double-taps. Wins get the full
+  ceremony: card pop → stars → UI-space confetti (one driver coroutine, zero
+  per-burst allocs) → a 0→score count-up, while cleared-goal sparks fly from the
+  board to their objective chips.
+- **The view stays rule-free** — everything above derives from the resolver's
+  recordings (`Detonation.Origin/Kind/Area`, `CascadeIndex`, tracker deltas); no
+  gameplay fact is ever recomputed in the view layer. **Reduced Motion** turns
+  scale beats instant, halves informative fades, and skips shakes, wiggles,
+  beams, flyers and most confetti.
+
 ## Generated assets — no art or audio dependencies
 
 Everything visual/audible ships generated, and can be regenerated inside Unity:
@@ -301,7 +328,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**420 EditMode tests, all green** — the core is tested without ever opening a scene:
+**476 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
