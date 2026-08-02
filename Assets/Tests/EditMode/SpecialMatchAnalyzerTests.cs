@@ -181,6 +181,109 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void PlusShape_CreatesOneWrapped_AtTheCenter_SourcesDeduped()
+        {
+            // Two runs crossing at INTERIOR cells of both — the '+' shape most
+            // match-3s special-case; here the generic intersecting-pair pass covers it.
+            var board = Board.FromLayout(new[,]
+            {
+                { C, D, B, D, C },
+                { D, C, A, C, D },
+                { B, A, A, A, B },
+                { D, C, A, C, D },
+                { C, D, B, D, C },
+            }, TestFactories.Seeded());
+
+            var plans = SpecialMatchAnalyzer.Analyze(board, board.FindMatchRuns(), null, null);
+
+            Assert.That(plans, Has.Count.EqualTo(1));
+            Assert.That(plans[0].Kind, Is.EqualTo(TileKind.Wrapped));
+            Assert.That(plans[0].Position, Is.EqualTo(new GridPosition(2, 2)), "the wrapped sits on the crossing");
+            Assert.That(plans[0].SourcePositions, Has.Count.EqualTo(5), "3 + 3 with the shared center counted once");
+        }
+
+        [Test]
+        public void SixInLine_IsOneMaximalRun_AndOneColorBomb()
+        {
+            var board = Board.FromLayout(new[,]
+            {
+                { B, C, D, B, C, D },
+                { C, D, B, C, D, B },
+                { A, A, A, A, A, A },
+            }, TestFactories.Seeded());
+
+            var runs = board.FindMatchRuns();
+            Assert.That(runs, Has.Count.EqualTo(1), "a 6-run is one maximal run, never two overlapping shorter ones");
+            Assert.That(runs[0].Length, Is.EqualTo(6));
+
+            var plans = SpecialMatchAnalyzer.Analyze(board, runs, null, null);
+            Assert.That(plans, Has.Count.EqualTo(1));
+            Assert.That(plans[0].Kind, Is.EqualTo(TileKind.ColorBomb));
+            Assert.That(plans[0].Position, Is.EqualTo(new GridPosition(3, 0)), "mid-run for a cascade-made shape");
+        }
+
+        [Test]
+        public void BothSwappedCells_CompleteRuns_TwoSpecialsAtTheSwapCells()
+        {
+            // One swap finishes an A-four on the upper row AND a B-four on the lower:
+            // each special must land on its own swapped cell.
+            var board = Board.FromLayout(new[,]
+            {
+                { D, C, D, C, D },
+                { A, A, B, A, C },
+                { B, B, A, B, D },
+                { C, D, C, D, C },
+            }, TestFactories.Seeded());
+            var from = new GridPosition(2, 1);
+            var to = new GridPosition(2, 2);
+            board.Swap(from, to);
+
+            var plans = SpecialMatchAnalyzer.Analyze(board, board.FindMatchRuns(), swapFrom: from, swapTo: to);
+
+            Assert.That(plans, Has.Count.EqualTo(2));
+            Assert.That(plans.Select(p => p.Kind), Is.All.EqualTo(TileKind.StripedV));
+            Assert.That(plans.Select(p => p.Position), Is.EquivalentTo(new[] { from, to }));
+        }
+
+        [Test]
+        public void FiveRun_BombLandsAtTheSwapCell_NotTheMiddle()
+        {
+            var board = Board.FromLayout(new[,]
+            {
+                { B, C, D, B, C },
+                { C, D, B, C, D },
+                { D, B, C, D, B },
+                { A, A, A, A, A },
+            }, TestFactories.Seeded());
+
+            var plans = SpecialMatchAnalyzer.Analyze(
+                board, board.FindMatchRuns(),
+                swapFrom: new GridPosition(1, 1), swapTo: new GridPosition(1, 0));
+
+            Assert.That(plans[0].Kind, Is.EqualTo(TileKind.ColorBomb));
+            Assert.That(plans[0].Position, Is.EqualTo(new GridPosition(1, 0)), "the bomb appears where the player swapped");
+        }
+
+        [Test]
+        public void LShape_WrappedIgnoresTheSwapCell_AlwaysTheCorner()
+        {
+            var board = Board.FromLayout(new[,]
+            {
+                { A, B, C },
+                { A, C, B },
+                { A, A, A },
+            }, TestFactories.Seeded());
+
+            var plans = SpecialMatchAnalyzer.Analyze(
+                board, board.FindMatchRuns(),
+                swapFrom: new GridPosition(1, 2), swapTo: new GridPosition(0, 2));
+
+            Assert.That(plans[0].Kind, Is.EqualTo(TileKind.Wrapped));
+            Assert.That(plans[0].Position, Is.EqualTo(new GridPosition(0, 0)),
+                "an L/T wrapped always sits on the corner — the swap cell preference is a straight-run rule");
+        }
+
+        [Test]
         public void CreationNeverReplacesAnExistingSpecial()
         {
             var factory = TestFactories.Seeded();

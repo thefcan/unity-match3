@@ -52,6 +52,41 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void MultiGapColumn_RecordsEachFall_WithCompactedTargets()
+        {
+            // Column 0 has TWO gaps between three tiles — the recording must give
+            // the view one fall per mover with fully compacted targets, in order.
+            var board = Board.FromLayout(new[,]
+            {
+                { C, A, B },
+                { _, B, A },
+                { B, A, B },
+                { _, B, A },
+                { A, C, A },
+            }, TestFactories.Seeded());
+
+            int idB = board[new GridPosition(0, 2)].Value.Id;
+            int idC = board[new GridPosition(0, 4)].Value.Id;
+
+            var falls = board.ApplyGravity();
+
+            var col0 = falls.Where(f => f.From.X == 0).ToList();
+            Assert.That(col0, Has.Count.EqualTo(2));
+
+            var fallB = col0.Single(f => f.Tile.Id == idB);
+            Assert.That(fallB.From, Is.EqualTo(new GridPosition(0, 2)));
+            Assert.That(fallB.To, Is.EqualTo(new GridPosition(0, 1)));
+
+            var fallC = col0.Single(f => f.Tile.Id == idC);
+            Assert.That(fallC.From, Is.EqualTo(new GridPosition(0, 4)));
+            Assert.That(fallC.To, Is.EqualTo(new GridPosition(0, 2)));
+
+            Assert.That(board[new GridPosition(0, 0)].Value.ColorIndex, Is.EqualTo(A));
+            Assert.That(board[new GridPosition(0, 1)].Value.ColorIndex, Is.EqualTo(B));
+            Assert.That(board[new GridPosition(0, 2)].Value.ColorIndex, Is.EqualTo(C));
+        }
+
+        [Test]
         public void StableBoard_ProducesNoFalls()
         {
             var board = Board.FromLayout(new[,]

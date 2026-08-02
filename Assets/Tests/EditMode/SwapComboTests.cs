@@ -50,6 +50,13 @@ namespace Match3.Tests
             Assert.That(SwapRules.Classify(bomb, stripedH), Is.EqualTo(SwapKind.BombStriped));
             Assert.That(SwapRules.Classify(bomb, wrapped), Is.EqualTo(SwapKind.BombWrapped));
             Assert.That(SwapRules.Classify(bomb, bomb), Is.EqualTo(SwapKind.BombBomb));
+
+            Tile fish = f.CreateSpecial(D, TileKind.Fish);
+            Assert.That(SwapRules.Classify(fish, normal), Is.EqualTo(SwapKind.None), "a fish only activates when matched");
+            Assert.That(SwapRules.Classify(fish, fish), Is.EqualTo(SwapKind.FishFish));
+            Assert.That(SwapRules.Classify(fish, stripedH), Is.EqualTo(SwapKind.FishStriped));
+            Assert.That(SwapRules.Classify(fish, wrapped), Is.EqualTo(SwapKind.FishWrapped));
+            Assert.That(SwapRules.Classify(bomb, fish), Is.EqualTo(SwapKind.BombFish));
         }
 
         [Test]

@@ -127,7 +127,12 @@ namespace Match3.Core
             return plans;
         }
 
-        /// <summary>A run is spent when any of its cells already funded another special.</summary>
+        /// <summary>
+        /// A run is spent when any of its cells already funded another special.
+        /// Deliberately any-cell (not majority): a 4-run sharing one corner with a
+        /// consumed 5-run mints nothing extra — the Candy Crush rule, where the
+        /// bigger shape swallows the overlap. Not a bug.
+        /// </summary>
         private static bool IsSpent(MatchRun run, HashSet<GridPosition> consumed) =>
             run.Positions.Any(consumed.Contains);
 

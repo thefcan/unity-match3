@@ -145,5 +145,33 @@ namespace Match3.Tests
             Assert.Throws<InvalidOperationException>(
                 () => factory.CreateExcluding(new[] { 0, 1, 2 }));
         }
+
+        [Test]
+        public void FillWithoutMatches_SquareExclusionBranch_IsFullyScripted()
+        {
+            // Hand-traced fill on 3x3/3 colours: draws land A A | 1 | A | 1 | B | 0 | C | A,
+            // where the bracketed values are CreateExcluding picks. Cell (1,1)'s left,
+            // below-left and below neighbours all agree on A, so ONLY the square branch
+            // fires there: allowed = [B, C], scripted pick 1 -> C. Deterministic proof
+            // of the exclusion the sampling tests only make probable.
+            var factory = TestFactories.Scripted(colorCount: 3, draws: new[] { A, A, 1, A, 1, B, 0, C, A });
+            var board = new Board(3, 3, factory);
+
+            Assert.That(board[new GridPosition(1, 1)].Value.ColorIndex, Is.EqualTo(C),
+                "the square exclusion must veto A at (1,1)");
+            Assert.That(board.FindMatches(), Is.Empty);
+            Assert.That(board.FindSquares(), Is.Empty);
+        }
+
+        [Test]
+        public void TwoColourFactory_IsRejectedAtBoardConstruction()
+        {
+            // With two colours a cell whose left-pair and below-pair disagree would
+            // exclude BOTH — the ctor guards the documented 3-colour minimum up front
+            // instead of letting the fill dead-end mid-board.
+            var factory = TestFactories.Scripted(colorCount: 2, draws: new[] { A, B, A, B });
+
+            Assert.Throws<ArgumentException>(() => new Board(3, 3, factory));
+        }
     }
 }
