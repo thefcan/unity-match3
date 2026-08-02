@@ -175,6 +175,76 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void TwoByThreeBlock_MintsOneFish_AndPaysNoDoubleBigMatch()
+        {
+            // A 2x3 monochrome blob = two 3-runs + two overlapping squares. One fish
+            // (the second square is spent) and NO 4-length entries: the blob's cells
+            // are already counted by its runs, so time attack pays no double bonus.
+            TileFactory factory = TestFactories.Scripted(5, B, D, C, E, B);
+            Board board = Board.FromLayout(new[,]
+            {
+                { A, A, C, D },
+                { A, A, D, C },
+                { A, A, C, D },
+            }, factory);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SequenceRandom());
+            ResolutionResult result = resolver.Resolve(board);
+
+            CascadeStep step = result.Steps[0];
+            Assert.That(step.Creations.Count, Is.EqualTo(1));
+            Assert.That(step.Creations[0].Created.Kind, Is.EqualTo(TileKind.Fish));
+            Assert.That(step.RunLengths, Is.EquivalentTo(new[] { 3, 3 }));
+            Assert.That(step.BigMatchCount(4), Is.EqualTo(0));
+            Assert.That(step.Cleared.Count, Is.EqualTo(5), "six cells in the blob, one morphs");
+        }
+
+        [Test]
+        public void DisjointSquareAndFourRun_TwoCreations_TwoBigMatches()
+        {
+            // A square and a 4-run that share NOTHING: both mint, both count.
+            TileFactory factory = TestFactories.Scripted(5, E, E, B, E, D, C);
+            Board board = Board.FromLayout(new[,]
+            {
+                { C, D, B, D, C, D, C },
+                { A, A, D, C, D, E, D },
+                { A, A, C, B, B, B, B },
+            }, factory);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SequenceRandom());
+            ResolutionResult result = resolver.Resolve(board);
+
+            CascadeStep step = result.Steps[0];
+            Assert.That(step.Creations.Count, Is.EqualTo(2));
+            Assert.That(step.Creations.Select(c => c.Created.Kind),
+                Is.EquivalentTo(new[] { TileKind.StripedV, TileKind.Fish }));
+            Assert.That(step.RunLengths, Is.EquivalentTo(new[] { 4, 4 }));
+            Assert.That(step.BigMatchCount(4), Is.EqualTo(2));
+            Assert.That(step.Cleared.Count, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void FourRunSharingASquare_PaysOneBigMatch()
+        {
+            // The striped wins the shared cells (long pinned); the overlapping
+            // square must ALSO stay out of RunLengths — one blob, one bonus.
+            TileFactory factory = TestFactories.Seeded(5, 5);
+            Board board = Board.FromLayout(new[,]
+            {
+                { A, A, A, A },
+                { A, A, C, B },
+                { B, C, D, C },
+            }, factory);
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SystemRandom(5));
+            ResolutionResult result = resolver.Resolve(board);
+
+            CascadeStep step = result.Steps[0];
+            Assert.That(step.RunLengths, Is.EquivalentTo(new[] { 4 }));
+            Assert.That(step.BigMatchCount(4), Is.EqualTo(1));
+        }
+
+        [Test]
         public void SquareOverlappingAPlainTriple_StillMintsTheFish()
         {
             // A 3-run creates no special, so it spends nothing — the square wins.

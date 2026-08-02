@@ -399,20 +399,44 @@ namespace Match3.Core
 
                     // Union the runs into the set of cells to clear; an L / T shape's
                     // shared corner collapses to one cell, cleared and scored once.
+                    // countedCells exists only when squares are in play — classic
+                    // mode allocates nothing and stays bit-identical.
+                    HashSet<GridPosition> countedCells = squareCount > 0 ? new HashSet<GridPosition>() : null;
                     foreach (MatchRun run in runs)
                     {
                         runLengths.Add(run.Length);
                         foreach (GridPosition pos in run.Positions)
+                        {
                             clearSet.Add(pos);
+                            countedCells?.Add(pos);
+                        }
                     }
 
                     // Squares clear their four cells too, and count as a 4-length run
-                    // for the big-match bonuses (time attack's clock top-up).
+                    // for the big-match bonuses (time attack's clock top-up) — but
+                    // only when the square shares no cell with a counted run or an
+                    // earlier counted square: one blob never pays twice.
                     if (squareCount > 0)
                     {
                         foreach (MatchSquare square in squares)
                         {
-                            runLengths.Add(4);
+                            bool overlaps = false;
+                            foreach (GridPosition pos in square.Positions)
+                            {
+                                if (countedCells.Contains(pos))
+                                {
+                                    overlaps = true;
+                                    break;
+                                }
+                            }
+
+                            if (!overlaps)
+                            {
+                                runLengths.Add(4);
+                                foreach (GridPosition pos in square.Positions)
+                                    countedCells.Add(pos);
+                            }
+
                             foreach (GridPosition pos in square.Positions)
                                 clearSet.Add(pos);
                         }

@@ -284,6 +284,29 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void ThreeByThreeBlock_WrapsOneCrossing_AndTheFarSquareStillFishes()
+        {
+            // A 3x3 monochrome blob is six 3-runs. The first crossing mints a
+            // wrapped and its row+column spend every other RUN (any-cell rule) —
+            // but the far-corner 2x2 touches neither, so it still mints a fish.
+            // One blob, exactly two specials.
+            var board = Board.FromLayout(new[,]
+            {
+                { C, D, C, D },
+                { A, A, A, B },
+                { A, A, A, C },
+                { A, A, A, D },
+            }, TestFactories.Seeded());
+
+            var plans = SpecialMatchAnalyzer.Analyze(
+                board, board.FindMatchRuns(), board.FindSquares(), null, null);
+
+            Assert.That(plans, Has.Count.EqualTo(2));
+            Assert.That(plans.Select(p => p.Kind),
+                Is.EquivalentTo(new[] { TileKind.Wrapped, TileKind.Fish }));
+        }
+
+        [Test]
         public void CreationNeverReplacesAnExistingSpecial()
         {
             var factory = TestFactories.Seeded();
