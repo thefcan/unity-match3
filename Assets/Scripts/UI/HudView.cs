@@ -53,6 +53,11 @@ namespace Match3.UI
             if (levelText != null)
                 levelText.color = UiTheme.TextDim;
 
+            // The scene ships a placeholder string in the banner label. It used to
+            // be invisible (Playing cleared it on frame one), but the board intro
+            // now holds the Init phase for ~0.6s — long enough to read it.
+            SetBanner(string.Empty);
+
             // The score and clock change many times a second; a nested Canvas confines
             // their mesh rebuilds to a tiny canvas instead of dirtying the whole HUD.
             IsolateFrequentText(scoreText);

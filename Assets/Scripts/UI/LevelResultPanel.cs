@@ -422,10 +422,15 @@ namespace Match3.UI
             // and clock labels (mesh-rebuild isolation), and FindObjectOfType<Canvas>
             // can return one of those — every panel then builds inside a tiny label
             // rect (result card squeezed into the top bar, no dim over the board).
+            // It must also belong to the ACTIVE scene: ScreenFader's persistent
+            // (DontDestroyOnLoad) canvas is a root canvas too, and building the HUD
+            // there hides it forever — the fader's CanvasGroup sits at alpha 0
+            // between transitions.
             Canvas canvas = null;
             foreach (Canvas candidate in Object.FindObjectsOfType<Canvas>())
             {
-                if (candidate.isRootCanvas)
+                if (candidate.isRootCanvas &&
+                    candidate.gameObject.scene == SceneManager.GetActiveScene())
                 {
                     canvas = candidate;
                     break;
