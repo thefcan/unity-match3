@@ -534,6 +534,7 @@ namespace Match3.View
                     {
                         (Sprite sprite, Color color) = VisualFor(tile);
                         view.Bind(tile, sprite, color);
+                        view.SetSpecialShimmer(IsShimmerKind(tile.Kind)); // Bind cleared it
                     }
                 }
             }
@@ -673,7 +674,12 @@ namespace Match3.View
             ApplyLockBreaks(step); // cages shatter first — their candies stay
             PlayDetonationJuice(step);
             if (step.Cleared.Count > 0)
+            {
                 AudioManager.Play(Sfx.Pop, 1f + 0.08f * step.CascadeIndex); // combos climb in pitch
+                string banner = BannerPopup.TextFor(step.CascadeIndex);
+                if (banner != null)
+                    BannerPopup.Spawn(BannerAnchor(Centroid(step.Cleared)), banner); // fire-and-forget
+            }
 
             Dictionary<GridPosition, float> delays = BuildDetonationDelays(step);
 
@@ -732,6 +738,10 @@ namespace Match3.View
             {
                 AudioManager.Play(Sfx.SpecialCreate);
                 yield return RunAll(morphs);
+                // The freshly minted specials start breathing once the morph lands.
+                foreach (SpecialCreation creation in step.Creations)
+                    if (_viewsById.TryGetValue(creation.Created.Id, out TileView minted))
+                        minted.SetSpecialShimmer(IsShimmerKind(creation.Created.Kind));
             }
 
             // Ingredients that reached the floor slide out below the board.
@@ -835,6 +845,7 @@ namespace Match3.View
                     case DetonationKind.TripleCross:
                         if (playSound) AudioManager.Play(Sfx.LineClear);
                         EffectsView.BlastBurst(origin, Color.white);
+                        FireLaneBeams(detonation);
                         if (!haptic) { haptic = true; Haptics.Light(); }
                         break;
 
@@ -842,6 +853,9 @@ namespace Match3.View
                     case DetonationKind.Blast5x5:
                         if (playSound) AudioManager.Play(Sfx.WrappedBlast);
                         EffectsView.BlastBurst(origin, new Color(1f, 0.7f, 0.3f));
+                        EffectsView.BlastRing(origin,
+                            (detonation.Kind == DetonationKind.Blast5x5 ? 2.5f : 1.5f) * CellSize(),
+                            new Color(1f, 0.8f, 0.45f));
                         EffectsView.Shake(detonation.Kind == DetonationKind.Blast5x5 ? 0.2f : 0.12f);
                         if (!haptic) { haptic = true; Haptics.Medium(); }
                         break;
@@ -850,6 +864,7 @@ namespace Match3.View
                     case DetonationKind.BoardClear:
                         if (playSound) AudioManager.Play(Sfx.ColorBomb);
                         EffectsView.BlastBurst(origin, new Color(0.8f, 0.5f, 1f));
+                        FireStreaks(detonation, origin);
                         EffectsView.Shake(0.22f, 0.3f);
                         if (!haptic) { haptic = true; Haptics.Heavy(); }
                         break;
@@ -862,6 +877,55 @@ namespace Match3.View
             }
         }
 
+        /// <summary>
+        /// Up to four beams sweeping outward along the detonation's recorded lanes.
+        /// Extents come from Detonation.Area (never re-derived) and the tip speed is
+        /// cellSize/detonationStagger, so the front reaches each cell exactly when
+        /// its staggered pop fires.
+        /// </summary>
+        private void FireLaneBeams(Detonation detonation)
+        {
+            float cell = CellSize();
+            float speed = cell / Mathf.Max(0.001f, detonationStagger);
+            Vector3 origin = GridToWorld(detonation.Origin);
+
+            int left = 0, right = 0, down = 0, up = 0;
+            foreach (GridPosition pos in detonation.Area)
+            {
+                if (pos.Y == detonation.Origin.Y)
+                {
+                    left = Mathf.Max(left, detonation.Origin.X - pos.X);
+                    right = Mathf.Max(right, pos.X - detonation.Origin.X);
+                }
+                if (pos.X == detonation.Origin.X)
+                {
+                    down = Mathf.Max(down, detonation.Origin.Y - pos.Y);
+                    up = Mathf.Max(up, pos.Y - detonation.Origin.Y);
+                }
+            }
+
+            float width = 0.35f * cell;
+            if (right > 0) EffectsView.LaneBeam(origin, Vector3.right, right * cell, speed, width, Color.white);
+            if (left > 0) EffectsView.LaneBeam(origin, Vector3.left, left * cell, speed, width, Color.white);
+            if (up > 0) EffectsView.LaneBeam(origin, Vector3.up, up * cell, speed, width, Color.white);
+            if (down > 0) EffectsView.LaneBeam(origin, Vector3.down, down * cell, speed, width, Color.white);
+        }
+
+        /// <summary>Colour-bomb tendrils to an even sample (max 12) of its victims.</summary>
+        private void FireStreaks(Detonation detonation, Vector3 origin)
+        {
+            const int maxStreaks = 12;
+            int count = detonation.Area.Count;
+            if (count == 0)
+                return;
+
+            var targets = new List<Vector3>(Mathf.Min(count, maxStreaks));
+            int stride = Mathf.Max(1, count / maxStreaks);
+            for (int i = 0; i < count && targets.Count < maxStreaks; i += stride)
+                targets.Add(GridToWorld(detonation.Area[i]));
+            EffectsView.Streaks(origin, targets, new Color(0.85f, 0.6f, 1f));
+        }
+
         private Vector3 Centroid(IReadOnlyList<ClearedTile> cleared)
         {
             Vector3 sum = Vector3.zero;
@@ -869,6 +933,20 @@ namespace Match3.View
                 sum += GridToWorld(tile.Position);
             return sum / cleared.Count;
         }
+
+        /// <summary>Clamps a banner position into the board's middle band so the
+        /// word never hides under the HUD or the booster tray.</summary>
+        private Vector3 BannerAnchor(Vector3 centroid)
+        {
+            float minY = GridToWorld(new GridPosition(0, 1)).y;
+            float maxY = GridToWorld(new GridPosition(0, _board.Height - 2)).y;
+            centroid.y = Mathf.Clamp(centroid.y, minY, maxY);
+            return centroid;
+        }
+
+        /// <summary>World size of one cell — beams and rings are sized off it.</summary>
+        private float CellSize() =>
+            Mathf.Abs(GridToWorld(new GridPosition(1, 0)).x - GridToWorld(new GridPosition(0, 0)).x);
 
         private IEnumerator ConvergeAndRelease(ClearedTile cleared, Vector3 target)
         {
@@ -920,9 +998,16 @@ namespace Match3.View
             view.transform.position = worldPosition;
             (Sprite sprite, Color color) = VisualFor(tile);
             view.Bind(tile, sprite, color);
+            view.SetSpecialShimmer(IsShimmerKind(tile.Kind));
             _viewsById[tile.Id] = view;
             return view;
         }
+
+        /// <summary>Which kinds breathe while idle — the "I am valuable" ambient cue.</summary>
+        private static bool IsShimmerKind(TileKind kind) =>
+            kind == TileKind.StripedH || kind == TileKind.StripedV ||
+            kind == TileKind.Wrapped || kind == TileKind.Fish ||
+            kind == TileKind.Bomb || kind == TileKind.ColorBomb;
 
         /// <summary>
         /// Candy sprite (drawn untinted) when the library has one; otherwise the

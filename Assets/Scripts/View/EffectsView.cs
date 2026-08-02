@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Match3.View
@@ -51,6 +52,148 @@ namespace Match3.View
             if (Match3.Game.Prefs.ReducedMotionOn)
                 return; // accessibility: camera stays still
             Instance.StartShake(amplitude, duration);
+        }
+
+        // ---- Detonation connective tissue (pooled sprite quads, sorting order 8:
+        // over the tiles, under the particles). All skipped under reduced motion —
+        // the existing (already reduced) bursts remain the cue. ---------------------
+
+        /// <summary>
+        /// A beam sweeping a lane from the detonation origin, its tip riding the
+        /// same cells-per-stagger speed as the staggered pops so front and pop
+        /// always arrive together.
+        /// </summary>
+        public static void LaneBeam(Vector3 origin, Vector3 direction, float worldLength, float worldSpeed, float width, Color color)
+        {
+            if (Match3.Game.Prefs.ReducedMotionOn || worldLength <= 0.01f || worldSpeed <= 0f)
+                return;
+            Instance.StartCoroutine(Instance.BeamRoutine(origin, direction.normalized, worldLength, worldSpeed, width, color));
+        }
+
+        /// <summary>An expanding ring under a wrapped blast (radius in world units).</summary>
+        public static void BlastRing(Vector3 origin, float worldRadius, Color color)
+        {
+            if (Match3.Game.Prefs.ReducedMotionOn)
+                return;
+            Instance.StartCoroutine(Instance.RingRoutine(origin, worldRadius, color));
+        }
+
+        /// <summary>Thin tendrils from a colour bomb to (a sample of) its victims.</summary>
+        public static void Streaks(Vector3 origin, IReadOnlyList<Vector3> targets, Color color)
+        {
+            if (Match3.Game.Prefs.ReducedMotionOn || targets.Count == 0)
+                return;
+            Instance.StartCoroutine(Instance.StreaksRoutine(origin, targets, color));
+        }
+
+        private readonly Stack<SpriteRenderer> _quadPool = new Stack<SpriteRenderer>();
+        private Sprite _pillSprite;
+        private Sprite _ringSprite;
+
+        private SpriteRenderer GetQuad(Sprite sprite, Color color)
+        {
+            SpriteRenderer quad = null;
+            while (_quadPool.Count > 0 && quad == null)
+                quad = _quadPool.Pop(); // drain destroyed instances
+            if (quad == null)
+            {
+                var go = new GameObject("EffectQuad", typeof(SpriteRenderer));
+                go.transform.SetParent(transform, false);
+                quad = go.GetComponent<SpriteRenderer>();
+                quad.sortingOrder = 8;
+            }
+            quad.sprite = sprite;
+            quad.color = color;
+            quad.gameObject.SetActive(true);
+            return quad;
+        }
+
+        private void ReleaseQuad(SpriteRenderer quad)
+        {
+            if (quad == null)
+                return;
+            quad.gameObject.SetActive(false);
+            _quadPool.Push(quad);
+        }
+
+        private Sprite PillSprite => _pillSprite != null ? _pillSprite : _pillSprite = Resources.Load<Sprite>("UI/ui_pill");
+        private Sprite RingSprite => _ringSprite != null ? _ringSprite : _ringSprite = Resources.Load<Sprite>("UI/ui_round_outline");
+
+        private IEnumerator BeamRoutine(Vector3 origin, Vector3 dir, float length, float speed, float width, Color color)
+        {
+            Sprite sprite = PillSprite;
+            if (sprite == null)
+                yield break; // chrome not generated yet — bursts alone carry the beat
+            SpriteRenderer quad = GetQuad(sprite, color);
+            Vector2 spriteSize = sprite.bounds.size;
+            quad.transform.rotation = Quaternion.FromToRotation(Vector3.right, dir);
+
+            float duration = length / speed;
+            float fadeStart = 0.6f;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                float tip = length * t;
+                quad.transform.position = origin + dir * (tip * 0.5f);
+                quad.transform.localScale = new Vector3(
+                    Mathf.Max(0.01f, tip) / spriteSize.x, width / spriteSize.y, 1f);
+                float alpha = t < fadeStart ? 0.85f : Mathf.Lerp(0.85f, 0f, (t - fadeStart) / (1f - fadeStart));
+                quad.color = new Color(color.r, color.g, color.b, alpha);
+                yield return null;
+            }
+            ReleaseQuad(quad);
+        }
+
+        private IEnumerator RingRoutine(Vector3 origin, float radius, Color color)
+        {
+            Sprite sprite = RingSprite;
+            if (sprite == null)
+                yield break;
+            SpriteRenderer quad = GetQuad(sprite, color);
+            quad.transform.rotation = Quaternion.identity;
+            quad.transform.position = origin;
+            float spriteExtent = sprite.bounds.size.x;
+
+            const float duration = 0.22f;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                float scale = radius * 2f * Mathf.SmoothStep(0f, 1f, t) / spriteExtent;
+                quad.transform.localScale = new Vector3(scale, scale, 1f);
+                quad.color = new Color(color.r, color.g, color.b, 0.8f * (1f - t));
+                yield return null;
+            }
+            ReleaseQuad(quad);
+        }
+
+        private IEnumerator StreaksRoutine(Vector3 origin, IReadOnlyList<Vector3> targets, Color color)
+        {
+            Sprite sprite = PillSprite;
+            if (sprite == null)
+                yield break;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                StartCoroutine(SingleStreak(origin, targets[i], color, sprite));
+                if (i < targets.Count - 1)
+                    yield return null; // ~one frame apart reads as a crackle
+            }
+        }
+
+        private IEnumerator SingleStreak(Vector3 origin, Vector3 target, Color color, Sprite sprite)
+        {
+            SpriteRenderer quad = GetQuad(sprite, color);
+            Vector3 delta = target - origin;
+            float length = delta.magnitude;
+            Vector2 spriteSize = sprite.bounds.size;
+            quad.transform.rotation = Quaternion.FromToRotation(Vector3.right, delta.normalized);
+            quad.transform.position = origin + delta * 0.5f;
+            quad.transform.localScale = new Vector3(length / spriteSize.x, 0.12f / spriteSize.y, 1f);
+
+            const float duration = 0.16f; // the converge vocabulary
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                quad.color = new Color(color.r, color.g, color.b, 0.75f * (1f - t));
+                yield return null;
+            }
+            ReleaseQuad(quad);
         }
 
         private void Build()

@@ -19,6 +19,11 @@ namespace Match3.View
         private Vector3 _baseScale;
         private Sprite _defaultSprite;
         private Coroutine _hintRoutine;
+        private Coroutine _shimmerRoutine;
+        private bool _shimmerWanted;
+        // Scale animations "claim" the transform; the idle shimmer only breathes
+        // while nothing else owns the scale, so tweens never fight each other.
+        private int _scaleClaims;
 
         private void Awake()
         {
@@ -43,9 +48,52 @@ namespace Match3.View
             spriteRenderer.color = color;
             transform.localScale = _baseScale;
             transform.localRotation = Quaternion.identity; // a pooled wiggle must never leak a tilt
+            _scaleClaims = 0;
+            _shimmerWanted = false;
+            if (_shimmerRoutine != null)
+            {
+                StopCoroutine(_shimmerRoutine);
+                _shimmerRoutine = null;
+            }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             name = $"Tile_{tile.Id}"; // debug-only: SetName is a native call + string alloc per bind
 #endif
+        }
+
+        /// <summary>
+        /// Ambient "I am valuable" breathing for special candies (1.0 → 1.04 sine),
+        /// phase-offset per tile so specials never pulse in lockstep. Transform-only:
+        /// no material changes, no extra sprites, zero added draw calls. BoardView
+        /// decides eligibility; this view stays rule-free.
+        /// </summary>
+        public void SetSpecialShimmer(bool on)
+        {
+            _shimmerWanted = on && !Match3.Game.Prefs.ReducedMotionOn;
+            if (_shimmerRoutine != null)
+            {
+                StopCoroutine(_shimmerRoutine);
+                _shimmerRoutine = null;
+            }
+            if (_shimmerWanted && isActiveAndEnabled)
+                _shimmerRoutine = StartCoroutine(Shimmer());
+        }
+
+        private IEnumerator Shimmer()
+        {
+            const float frequency = 1.6f;
+            const float amplitude = 0.04f;
+            float phase = TileId % 7 * 0.35f;
+            while (true)
+            {
+                if (_scaleClaims > 0)
+                {
+                    yield return null; // someone else owns the scale — breathe later
+                    continue;
+                }
+                phase += Time.deltaTime * frequency * Mathf.PI * 2f;
+                transform.localScale = _baseScale * (1f + amplitude * (0.5f + 0.5f * Mathf.Sin(phase)));
+                yield return null;
+            }
         }
 
         /// <summary>
@@ -54,23 +102,35 @@ namespace Match3.View
         /// </summary>
         public IEnumerator MorphTo(Tile tile, Sprite sprite, Color color, float duration)
         {
-            yield return ScaleTo(_baseScale * 0.35f, duration * 0.35f);
+            _scaleClaims++;
+            try
+            {
+                yield return ScaleTo(_baseScale * 0.35f, duration * 0.35f);
 
-            TileId = tile.Id;
-            if (sprite != null) spriteRenderer.sprite = sprite;
-            spriteRenderer.color = color;
+                TileId = tile.Id;
+                if (sprite != null) spriteRenderer.sprite = sprite;
+                spriteRenderer.color = color;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            name = $"Tile_{tile.Id}";
+                name = $"Tile_{tile.Id}";
 #endif
 
-            yield return ScaleTo(_baseScale * 1.25f, duration * 0.4f);
-            yield return ScaleTo(_baseScale, duration * 0.25f);
+                yield return ScaleTo(_baseScale * 1.25f, duration * 0.4f);
+                yield return ScaleTo(_baseScale, duration * 0.25f);
+            }
+            finally
+            {
+                _scaleClaims--;
+            }
         }
 
         public void ResetForPool()
         {
             StopAllCoroutines();
             _hintRoutine = null;
+            _shimmerRoutine = null;
+            _pressRoutine = null;
+            _shimmerWanted = false;
+            _scaleClaims = 0;
             transform.localScale = _baseScale;
             transform.localRotation = Quaternion.identity;
         }
@@ -78,14 +138,30 @@ namespace Match3.View
         /// <summary>Vanish (shrink to nothing) — used for the level-transition wipe.</summary>
         public IEnumerator ShrinkOut(float duration)
         {
-            yield return ScaleTo(Vector3.zero, duration);
+            _scaleClaims++;
+            try
+            {
+                yield return ScaleTo(Vector3.zero, duration);
+            }
+            finally
+            {
+                _scaleClaims--;
+            }
         }
 
         /// <summary>Pop back in (grow from nothing) — the level-transition reveal.</summary>
         public IEnumerator GrowIn(float duration)
         {
-            transform.localScale = Vector3.zero;
-            yield return ScaleTo(_baseScale, duration);
+            _scaleClaims++;
+            try
+            {
+                transform.localScale = Vector3.zero;
+                yield return ScaleTo(_baseScale, duration);
+            }
+            finally
+            {
+                _scaleClaims--;
+            }
         }
 
         /// <summary>
@@ -95,6 +171,7 @@ namespace Match3.View
         public void StartHintPulse()
         {
             StopHintPulse();
+            _scaleClaims++;
             _hintRoutine = StartCoroutine(HintPulse());
         }
 
@@ -104,6 +181,7 @@ namespace Match3.View
             {
                 StopCoroutine(_hintRoutine);
                 _hintRoutine = null;
+                _scaleClaims--;
             }
             transform.localScale = _baseScale;
         }
@@ -186,19 +264,27 @@ namespace Match3.View
         {
             // Vertical squash on impact, tiny overshoot on the way back — never
             // blocks the wave (the caller already yielded on the fall itself).
-            Vector3 squashed = new Vector3(_baseScale.x * 1.12f, _baseScale.y * 0.86f, _baseScale.z);
-            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.05f)
+            _scaleClaims++;
+            try
             {
-                transform.localScale = Vector3.Lerp(_baseScale, squashed, t);
-                yield return null;
+                Vector3 squashed = new Vector3(_baseScale.x * 1.12f, _baseScale.y * 0.86f, _baseScale.z);
+                for (float t = 0f; t < 1f; t += Time.deltaTime / 0.05f)
+                {
+                    transform.localScale = Vector3.Lerp(_baseScale, squashed, t);
+                    yield return null;
+                }
+                Vector3 overshoot = _baseScale * 1.04f;
+                for (float t = 0f; t < 1f; t += Time.deltaTime / 0.07f)
+                {
+                    transform.localScale = Vector3.Lerp(squashed, overshoot, Mathf.SmoothStep(0f, 1f, t));
+                    yield return null;
+                }
+                transform.localScale = _baseScale;
             }
-            Vector3 overshoot = _baseScale * 1.04f;
-            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.07f)
+            finally
             {
-                transform.localScale = Vector3.Lerp(squashed, overshoot, Mathf.SmoothStep(0f, 1f, t));
-                yield return null;
+                _scaleClaims--;
             }
-            transform.localScale = _baseScale;
         }
 
         /// <summary>Touch registered: a small press-down. Kept even under reduced
@@ -206,23 +292,35 @@ namespace Match3.View
         public void PressIn()
         {
             StopHintPulse();
-            if (_pressRoutine != null) StopCoroutine(_pressRoutine);
+            ReleasePress();
+            _scaleClaims++;
             _pressRoutine = StartCoroutine(ScaleTo(_baseScale * 0.92f, 0.05f));
         }
 
         public void PressOut()
         {
-            if (_pressRoutine != null) StopCoroutine(_pressRoutine);
+            ReleasePress();
+            _scaleClaims++;
             _pressRoutine = StartCoroutine(PressRelease());
         }
 
         private Coroutine _pressRoutine;
 
+        private void ReleasePress()
+        {
+            if (_pressRoutine != null)
+            {
+                StopCoroutine(_pressRoutine);
+                _pressRoutine = null;
+                _scaleClaims--;
+            }
+        }
+
         private IEnumerator PressRelease()
         {
             yield return ScaleTo(_baseScale * 1.06f, 0.05f);
             yield return ScaleTo(_baseScale, 0.05f);
-            _pressRoutine = null;
+            ReleasePress();
         }
 
         /// <summary>Detached "no" head-shake for an invalid swap (z ±5° over 0.12s).</summary>
