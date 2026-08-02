@@ -296,12 +296,14 @@ namespace Match3.Core
         }
 
         /// <summary>
-        /// Every 2x2 block of same-coloured tiles — the square shape that mints a
-        /// jelly fish. Reported in scan order (x, then y); overlapping blocks all
-        /// appear and the analyzer's spent-cell rules pick the winners. Kept OUT of
-        /// <see cref="FindMatches"/> / <see cref="WouldSwapMatch"/>: squares only
-        /// clear in the resolver's full mode, and the move search must never call a
-        /// board "alive" for a shape the classic resolver would ignore.
+        /// Every 2x2 block of same-coloured PLAIN candies (normals and timer bombs —
+        /// clearing a bomb is defusing it) — the square shape that mints a jelly
+        /// fish. Striped/wrapped/fish members disqualify a square: squares seed on
+        /// every resolver wave, and a colour-only rule let incidental refill squares
+        /// consume a just-earned special with no player input. Matching a special in
+        /// a straight RUN remains the deliberate activation path. Reported in scan
+        /// order (x, then y); overlapping blocks all appear and the analyzer's
+        /// spent-cell rules pick the winners.
         /// </summary>
         public List<MatchSquare> FindSquares()
         {
@@ -311,7 +313,9 @@ namespace Match3.Core
                 for (int y = 0; y + 1 < Height; y++)
                 {
                     if (SameColor(x, y, x + 1, y) && SameColor(x, y, x, y + 1) &&
-                        SameColor(x, y, x + 1, y + 1))
+                        SameColor(x, y, x + 1, y + 1) &&
+                        IsPlainAt(x, y) && IsPlainAt(x + 1, y) &&
+                        IsPlainAt(x, y + 1) && IsPlainAt(x + 1, y + 1))
                     {
                         squares.Add(new MatchSquare(new[]
                         {
@@ -323,6 +327,9 @@ namespace Match3.Core
             }
             return squares;
         }
+
+        private bool IsPlainAt(int x, int y) =>
+            _tiles[x, y] is { } tile && tile.IsPlainCandy;
 
         /// <summary>
         /// Every cell that is part of a match, de-duplicated (an L / T shape's shared

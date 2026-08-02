@@ -41,6 +41,40 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void FindSquares_IgnoresAStripedMember()
+        {
+            // Squares are plain-candy shapes: a just-earned special dropped beside
+            // three same-coloured plains must NOT be consumed by an incidental square.
+            TileFactory factory = TestFactories.Scripted(5);
+            Board board = Board.FromLayout(new[,]
+            {
+                { A, A, C },
+                { A, A, B },
+                { C, B, C },
+            }, factory);
+            board.SetTile(new GridPosition(0, 1), factory.CreateSpecial(A, TileKind.StripedH));
+
+            Assert.That(board.FindSquares(), Is.Empty);
+        }
+
+        [Test]
+        public void FindSquares_AcceptsATimerBombMember()
+        {
+            // Timer bombs ARE plain candies (IsPlainCandy) — a square containing one
+            // still counts, so defusing by square stays possible.
+            TileFactory factory = TestFactories.Scripted(5);
+            Board board = Board.FromLayout(new[,]
+            {
+                { A, A, C },
+                { A, A, B },
+                { C, B, C },
+            }, factory);
+            board.SetTile(new GridPosition(0, 1), factory.CreateSpecial(A, TileKind.Bomb));
+
+            Assert.That(board.FindSquares().Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void SquareMatch_MintsAFish_InFullMode()
         {
             TileFactory factory = TestFactories.Scripted(5, D, E, D);
