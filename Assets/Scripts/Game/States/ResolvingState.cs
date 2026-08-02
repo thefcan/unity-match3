@@ -50,11 +50,11 @@ namespace Match3.Game
 
             if (!result.HadMatches)
             {
-                // Useless swap: revert the logic and animate the bounce-back.
-                // In time-attack mode a swap costs only the clock, so nothing else
-                // happens — Toon Blast-style forgiveness.
+                // Useless swap: revert the logic and animate the bounce-back with
+                // the "no" treatment (low thunk + head-shake). In time-attack mode
+                // a swap costs only the clock, so nothing else happens.
                 Game.Board.Swap(_from, _to);
-                yield return Game.BoardView.AnimateSwap(_from, _to);
+                yield return Game.BoardView.AnimateSwapRevert(_from, _to);
                 Game.SetState(new PlayingState(Game));
                 yield break;
             }

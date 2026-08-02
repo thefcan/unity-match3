@@ -42,6 +42,7 @@ namespace Match3.View
             spriteRenderer.sprite = sprite != null ? sprite : _defaultSprite;
             spriteRenderer.color = color;
             transform.localScale = _baseScale;
+            transform.localRotation = Quaternion.identity; // a pooled wiggle must never leak a tilt
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             name = $"Tile_{tile.Id}"; // debug-only: SetName is a native call + string alloc per bind
 #endif
@@ -71,6 +72,7 @@ namespace Match3.View
             StopAllCoroutines();
             _hintRoutine = null;
             transform.localScale = _baseScale;
+            transform.localRotation = Quaternion.identity;
         }
 
         /// <summary>Vanish (shrink to nothing) — used for the level-transition wipe.</summary>
@@ -153,6 +155,94 @@ namespace Match3.View
                 yield return null; // resume next frame
             }
             transform.position = target;
+        }
+
+        /// <summary>
+        /// Gravity fall: same duration as MoveTo but with a quadratic ease-in — the
+        /// candy accelerates like it's actually dropping — then a detached landing
+        /// squash. The squash runs on THIS view's coroutines so pool release kills it.
+        /// </summary>
+        public IEnumerator FallTo(Vector3 target, float duration)
+        {
+            if (duration <= 0f)
+            {
+                transform.position = target;
+                yield break;
+            }
+
+            Vector3 start = transform.position;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                transform.position = Vector3.Lerp(start, target, t * t); // ease-in: gravity
+                yield return null;
+            }
+            transform.position = target;
+
+            if (!Match3.Game.Prefs.ReducedMotionOn)
+                StartCoroutine(LandingSquash());
+        }
+
+        private IEnumerator LandingSquash()
+        {
+            // Vertical squash on impact, tiny overshoot on the way back — never
+            // blocks the wave (the caller already yielded on the fall itself).
+            Vector3 squashed = new Vector3(_baseScale.x * 1.12f, _baseScale.y * 0.86f, _baseScale.z);
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.05f)
+            {
+                transform.localScale = Vector3.Lerp(_baseScale, squashed, t);
+                yield return null;
+            }
+            Vector3 overshoot = _baseScale * 1.04f;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.07f)
+            {
+                transform.localScale = Vector3.Lerp(squashed, overshoot, Mathf.SmoothStep(0f, 1f, t));
+                yield return null;
+            }
+            transform.localScale = _baseScale;
+        }
+
+        /// <summary>Touch registered: a small press-down. Kept even under reduced
+        /// motion — it is the accessibility-critical "I felt that" signal.</summary>
+        public void PressIn()
+        {
+            StopHintPulse();
+            if (_pressRoutine != null) StopCoroutine(_pressRoutine);
+            _pressRoutine = StartCoroutine(ScaleTo(_baseScale * 0.92f, 0.05f));
+        }
+
+        public void PressOut()
+        {
+            if (_pressRoutine != null) StopCoroutine(_pressRoutine);
+            _pressRoutine = StartCoroutine(PressRelease());
+        }
+
+        private Coroutine _pressRoutine;
+
+        private IEnumerator PressRelease()
+        {
+            yield return ScaleTo(_baseScale * 1.06f, 0.05f);
+            yield return ScaleTo(_baseScale, 0.05f);
+            _pressRoutine = null;
+        }
+
+        /// <summary>Detached "no" head-shake for an invalid swap (z ±5° over 0.12s).</summary>
+        public void StartWiggle()
+        {
+            if (Match3.Game.Prefs.ReducedMotionOn)
+                return;
+            StartCoroutine(Wiggle());
+        }
+
+        private IEnumerator Wiggle()
+        {
+            const float duration = 0.12f;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
+            {
+                float angle = 5f * Mathf.Sin(t * Mathf.PI * 2f); // one full +/- oscillation
+                transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+                yield return null;
+            }
+            transform.localRotation = Quaternion.identity;
         }
 
         /// <summary>Clear effect: briefly bulge, then shrink to nothing.</summary>

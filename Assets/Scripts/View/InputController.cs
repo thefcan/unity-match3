@@ -50,6 +50,10 @@ namespace Match3.View
 
                 _pressedWorld = PointerWorldPosition();
                 _pressedCell = boardView.WorldToGrid(_pressedWorld);
+                // Cosmetic press-down AFTER the cell is computed — feedback never
+                // reorders or delays the gesture logic.
+                if (_pressedCell is { } pressed)
+                    boardView.ShowPressFeedback(pressed);
             }
 
             if (Input.GetMouseButton(0) && _pressedCell is { } from)
@@ -62,6 +66,7 @@ namespace Match3.View
                         : from.Offset(0, drag.y > 0 ? 1 : -1);
 
                     _pressedCell = null; // one swap per press
+                    boardView.ClearPressFeedback();
                     SwapRequested?.Invoke(from, to);
                 }
             }
@@ -73,6 +78,7 @@ namespace Match3.View
                     (PointerWorldPosition() - _pressedWorld).magnitude < dragThreshold)
                     TapRequested?.Invoke(cell);
                 _pressedCell = null;
+                boardView.ClearPressFeedback();
             }
         }
 

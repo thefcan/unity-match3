@@ -615,6 +615,54 @@ namespace Match3.View
         }
 
         /// <summary>
+        /// The bounce-back variant of <see cref="AnimateSwap"/>: same glide, but it
+        /// SOUNDS and FEELS like a refusal — low-pitched thunk, light haptic, and a
+        /// detached head-shake on both candies (input reopens during the shake).
+        /// </summary>
+        public IEnumerator AnimateSwapRevert(GridPosition a, GridPosition b)
+        {
+            AudioManager.Play(Sfx.Swap, 0.75f);
+            Match3.Game.Haptics.Light();
+            var moves = new List<IEnumerator>();
+            var shaken = new List<TileView>(2);
+            foreach (GridPosition pos in new[] { a, b })
+            {
+                if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+                {
+                    moves.Add(view.MoveTo(GridToWorld(pos), swapDuration));
+                    shaken.Add(view);
+                }
+            }
+            yield return RunAll(moves);
+            foreach (TileView view in shaken)
+                view.StartWiggle();
+        }
+
+        // ---- Press feedback (view-only; swap detection never waits on this) ----------
+
+        private TileView _pressedTileView;
+
+        public void ShowPressFeedback(GridPosition cell)
+        {
+            ClearPressFeedback();
+            if (_board != null && _board.IsInside(cell) &&
+                _board[cell] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+            {
+                _pressedTileView = view;
+                view.PressIn();
+            }
+        }
+
+        public void ClearPressFeedback()
+        {
+            if (_pressedTileView != null)
+            {
+                _pressedTileView.PressOut();
+                _pressedTileView = null;
+            }
+        }
+
+        /// <summary>
         /// Plays one cascade wave: clear the popped tiles (staggered outward from any
         /// detonation origin; match tiles that fund a special converge into its cell),
         /// morph the newly created specials, then animate falls and spawns together.
@@ -852,7 +900,7 @@ namespace Match3.View
                 yield break;
 
             float duration = FallDuration(fall.From.Y - fall.To.Y);
-            yield return view.MoveTo(GridToWorld(fall.To), duration);
+            yield return view.FallTo(GridToWorld(fall.To), duration);
         }
 
         private IEnumerator AnimateSpawn(TileSpawn spawn)
@@ -863,7 +911,7 @@ namespace Match3.View
             TileView view = SpawnView(spawn.Tile, GridToWorld(startCell));
 
             float duration = FallDuration(startCell.Y - spawn.Position.Y);
-            yield return view.MoveTo(GridToWorld(spawn.Position), duration);
+            yield return view.FallTo(GridToWorld(spawn.Position), duration);
         }
 
         private TileView SpawnView(Tile tile, Vector3 worldPosition)
