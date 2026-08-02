@@ -291,6 +291,7 @@ namespace Match3.UI
                 UiTheme.ApplySprite(card, UiTheme.Round, UiTheme.ThemeCard);
 
                 _button = _go.GetComponent<Button>();
+                _go.AddComponent<PressableButton>();
                 _button.targetGraphic = card;
                 _button.onClick.AddListener(() => onClick(_definition, _levelNumber));
 
@@ -534,6 +535,7 @@ namespace Match3.UI
             if (sprite == null)
                 image.color = spriteColor == Color.white ? UiTheme.Cta : spriteColor;
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(onClick);
 

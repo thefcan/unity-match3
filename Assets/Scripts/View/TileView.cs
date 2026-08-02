@@ -165,6 +165,27 @@ namespace Match3.View
         }
 
         /// <summary>
+        /// Board-intro reveal: stay hidden through the stagger delay, then grow in.
+        /// One claim spans the whole wait so the special-candy shimmer can't flash
+        /// the tile at full scale before its wave arrives.
+        /// </summary>
+        public IEnumerator GrowInAfter(float delay, float duration)
+        {
+            _scaleClaims++;
+            try
+            {
+                transform.localScale = Vector3.zero;
+                for (float t = 0f; t < delay; t += Time.deltaTime)
+                    yield return null;
+                yield return ScaleTo(_baseScale, duration);
+            }
+            finally
+            {
+                _scaleClaims--;
+            }
+        }
+
+        /// <summary>
         /// Gently pulses the tile's scale to draw the eye, looping until stopped.
         /// Used by the idle hint to highlight a still-available move.
         /// </summary>

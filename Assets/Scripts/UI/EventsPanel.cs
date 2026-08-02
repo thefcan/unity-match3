@@ -88,10 +88,10 @@ namespace Match3.UI
                 ? ComposeToast(banked, trophy, rescues, packs)
                 : string.Empty;
             Refresh();
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide() => UiTween.ClosePanel(this, _root);
 
         private void OnOpenerClicked()
         {
@@ -312,6 +312,7 @@ namespace Match3.UI
             var closeImage = closeGo.AddComponent<Image>();
             UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
             var closeButton = closeGo.AddComponent<Button>();
+            closeGo.AddComponent<PressableButton>();
             closeButton.targetGraphic = closeImage;
             closeButton.onClick.AddListener(OnOpenerClicked);
             TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
@@ -400,6 +401,7 @@ namespace Match3.UI
             row.ClaimImage = claimGo.AddComponent<Image>();
             UiTheme.ApplySprite(row.ClaimImage, UiTheme.Pill, UiTheme.Cta);
             row.Claim = claimGo.AddComponent<Button>();
+            claimGo.AddComponent<PressableButton>();
             row.Claim.targetGraphic = row.ClaimImage;
             int captured = tier;
             row.Claim.onClick.AddListener(() => OnClaimTier(captured));
@@ -427,6 +429,7 @@ namespace Match3.UI
             var claimImage = _raceClaimGo.AddComponent<Image>();
             UiTheme.ApplySprite(claimImage, UiTheme.PillPink, Color.white);
             var claimButton = _raceClaimGo.AddComponent<Button>();
+            _raceClaimGo.AddComponent<PressableButton>();
             claimButton.targetGraphic = claimImage;
             claimButton.onClick.AddListener(OnClaimRace);
             TMP_Text claimLabel = CreateText("Label", _raceClaimGo.transform, Vector2.zero, 36f, FontStyles.Bold);
@@ -477,6 +480,7 @@ namespace Match3.UI
             var image = _opener.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Slot);
             var button = _opener.GetComponent<Button>();
+            _opener.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(OnOpenerClicked);
 

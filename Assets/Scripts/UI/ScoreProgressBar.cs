@@ -1,3 +1,4 @@
+using System.Collections;
 using Match3.Core;
 using Match3.Game;
 using TMPro;
@@ -19,6 +20,8 @@ namespace Match3.UI
         private GameManager _game;
         private RectTransform _fill;
         private TMP_Text _caption;
+        private Coroutine _glide;
+        private float _shownFraction; // what the fill currently displays (the glide's "from")
 
         /// <summary>Builds the track + fill + caption inside <paramref name="topBar"/>.</summary>
         public static ScoreProgressBar Attach(Transform topBar, GameManager game)
@@ -118,7 +121,7 @@ namespace Match3.UI
             if (target <= 0)
             {
                 // No score goal this level — a quiet empty track, no caption.
-                _fill.anchorMax = new Vector2(0f, 1f);
+                Snap(0f);
                 _caption.text = string.Empty;
                 return;
             }
@@ -126,9 +129,47 @@ namespace Match3.UI
             float fraction = Mathf.Clamp01(current / (float)target);
             if (fraction > 0f)
                 fraction = Mathf.Max(fraction, 0.05f); // a sliced pill needs a sliver to read as round
-            _fill.anchorMax = new Vector2(fraction, 1f);
+            // Caption tells the truth instantly; only the fill glides. Progress
+            // never animates DOWNWARD (restart/new level) — that snaps, mirroring
+            // HudView's score==0 rule.
             _caption.text = string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "{0:N0} / {1:N0}", current, target);
+            if (fraction < _shownFraction || Prefs.ReducedMotionOn)
+                Snap(fraction);
+            else if (fraction > _shownFraction)
+            {
+                StopGlide();
+                _glide = StartCoroutine(GlideTo(fraction));
+            }
+        }
+
+        private void Snap(float fraction)
+        {
+            StopGlide();
+            _shownFraction = fraction;
+            _fill.anchorMax = new Vector2(fraction, 1f);
+        }
+
+        private IEnumerator GlideTo(float target)
+        {
+            float from = _shownFraction;
+            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime / 0.3f)
+            {
+                _shownFraction = Mathf.Lerp(from, target, Mathf.SmoothStep(0f, 1f, t));
+                _fill.anchorMax = new Vector2(_shownFraction, 1f);
+                yield return null;
+            }
+            _glide = null;
+            Snap(target);
+        }
+
+        private void StopGlide()
+        {
+            if (_glide != null)
+            {
+                StopCoroutine(_glide);
+                _glide = null;
+            }
         }
     }
 }

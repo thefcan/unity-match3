@@ -299,6 +299,7 @@ namespace Match3.UI
             if (buttonImage.sprite == null)
                 buttonImage.color = ButtonColor;
             var button = buttonGo.AddComponent<Button>();
+            buttonGo.AddComponent<PressableButton>();
             button.targetGraphic = buttonImage;
             button.onClick.AddListener(OnButtonClicked);
 
@@ -311,6 +312,7 @@ namespace Match3.UI
             var menuImage = _menuButton.AddComponent<Image>();
             UiTheme.ApplySprite(menuImage, UiTheme.Pill, UiTheme.Slot);
             var menuButton = _menuButton.AddComponent<Button>();
+            _menuButton.AddComponent<PressableButton>();
             menuButton.targetGraphic = menuImage;
             menuButton.onClick.AddListener(OnMenuClicked);
             Image menuOutline = new GameObject("Outline", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
@@ -335,6 +337,7 @@ namespace Match3.UI
             if (rescueImage.sprite == null)
                 rescueImage.color = ButtonColor;
             var rescueButton = _rescueButton.AddComponent<Button>();
+            _rescueButton.AddComponent<PressableButton>();
             rescueButton.targetGraphic = rescueImage;
             rescueButton.onClick.AddListener(OnRescueClicked);
             Image rescueOutline = new GameObject("Outline", typeof(RectTransform), typeof(Image)).GetComponent<Image>();

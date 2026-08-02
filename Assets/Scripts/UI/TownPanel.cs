@@ -98,10 +98,10 @@ namespace Match3.UI
         {
             _card.color = UiTheme.ThemeCard;
             Refresh();
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide() => UiTween.ClosePanel(this, _root);
 
         private void OnOpenerClicked()
         {
@@ -184,6 +184,7 @@ namespace Match3.UI
             var closeImage = closeGo.AddComponent<Image>();
             UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
             var closeButton = closeGo.AddComponent<Button>();
+            closeGo.AddComponent<PressableButton>();
             closeButton.targetGraphic = closeImage;
             closeButton.onClick.AddListener(OnOpenerClicked);
             TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
@@ -206,6 +207,7 @@ namespace Match3.UI
             var image = go.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Slot);
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(OnOpenerClicked);
 

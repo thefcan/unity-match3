@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace Match3.Game
 {
     /// <summary>
@@ -15,6 +17,27 @@ namespace Match3.Game
         {
             Game.BuildNewGame();
 
+            // Moves mode opens with the diagonal grow-in curtain; the Init phase
+            // itself keeps input blocked, so no extra gate is needed. Time attack
+            // starts instantly (the ticking clock is the show), and reduced
+            // motion skips straight to play.
+            if (Game.Mode == GameMode.Moves && !Prefs.ReducedMotionOn)
+            {
+                Game.RunCoroutine(RevealThenStart());
+                return;
+            }
+
+            StartPlay();
+        }
+
+        private IEnumerator RevealThenStart()
+        {
+            yield return Game.BoardView.AnimateBoardIntro();
+            StartPlay();
+        }
+
+        private void StartPlay()
+        {
             if (Game.Board.HasPossibleMove())
                 Game.SetState(new PlayingState(Game));
             else

@@ -101,10 +101,10 @@ namespace Match3.UI
         {
             _card.color = UiTheme.ThemeCard;
             Refresh();
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide() => UiTween.ClosePanel(this, _root);
 
         private void OnOpenerClicked()
         {
@@ -150,6 +150,7 @@ namespace Match3.UI
             var closeImage = closeGo.AddComponent<Image>();
             UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
             var closeButton = closeGo.AddComponent<Button>();
+            closeGo.AddComponent<PressableButton>();
             closeButton.targetGraphic = closeImage;
             closeButton.onClick.AddListener(OnOpenerClicked);
             TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
@@ -186,6 +187,7 @@ namespace Match3.UI
             row.ClaimImage = claimGo.AddComponent<Image>();
             UiTheme.ApplySprite(row.ClaimImage, UiTheme.Pill, UiTheme.Cta);
             row.Claim = claimGo.AddComponent<Button>();
+            claimGo.AddComponent<PressableButton>();
             row.Claim.targetGraphic = row.ClaimImage;
             int captured = slot;
             row.Claim.onClick.AddListener(() => OnClaim(captured));
@@ -198,6 +200,7 @@ namespace Match3.UI
             var rerollImage = rerollGo.AddComponent<Image>();
             UiTheme.ApplySprite(rerollImage, UiTheme.CircleSprite, UiTheme.OutlineDim);
             row.Reroll = rerollGo.AddComponent<Button>();
+            rerollGo.AddComponent<PressableButton>();
             row.Reroll.targetGraphic = rerollImage;
             row.Reroll.onClick.AddListener(() => OnReroll(captured));
             TMP_Text rerollLabel = CreateText("Label", rerollGo.transform, Vector2.zero, 32f, FontStyles.Bold);
@@ -223,6 +226,7 @@ namespace Match3.UI
             var image = go.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Slot);
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(OnOpenerClicked);
 

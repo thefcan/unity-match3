@@ -87,11 +87,11 @@ namespace Match3.Cloud
         private void Show()
         {
             _card.color = UiTheme.ThemeCard;
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
             Refresh();
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide() => UiTween.ClosePanel(this, _root);
 
         private async void Refresh()
         {
@@ -195,6 +195,7 @@ namespace Match3.Cloud
             var image = go.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.Pill, UiTheme.Slot);
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(() =>
             {
@@ -224,6 +225,7 @@ namespace Match3.Cloud
             var image = go.GetComponent<Image>();
             UiTheme.ApplySprite(image, UiTheme.PillPink, Color.white);
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(onClick);
 

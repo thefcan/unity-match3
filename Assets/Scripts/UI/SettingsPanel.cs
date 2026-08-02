@@ -92,10 +92,10 @@ namespace Match3.UI
         {
             _card.color = UiTheme.ThemeCard; // the ambience may have drifted since Build
             RefreshFromPrefs();
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
         }
 
-        private void Hide() => _root.SetActive(false);
+        private void Hide() => UiTween.ClosePanel(this, _root);
 
         private void RefreshFromPrefs()
         {
@@ -247,6 +247,7 @@ namespace Match3.UI
             UiTheme.ApplySprite(image, UiTheme.CircleSprite, UiTheme.Slot);
 
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(OnOpenerClicked);
 
@@ -300,6 +301,7 @@ namespace Match3.UI
             SetVisual(initial);
 
             var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = back;
             button.onClick.AddListener(() =>
             {
@@ -378,6 +380,7 @@ namespace Match3.UI
             var image = go.AddComponent<Image>();
             UiTheme.ApplySprite(image, sprite, spriteColor);
             var button = go.AddComponent<Button>();
+            go.AddComponent<PressableButton>();
             button.targetGraphic = image;
             button.onClick.AddListener(onClick);
 

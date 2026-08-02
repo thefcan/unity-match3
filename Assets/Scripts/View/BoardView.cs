@@ -496,6 +496,29 @@ namespace Match3.View
         }
 
         /// <summary>
+        /// Level-start reveal: every candy grows in on a diagonal stagger ((x+y)
+        /// order — a curtain sweeping from the bottom-left corner), ≤0.58s on an
+        /// 8×8. Runs during the Init phase, so input is naturally still blocked.
+        /// </summary>
+        public IEnumerator AnimateBoardIntro()
+        {
+            if (Match3.Game.Prefs.ReducedMotionOn)
+                yield break;
+
+            var reveals = new List<IEnumerator>();
+            for (int x = 0; x < _board.Width; x++)
+            {
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+                        reveals.Add(view.GrowInAfter((x + y) * 0.02f, appearDuration));
+                }
+            }
+            yield return RunAll(reveals);
+        }
+
+        /// <summary>
         /// Glides every tile to its CURRENT board cell — call right after Board.Shuffle
         /// so the views animate from their old spots to the reshuffled layout.
         /// </summary>

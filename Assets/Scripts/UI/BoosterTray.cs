@@ -105,6 +105,7 @@ namespace Match3.UI
                 _pills[i] = pill;
 
                 var button = pillGo.GetComponent<Button>();
+                pillGo.AddComponent<PressableButton>();
                 button.targetGraphic = pill;
                 button.onClick.AddListener(() =>
                 {
