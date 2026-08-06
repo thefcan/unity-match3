@@ -4,11 +4,11 @@
   <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
 </p>
 
-A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (100
-levels in five slowly-shifting chapters — objectives, special candies incl. the
+A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (120
+levels in six slowly-shifting chapters — objectives, special candies incl. the
 2×2 **jelly fish**, jelly, licorice locks, spreading chocolate + **fountains**,
-**layered frosting**, **countdown bombs**, beam-eating **swirls**, ingredient
-drops, the **Sugar Crush** finale, in-level **boosters**, win-streak head starts,
+**layered frosting**, **countdown bombs**, beam-eating **swirls**, hatching
+**mystery eggs**, ingredient drops, the **Sugar Crush** finale, in-level **boosters**, win-streak head starts,
 star ratings, a **star chest** + **daily missions** economy, a buildable candy
 town, daily streak rewards, one-line **tutorial overlays**, a relaxed mode +
 accessibility switches, saved + cloud-synced progress, generative chapter music)
@@ -218,8 +218,8 @@ Core rule units, each small and independently tested:
 - `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` / `ProgressMerger` —
   moves-mode win logic, save, and the conflict-free cloud merge
 - `DailyStreak` / `MetaState` — the login-streak rules and their tolerant save format
-- `LevelCurve` / `ThemeCurve` — the 100-level difficulty curve (chapter-4 and
-  chapter-5 blocker acts + tutorial lines included) and the per-chapter ambience
+- `LevelCurve` / `ThemeCurve` — the 120-level difficulty curve (chapter 4-6
+  blocker/egg acts + tutorial lines included) and the per-chapter ambience
   drift (single source for generated assets and runtime tinting)
 - `CandyArtist` / `UiArtist` / `SfxSynth` / `MusicComposer` — procedural candy
   sprites, UI chrome, sounds and loop-perfect chapter music (pure pixel/sample
@@ -313,9 +313,9 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
-- **Match3 → Generate → Level Definitions** — the 100 campaign levels + catalog
+- **Match3 → Generate → Level Definitions** — the 120 campaign levels + catalog
   from `LevelCurve` (jelly, locks, chocolate, frosting, swirls, fountains, bombs,
-  ingredient counts and tutorial lines included).
+  mystery eggs, ingredient counts and tutorial lines included).
 - **Match3 → Generate → Sound Effects** — 10 WAVs synthesized by `SfxSynth`.
 - **Match3 → Generate → Music** — one loop-perfect stereo track per chapter from
   `MusicComposer` (deterministic: same chapter, same bytes).
@@ -328,7 +328,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**476 EditMode tests, all green** — the core is tested without ever opening a scene:
+**531 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -353,6 +353,9 @@ Assets/Tests/EditMode/
 ├── BlockerTests.cs               frosting layers, bomb fuses (birth-move grace), swirl beam
 │                                 absorption, fountain revival — and their recordings
 ├── Chapter5Tests.cs              level 81-100 landmarks, tutorial lines, 1-80 bit-identical
+├── Chapter6Tests.cs              level 101-120 egg acts, jelly encore, 1-100 landmark pins
+├── EggTests.cs                   mystery-egg hatching: weights, row-major rolls, cage/jelly/
+│                                 chocolate/fish interplay, finale cracks, classic-mode inertness
 ├── FinaleTests.cs                Sugar Crush conversions, determinism, finale score bonuses
 ├── BoosterTests.cs               inventory roundtrip, hammer/free-swap/shuffle behaviour
 ├── WinStreakTests.cs             streak growth/reset, structural abandon, preload ladder
