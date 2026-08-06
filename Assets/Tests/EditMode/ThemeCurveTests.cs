@@ -38,7 +38,7 @@ namespace Match3.Tests
         [Test]
         public void ConsecutiveLevels_NeverShiftSharply()
         {
-            for (int level = 1; level < 100; level++)
+            for (int level = 1; level < 120; level++)
             {
                 ThemeParameters a = ThemeCurve.For(level);
                 ThemeParameters b = ThemeCurve.For(level + 1);

@@ -29,11 +29,8 @@ namespace Match3.Tests
             Assert.That(parameters.StarScores, Is.Ordered.Ascending);
         }
 
-        [Test]
-        public void LevelCount_IsNowOneHundred()
-        {
-            Assert.That(LevelCurve.LevelCount, Is.EqualTo(100));
-        }
+        // The LevelCount landmark moved to Chapter6Tests when the campaign grew
+        // to 120 — this file keeps pinning the 81-100 layouts themselves.
 
         [Test]
         public void ActOne_FrostingShelf_WidensAndThickens()

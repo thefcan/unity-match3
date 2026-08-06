@@ -46,6 +46,7 @@ namespace Match3.Core
             new ChapterStyle(42, 86, 0.40f, 0.50f), // F#2 — dusk plum: darker, sparse
             new ChapterStyle(48, 94, 0.80f, 0.70f), // C3  — ember: lively, glinting
             new ChapterStyle(52, 96, 0.88f, 0.75f), // E3  — candy garden: airy, playful
+            new ChapterStyle(47, 88, 0.55f, 0.60f), // B2  — berry twilight: plush, rounded
         };
 
         /// <summary>Minor-pentatonic offsets — every arp/chime note comes from here.</summary>

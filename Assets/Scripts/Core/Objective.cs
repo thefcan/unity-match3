@@ -22,6 +22,8 @@ namespace Match3.Core
         CollectIngredients,
         /// <summary>Peel <see cref="Objective.TargetAmount"/> frosting layers (each hit is one layer).</summary>
         ClearFrosting,
+        /// <summary>Crack <see cref="Objective.TargetAmount"/> mystery eggs open (chapter 6).</summary>
+        HatchEggs,
     }
 
     /// <summary>One goal of a level: the type, the colour it applies to (if any), and how much.</summary>

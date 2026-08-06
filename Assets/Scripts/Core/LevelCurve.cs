@@ -63,6 +63,9 @@ namespace Match3.Core
         /// <summary>Cells highlighted through the tutorial dim.</summary>
         public IReadOnlyList<GridPosition> TutorialCells { get; }
 
+        /// <summary>Cells starting as mystery eggs. Chapter 6 onwards.</summary>
+        public IReadOnlyList<GridPosition> EggCells { get; }
+
         public LevelParameters(int width, int height, int colorCount, int movesLimit, int movesBonusPoints,
                                IReadOnlyList<Objective> objectives, IReadOnlyList<int> starScores,
                                int jellyRows = 0, int jellyLayers = 1,
@@ -74,7 +77,8 @@ namespace Match3.Core
                                IReadOnlyList<GridPosition> fountainCells = null,
                                int bombCount = 0, int bombTimerMoves = 9,
                                string tutorialText = null,
-                               IReadOnlyList<GridPosition> tutorialCells = null)
+                               IReadOnlyList<GridPosition> tutorialCells = null,
+                               IReadOnlyList<GridPosition> eggCells = null)
         {
             Width = width;
             Height = height;
@@ -95,6 +99,7 @@ namespace Match3.Core
             BombTimerMoves = bombTimerMoves;
             TutorialText = tutorialText ?? string.Empty;
             TutorialCells = tutorialCells ?? Array.Empty<GridPosition>();
+            EggCells = eggCells ?? Array.Empty<GridPosition>();
         }
     }
 
@@ -112,7 +117,7 @@ namespace Match3.Core
     /// </summary>
     public static class LevelCurve
     {
-        public const int LevelCount = 100;
+        public const int LevelCount = 120;
         public const int ChapterLength = 20;
 
         public static LevelParameters For(int level)
@@ -159,16 +164,28 @@ namespace Match3.Core
 
             // Chapter 4 (levels 81-100): frosting → bombs+swirls → the fish showcase
             // fed by fountains → the everything-finale ("almost win" pressure).
+            // Its layouts are FROZEN — chapter 6 gets its own act builder below.
             var frostingCells = new List<FrostingCell>();
             var swirlCells = new List<GridPosition>();
             var fountainCells = new List<GridPosition>();
+            var eggCells = new List<GridPosition>();
             int bombCount = 0;
             int bombTimer = 9;
-            if (chapter >= 4)
+            if (chapter == 4)
             {
                 BuildChapter5Act(cl, objectives, frostingCells, swirlCells, fountainCells,
                                  ref bombCount, ref bombTimer);
                 // The finale act runs two moves tighter — near-miss pressure, only here.
+                if (cl >= 16)
+                    movesLimit = Math.Max(15, movesLimit - 2);
+            }
+
+            // Chapter 5 (levels 101-120): the mystery-egg chapter — meet the egg,
+            // eggs over a jelly encore, eggs behind frosting, the scramble finale.
+            if (chapter == 5)
+            {
+                BuildChapter6Act(cl, objectives, eggCells, frostingCells, lockCells,
+                                 ref bombCount, ref bombTimer);
                 if (cl >= 16)
                     movesLimit = Math.Max(15, movesLimit - 2);
             }
@@ -178,6 +195,13 @@ namespace Match3.Core
             // Chapters 3+ replace jelly entirely with the blocker mechanics.
             int jellyRows = chapter >= 3 ? 0 : cl < 8 ? 0 : cl < 13 ? 2 : 3;
             int jellyLayers = cl < 16 ? 1 : 2;
+            // Chapter 6's act 2 brings jelly back UNDER the eggs — the campaign's one
+            // late jelly encore; kept gentle (two rows, single layers).
+            if (chapter == 5 && cl >= 6 && cl <= 10)
+            {
+                jellyRows = 2;
+                jellyLayers = 1;
+            }
             if (jellyRows > 0)
                 objectives.Add(new Objective(ObjectiveType.ClearJelly, 0, jellyRows * 8 * jellyLayers));
 
@@ -185,12 +209,12 @@ namespace Match3.Core
             var starScores = new[] { oneStar, oneStar * 3 / 2, oneStar * 2 };
 
             (string tutorialText, IReadOnlyList<GridPosition> tutorialCells) =
-                TutorialFor(level, lockCells, chocolateCells, frostingCells);
+                TutorialFor(level, lockCells, chocolateCells, frostingCells, eggCells);
 
             return new LevelParameters(8, 8, colorCount, movesLimit, 30, objectives, starScores,
                                        jellyRows, jellyLayers, lockCells, chocolateCells, ingredientCount,
                                        frostingCells, swirlCells, fountainCells, bombCount, bombTimer,
-                                       tutorialText, tutorialCells);
+                                       tutorialText, tutorialCells, eggCells);
         }
 
         /// <summary>
@@ -267,13 +291,85 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// Chapter 6's egg acts on the 8x8 board (y0 = gravity floor): meet the egg,
+        /// eggs over the jelly encore, eggs behind a frosting shelf, the scramble
+        /// finale. Every level carries a HatchEggs objective matching its clutch.
+        /// </summary>
+        private static void BuildChapter6Act(int cl, List<Objective> objectives,
+                                             List<GridPosition> eggCells, List<FrostingCell> frostingCells,
+                                             List<GridPosition> lockCells,
+                                             ref int bombCount, ref int bombTimer)
+        {
+            if (cl <= 5)
+            {
+                // Act 1 — meet the egg: a widening clutch across row 4, then a low pair.
+                int half = Math.Min(cl, 3); // widths 2, 4, 6, 6, 6
+                for (int x = 4 - half; x <= 3 + half; x++)
+                    eggCells.Add(new GridPosition(x, 4));
+                if (cl >= 4)
+                {
+                    eggCells.Add(new GridPosition(3, 2));
+                    eggCells.Add(new GridPosition(4, 2));
+                }
+            }
+            else if (cl <= 10)
+            {
+                // Act 2 — eggs over the jelly encore (the caller re-enables the rows).
+                int half = Math.Min(cl - 4, 3); // widths 4, 6, 6, 6, 6
+                for (int x = 4 - half; x <= 3 + half; x++)
+                    eggCells.Add(new GridPosition(x, 5));
+                if (cl >= 9)
+                {
+                    eggCells.Add(new GridPosition(0, 7));
+                    eggCells.Add(new GridPosition(7, 7));
+                }
+            }
+            else if (cl <= 15)
+            {
+                // Act 3 — eggs waiting behind a frosting shelf: crack through to reach them.
+                for (int x = 2; x <= 5; x++)
+                    frostingCells.Add(new FrostingCell(new GridPosition(x, 5), cl >= 13 ? 2 : 1));
+                for (int x = 2; x <= 5; x++)
+                    eggCells.Add(new GridPosition(x, 3));
+                if (cl >= 14)
+                {
+                    eggCells.Add(new GridPosition(1, 3));
+                    eggCells.Add(new GridPosition(6, 3));
+                }
+
+                int totalLayers = 0;
+                foreach (FrostingCell cell in frostingCells)
+                    totalLayers += cell.Layers;
+                objectives.Add(new Objective(ObjectiveType.ClearFrosting, 0, totalLayers));
+            }
+            else
+            {
+                // Act 4 — the scramble finale: a caged bar over the clutch, corner
+                // eggs, and late bombs turning up the heat.
+                for (int x = 2; x <= 5; x++)
+                    lockCells.Add(new GridPosition(x, 5));
+                for (int x = 2; x <= 5; x++)
+                    eggCells.Add(new GridPosition(x, 4));
+                eggCells.Add(new GridPosition(0, 7));
+                eggCells.Add(new GridPosition(7, 7));
+                if (cl >= 18)
+                {
+                    bombCount = 2;
+                    bombTimer = 9;
+                }
+            }
+
+            objectives.Add(new Objective(ObjectiveType.HatchEggs, 0, eggCells.Count));
+        }
+
+        /// <summary>
         /// The one-line tutorial for each act opener (chapter 3's retrofits included).
         /// Highlight cells come from the level's own layout so the overlay always
         /// points at something real.
         /// </summary>
         private static (string text, IReadOnlyList<GridPosition> cells) TutorialFor(
             int level, List<GridPosition> lockCells, List<GridPosition> chocolateCells,
-            List<FrostingCell> frostingCells)
+            List<FrostingCell> frostingCells, List<GridPosition> eggCells)
         {
             switch (level)
             {
@@ -297,6 +393,29 @@ namespace Match3.Core
                     return ("A 2X2 MAKES A FISH", Array.Empty<GridPosition>());
                 case 96:
                     return ("EVERY BLOCKER AT ONCE", Array.Empty<GridPosition>());
+                case 101:
+                {
+                    var cells = new List<GridPosition>();
+                    for (int i = 0; i < eggCells.Count && i < 4; i++)
+                        cells.Add(eggCells[i]);
+                    return ("MATCH BESIDE THE MYSTERY EGG", cells);
+                }
+                case 106:
+                {
+                    var cells = new List<GridPosition>();
+                    for (int i = 0; i < eggCells.Count && i < 4; i++)
+                        cells.Add(eggCells[i]);
+                    return ("CRACK EGGS, CLEAR THE JELLY", cells);
+                }
+                case 111:
+                {
+                    var cells = new List<GridPosition>();
+                    for (int i = 0; i < frostingCells.Count && i < 4; i++)
+                        cells.Add(frostingCells[i].Position);
+                    return ("EGGS WAIT BEHIND THE FROSTING", cells);
+                }
+                case 116:
+                    return ("THE FINAL SCRAMBLE", Array.Empty<GridPosition>());
                 default:
                     return (string.Empty, Array.Empty<GridPosition>());
             }

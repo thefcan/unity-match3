@@ -35,6 +35,15 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void BerryTwilight_IsANewMood_AndDeterministic()
+        {
+            // Chapter 6's track (style index 5) differs from candy garden's tempo
+            // and renders the same bytes every time.
+            Assert.AreNotEqual(MusicComposer.SamplesPerBeat(5), MusicComposer.SamplesPerBeat(4));
+            Assert.AreEqual(Hash(MusicComposer.ComposeWav(5)), Hash(MusicComposer.ComposeWav(5)));
+        }
+
+        [Test]
         public void LoopLengthIsExactlyEightBars()
         {
             for (int chapter = 0; chapter < 4; chapter++)

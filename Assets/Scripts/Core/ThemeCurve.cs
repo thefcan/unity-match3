@@ -73,9 +73,12 @@ namespace Match3.Core
             new ThemeParameters( // chapter 4 — golden dawn (levels 81-100 open here)
                 new ThemeColor(0.27f, 0.19f, 0.08f), new ThemeColor(0.14f, 0.10f, 0.04f),
                 new ThemeColor(0.30f, 0.22f, 0.12f), new ThemeColor(0.22f, 0.16f, 0.07f), 4),
-            new ThemeParameters( // tail — candy garden (approached after level 100)
+            new ThemeParameters( // chapter 5 — candy garden (levels 101-120 open here)
                 new ThemeColor(0.13f, 0.24f, 0.16f), new ThemeColor(0.06f, 0.13f, 0.09f),
                 new ThemeColor(0.16f, 0.27f, 0.19f), new ThemeColor(0.11f, 0.20f, 0.13f), 5),
+            new ThemeParameters( // tail — berry twilight (approached after level 120)
+                new ThemeColor(0.22f, 0.10f, 0.26f), new ThemeColor(0.11f, 0.05f, 0.14f),
+                new ThemeColor(0.25f, 0.13f, 0.29f), new ThemeColor(0.18f, 0.09f, 0.22f), 6),
         };
 
         public static ThemeParameters For(int level)

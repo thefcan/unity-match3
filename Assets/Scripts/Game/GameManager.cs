@@ -404,6 +404,12 @@ namespace Match3.Game
                     if (Board.IsInside(pos))
                         Board.SetTile(pos, factory.CreateFountain());
                 }
+                foreach (Vector2Int cell in LevelDefinition.eggCells ?? Array.Empty<Vector2Int>())
+                {
+                    var pos = new GridPosition(cell.x, cell.y);
+                    if (Board.IsInside(pos))
+                        Board.SetTile(pos, factory.CreateMysteryEgg());
+                }
 
                 Bombs = null;
                 if (LevelDefinition.bombCount > 0)

@@ -61,6 +61,8 @@ namespace Match3.Game
         public Vector2Int[] swirlCells = Array.Empty<Vector2Int>();
         [Tooltip("Cells holding an indestructible chocolate fountain.")]
         public Vector2Int[] fountainCells = Array.Empty<Vector2Int>();
+        [Tooltip("Cells starting as mystery eggs (colourless, mobile; hatch when hit). Pair with a HatchEggs objective.")]
+        public Vector2Int[] eggCells = Array.Empty<Vector2Int>();
         [Tooltip("Bomb candies dispensed through refills (0 = none). Each must be matched before its countdown ends.")]
         [Min(0)] public int bombCount = 0;
         [Tooltip("Moves on a freshly dispensed bomb's countdown.")]

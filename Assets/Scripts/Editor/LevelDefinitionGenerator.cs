@@ -59,6 +59,7 @@ namespace Match3.EditorTools
                     .Select(c => new Vector3Int(c.Position.X, c.Position.Y, c.Layers)).ToArray();
                 level.swirlCells = parameters.SwirlCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
                 level.fountainCells = parameters.FountainCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
+                level.eggCells = parameters.EggCells.Select(c => new Vector2Int(c.X, c.Y)).ToArray();
                 level.bombCount = parameters.BombCount;
                 level.bombTimerMoves = parameters.BombTimerMoves;
                 level.tutorialText = parameters.TutorialText;

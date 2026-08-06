@@ -106,6 +106,8 @@ namespace Match3.Core
                     _progress[i] += step.IngredientExits.Count;
                 else if (_objectives[i].Type == ObjectiveType.ClearFrosting)
                     _progress[i] += step.FrostingHits.Count;
+                else if (_objectives[i].Type == ObjectiveType.HatchEggs)
+                    _progress[i] += step.EggHatches.Count;
             }
         }
     }
