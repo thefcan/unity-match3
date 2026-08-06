@@ -257,6 +257,7 @@ namespace Match3.UI
                 "CHAPTER 3 — DUSK PLUM",
                 "CHAPTER 4 — EMBER DAWN",
                 "CHAPTER 5 — CANDY GARDEN",
+                "CHAPTER 6 — BERRY TWILIGHT",
             };
 
             private readonly GameObject _go;

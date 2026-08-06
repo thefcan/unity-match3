@@ -35,6 +35,7 @@ namespace Match3.Game
         [SerializeField] private Sprite frosting3;
         [SerializeField] private Sprite swirl;
         [SerializeField] private Sprite fountain;
+        [SerializeField] private Sprite mysteryEgg;
 
         /// <summary>The licorice-cage overlay sprite (drawn over a locked candy). Null until generated.</summary>
         public Sprite LockCage => lockCage;
@@ -73,6 +74,8 @@ namespace Match3.Game
                 return swirl;
             if (kind == TileKind.ChocolateFountain)
                 return fountain;
+            if (kind == TileKind.MysteryEgg)
+                return mysteryEgg;
             if (colors == null || colorIndex < 0 || colorIndex >= colors.Length)
                 return null;
 
@@ -121,6 +124,12 @@ namespace Match3.Game
             frosting3 = frostingThree;
             swirl = swirlSprite;
             fountain = fountainSprite;
+        }
+
+        /// <summary>Editor-only: chapter 6's mystery-egg shell.</summary>
+        public void EditorSetEggSprite(Sprite eggSprite)
+        {
+            mysteryEgg = eggSprite;
         }
 #endif
     }

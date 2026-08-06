@@ -186,6 +186,13 @@ namespace Match3.UI
                         ? (frosting, Color.white)
                         : (UiTheme.Round, new Color(0.85f, 0.9f, 1f));
                 }
+                case ObjectiveType.HatchEggs:
+                {
+                    Sprite egg = _candies != null ? _candies.For(0, TileKind.MysteryEgg) : null;
+                    return egg != null
+                        ? (egg, Color.white)
+                        : (UiTheme.CircleSprite, new Color(0.94f, 0.9f, 0.8f));
+                }
                 default:
                     Sprite candy = _candies != null ? _candies.For(objective.ColorIndex, TileKind.Normal) : null;
                     return candy != null

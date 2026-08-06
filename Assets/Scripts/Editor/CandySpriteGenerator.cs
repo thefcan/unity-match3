@@ -59,6 +59,7 @@ namespace Match3.EditorTools
             Sprite frosting3 = WriteSprite("candy_frosting3", CandyArtist.RenderFrosting(Size, 3));
             Sprite swirl = WriteSprite("candy_swirl", CandyArtist.RenderSwirl(Size));
             Sprite fountain = WriteSprite("candy_fountain", CandyArtist.RenderFountain(Size));
+            Sprite egg = WriteSprite("candy_egg", CandyArtist.RenderMysteryEgg(Size));
 
             // Candy Town scenes (the decor meta): five cumulative build stages,
             // written into Resources so TownPanel can load them by name.
@@ -75,6 +76,7 @@ namespace Match3.EditorTools
             }
             library.EditorSetSprites(colorSets, colorblindSets, bomb, chocolate, ingredient, lockCage);
             library.EditorSetBlockerSprites(frosting1, frosting2, frosting3, swirl, fountain);
+            library.EditorSetEggSprite(egg);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
 

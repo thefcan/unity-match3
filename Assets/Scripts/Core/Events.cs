@@ -285,7 +285,10 @@ namespace Match3.Core
                 }
                 case EventKind.BlockerBash:
                 {
-                    int count = step.JellyHits.Count + step.FrostingHits.Count + step.LockBreaks.Count;
+                    // Egg hatches count as blocker chips too — monotone-safe: eggs
+                    // only ever ADD progress, never rewrite old history.
+                    int count = step.JellyHits.Count + step.FrostingHits.Count +
+                                step.LockBreaks.Count + step.EggHatches.Count;
                     foreach (ClearedTile cleared in step.Cleared)
                         if (cleared.Tile.Kind == TileKind.Chocolate)
                             count++;

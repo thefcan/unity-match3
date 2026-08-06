@@ -185,6 +185,8 @@ namespace Match3.UI
                     Match3.Core.ObjectiveType.ClearJelly => "Jelly",
                     Match3.Core.ObjectiveType.ClearChocolate => "Chocolate",
                     Match3.Core.ObjectiveType.CollectIngredients => "Ingredients",
+                    Match3.Core.ObjectiveType.ClearFrosting => "Frosting",
+                    Match3.Core.ObjectiveType.HatchEggs => "Eggs",
                     _ => ColorNames[Mathf.Clamp(objective.ColorIndex, 0, ColorNames.Length - 1)],
                 };
 

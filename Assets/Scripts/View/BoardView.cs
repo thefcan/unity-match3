@@ -774,6 +774,29 @@ namespace Match3.View
                         minted.SetSpecialShimmer(IsShimmerKind(creation.Created.Kind));
             }
 
+            // Mystery eggs crack open: the shell's view rebinds to its hatchling with
+            // the same squash-morph the specials use — BEFORE the falls play, because
+            // this wave's falls already carry the hatchling's id.
+            if (step.EggHatches.Count > 0)
+            {
+                AudioManager.Play(Sfx.SpecialCreate, 1.15f);
+                var hatches = new List<IEnumerator>();
+                foreach (EggHatch hatch in step.EggHatches)
+                {
+                    if (_viewsById.TryGetValue(hatch.Replaced.Id, out TileView view))
+                    {
+                        _viewsById.Remove(hatch.Replaced.Id);
+                        _viewsById[hatch.Hatched.Id] = view;
+                        (Sprite sprite, Color color) = VisualFor(hatch.Hatched);
+                        hatches.Add(view.MorphTo(hatch.Hatched, sprite, color, morphDuration));
+                    }
+                }
+                yield return RunAll(hatches);
+                foreach (EggHatch hatch in step.EggHatches)
+                    if (_viewsById.TryGetValue(hatch.Hatched.Id, out TileView chick))
+                        chick.SetSpecialShimmer(IsShimmerKind(hatch.Hatched.Kind));
+            }
+
             // Ingredients that reached the floor slide out below the board.
             if (step.IngredientExits.Count > 0)
             {
@@ -1068,6 +1091,8 @@ namespace Match3.View
                 return new Color(0.2f, 0.17f, 0.22f);
             if (tile.Kind == TileKind.ChocolateFountain)
                 return new Color(0.26f, 0.15f, 0.08f);
+            if (tile.Kind == TileKind.MysteryEgg)
+                return new Color(0.94f, 0.9f, 0.8f); // cream shell (ColorIndex is -1)
 
             Color baseColor = _config.tileColors[tile.ColorIndex];
             switch (tile.Kind)

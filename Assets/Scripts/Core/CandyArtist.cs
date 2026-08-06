@@ -523,6 +523,67 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// The mystery egg: a cream shell dotted with pastel speckles — hints of the
+        /// candy colours waiting inside. Colourless on purpose: it must read as a
+        /// container, never as a member of any colour run.
+        /// </summary>
+        public static byte[] RenderMysteryEgg(int size)
+        {
+            var pixels = new byte[size * size * 4];
+            float aa = 3f / size;
+            var speckles = new (float x, float y, float rad, float r, float g, float b)[]
+            {
+                (-0.26f, 0.30f, 0.13f, 0.98f, 0.55f, 0.65f), // pink
+                (0.28f, 0.10f, 0.11f, 0.55f, 0.75f, 0.98f),  // blue
+                (0.02f, -0.36f, 0.14f, 0.99f, 0.85f, 0.45f), // yellow
+                (-0.30f, -0.14f, 0.09f, 0.62f, 0.90f, 0.62f),// green
+                (0.26f, -0.50f, 0.08f, 0.80f, 0.62f, 0.95f), // purple
+            };
+
+            for (int row = 0; row < size; row++)
+            {
+                float y = 1f - 2f * (row + 0.5f) / size;
+                for (int col = 0; col < size; col++)
+                {
+                    float x = 2f * (col + 0.5f) / size - 1f;
+
+                    // Egg profile: an ellipse that narrows towards the top.
+                    float width = 0.68f - 0.11f * Clamp01((y + 1f) * 0.5f);
+                    float ex = x / width;
+                    float ey = y / 0.88f;
+                    float d = (float)Math.Sqrt(ex * ex + ey * ey) - 1f;
+                    float alpha = Clamp01(0.5f - d / (aa * 1.6f));
+
+                    float shade = Lerp(0.84f, 1.06f, (y + 1f) * 0.5f);
+                    float r = 0.96f * shade, g = 0.93f * shade, b = 0.85f * shade;
+
+                    foreach ((float sx, float sy, float rad, float sr, float sg, float sb) in speckles)
+                    {
+                        float sd = Dist(x, y, sx, sy) - rad;
+                        float mix = Clamp01(0.5f - sd / (aa * 2f));
+                        r = Lerp(r, sr * shade, mix);
+                        g = Lerp(g, sg * shade, mix);
+                        b = Lerp(b, sb * shade, mix);
+                    }
+
+                    float rim = Clamp01((d + 0.12f) / 0.12f);
+                    float rimMul = Lerp(1f, 0.68f, rim);
+                    r *= rimMul; g *= rimMul; b *= rimMul;
+
+                    float hd = Dist(x, y, -0.24f, 0.42f);
+                    if (hd < 0.24f)
+                    {
+                        float shine = (1f - hd / 0.24f) * 0.4f;
+                        r = Lerp(r, 1f, shine); g = Lerp(g, 1f, shine); b = Lerp(b, 1f, shine);
+                    }
+
+                    WritePixel(pixels, (row * size + col) * 4, r, g, b, alpha);
+                }
+            }
+            return pixels;
+        }
+
+        /// <summary>
         /// The chocolate fountain: a dark basin with a stem, an upper bowl and
         /// bubbling chocolate on top — clearly machinery, not a candy.
         /// </summary>
