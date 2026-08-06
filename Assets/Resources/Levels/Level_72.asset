@@ -32,9 +32,14 @@ MonoBehaviour:
   lockCells: []
   chocolateCells: []
   ingredientCount: 2
-  starScores:
-  - 4900
-  - 7350
-  - 9800
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
+  tutorialText: 
+  tutorialCells: []
+  starScores: 24130000b61c000048260000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

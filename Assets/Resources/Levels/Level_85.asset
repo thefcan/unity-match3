@@ -44,13 +44,11 @@ MonoBehaviour:
   - {x: 5, y: 2, z: 2}
   swirlCells: []
   fountainCells: []
+  eggCells: []
   bombCount: 0
   bombTimerMoves: 9
   tutorialText: 
   tutorialCells: []
-  starScores:
-  - 5300
-  - 7950
-  - 10600
+  starScores: b41400000e1f000068290000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

@@ -32,13 +32,11 @@ MonoBehaviour:
   frostingCells: []
   swirlCells: []
   fountainCells: []
+  eggCells: []
   bombCount: 3
   bombTimerMoves: 10
   tutorialText: DEFUSE BOMBS BEFORE ZERO
   tutorialCells: []
-  starScores:
-  - 5400
-  - 8100
-  - 10800
+  starScores: 18150000a41f0000302a0000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

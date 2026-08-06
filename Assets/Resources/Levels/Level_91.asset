@@ -33,13 +33,11 @@ MonoBehaviour:
   swirlCells: []
   fountainCells:
   - {x: 0, y: 7}
+  eggCells: []
   bombCount: 0
   bombTimerMoves: 9
   tutorialText: A 2X2 MAKES A FISH
   tutorialCells: []
-  starScores:
-  - 5900
-  - 8850
-  - 11800
+  starScores: 0c17000092220000182e0000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

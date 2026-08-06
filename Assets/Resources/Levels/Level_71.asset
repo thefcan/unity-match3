@@ -29,13 +29,16 @@ MonoBehaviour:
   lockCells: []
   chocolateCells: []
   ingredientCount: 2
-  starScores:
-  - 4800
-  - 7200
-  - 9600
-  pointsPerTile: 10
-  cascadeMultiplierStep: 1
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
   tutorialText: CARRY CHERRIES TO THE FLOOR
   tutorialCells:
   - {x: 3, y: 0}
   - {x: 4, y: 0}
+  starScores: c0120000201c000080250000
+  pointsPerTile: 10
+  cascadeMultiplierStep: 1

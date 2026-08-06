@@ -94,6 +94,7 @@ SpriteAtlas:
     - 4e09af090cd3b7c04ef4639deefb1478: 21300000
     - fe40d1390ecc44363bb4979998b4c3ee: 21300000
     - 15f4f469681dd42eaa0a33676fce48da: 21300000
+    - 7276a979594244473a0d19ff2d0035a3: 21300000
     - fa4e701adcbd0457d803a95effad5c4f: 21300000
     - 3bec916b60e5147c9875a6c546d3310a: 21300000
     - c639829b0cac64d8c97134911c9a7005: 21300000
@@ -165,6 +166,7 @@ SpriteAtlas:
   - {fileID: 21300000, guid: 4e09af090cd3b7c04ef4639deefb1478, type: 3}
   - {fileID: 21300000, guid: fe40d1390ecc44363bb4979998b4c3ee, type: 3}
   - {fileID: 21300000, guid: 15f4f469681dd42eaa0a33676fce48da, type: 3}
+  - {fileID: 21300000, guid: 7276a979594244473a0d19ff2d0035a3, type: 3}
   - {fileID: 21300000, guid: fa4e701adcbd0457d803a95effad5c4f, type: 3}
   - {fileID: 21300000, guid: 3bec916b60e5147c9875a6c546d3310a, type: 3}
   - {fileID: 21300000, guid: c639829b0cac64d8c97134911c9a7005, type: 3}
@@ -235,6 +237,7 @@ SpriteAtlas:
   - candy1_stripedV
   - candy4_fish_cb
   - candy3_normal_cb
+  - candy_egg
   - candy4_fish
   - candy_swirl
   - candy1_fish

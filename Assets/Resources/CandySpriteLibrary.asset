@@ -83,3 +83,4 @@ MonoBehaviour:
   frosting3: {fileID: 21300000, guid: 0e439fcb895f1425cbd2100ef10d9ea2, type: 3}
   swirl: {fileID: 21300000, guid: 3bec916b60e5147c9875a6c546d3310a, type: 3}
   fountain: {fileID: 21300000, guid: 58ebe0d22db2b4fd29016a4130790d81, type: 3}
+  mysteryEgg: {fileID: 21300000, guid: 7276a979594244473a0d19ff2d0035a3, type: 3}

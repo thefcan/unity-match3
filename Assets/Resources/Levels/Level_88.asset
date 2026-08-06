@@ -31,13 +31,11 @@ MonoBehaviour:
   - {x: 1, y: 6}
   - {x: 6, y: 6}
   fountainCells: []
+  eggCells: []
   bombCount: 5
   bombTimerMoves: 9
   tutorialText: 
   tutorialCells: []
-  starScores:
-  - 5600
-  - 8400
-  - 11200
+  starScores: e0150000d0200000c02b0000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

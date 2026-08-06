@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b9bb16fde0b406b2a96691787b6622dc, type: 3}
   m_Name: LevelCatalog
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   levels:
   - {fileID: 11400000, guid: 5f83a355fe4d9d18a4027d849257afbc, type: 2}
   - {fileID: 11400000, guid: 94186f4914aeedb551342fc020efa932, type: 2}
@@ -113,3 +113,23 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e68d51668ed6400083bcfa93d3ca791a, type: 2}
   - {fileID: 11400000, guid: 0da5eb07f3244f63805de312b4c0285c, type: 2}
   - {fileID: 11400000, guid: 1c3d6c302366437ab08c668b38c3ff8a, type: 2}
+  - {fileID: 11400000, guid: 7e52275ba8abc458aa2949cba3a856c1, type: 2}
+  - {fileID: 11400000, guid: b5d05dc79c7464bcd965356e27b1d6bb, type: 2}
+  - {fileID: 11400000, guid: 88f631001042846abaea7658ad4db012, type: 2}
+  - {fileID: 11400000, guid: 949faa6e29c984cc5b5a0bc05bb84142, type: 2}
+  - {fileID: 11400000, guid: ab57e9c976dca4a8abc4602d319a2d55, type: 2}
+  - {fileID: 11400000, guid: 55cb6bc643d1a4194819e07fa1ee7ab1, type: 2}
+  - {fileID: 11400000, guid: 0b1c39ecd675742bc9fd843a9ea9bd22, type: 2}
+  - {fileID: 11400000, guid: 20b2cf775e4f842ba89a5df815259c06, type: 2}
+  - {fileID: 11400000, guid: b00b97b1f204b487f8c371c040f6cddc, type: 2}
+  - {fileID: 11400000, guid: bff864fb1eac841adbdbb2b1474fc0d5, type: 2}
+  - {fileID: 11400000, guid: a767af7e6e30a4e96af04fa8904c8de2, type: 2}
+  - {fileID: 11400000, guid: eea02474fcdeb4808bf288dcdc815b62, type: 2}
+  - {fileID: 11400000, guid: bbbac0f428b47457885c4a1cd82ea56f, type: 2}
+  - {fileID: 11400000, guid: 84410b95a6a644078a07dc1976af99a2, type: 2}
+  - {fileID: 11400000, guid: b96e9d6d7af954f368e56f4bbc5ded46, type: 2}
+  - {fileID: 11400000, guid: 0a5a68f56419744dba1bde175cddbbb7, type: 2}
+  - {fileID: 11400000, guid: fd29c1577f60243e6a2e01a4eb83a16e, type: 2}
+  - {fileID: 11400000, guid: 6948c6a20ba024ccba2dc631677f4673, type: 2}
+  - {fileID: 11400000, guid: 9f6a5c350c0344b5db2a3282b2e97ea9, type: 2}
+  - {fileID: 11400000, guid: 95429f01288a14752915c823105f73e5, type: 2}

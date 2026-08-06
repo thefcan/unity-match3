@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 49865127264e2f4da82483ffcaa029e3, type: 3}
   m_Name: Level_50
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   width: 8
   height: 8
   colorCount: 5
@@ -29,9 +29,17 @@ MonoBehaviour:
     amount: 16
   jellyRows: 2
   jellyLayers: 1
-  starScores:
-  - 3600
-  - 5400
-  - 7200
+  lockCells: []
+  chocolateCells: []
+  ingredientCount: 0
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
+  tutorialText: 
+  tutorialCells: []
+  starScores: 100e000018150000201c0000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

@@ -28,13 +28,16 @@ MonoBehaviour:
   - {x: 4, y: 5}
   chocolateCells: []
   ingredientCount: 0
-  starScores:
-  - 3800
-  - 5700
-  - 7600
-  pointsPerTile: 10
-  cascadeMultiplierStep: 1
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
   tutorialText: MATCH BESIDE THE CAGES
   tutorialCells:
   - {x: 3, y: 5}
   - {x: 4, y: 5}
+  starScores: d80e000044160000b01d0000
+  pointsPerTile: 10
+  cascadeMultiplierStep: 1

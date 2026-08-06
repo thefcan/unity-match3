@@ -34,13 +34,16 @@ MonoBehaviour:
   - {x: 0, y: 7}
   - {x: 7, y: 7}
   ingredientCount: 0
-  starScores:
-  - 4300
-  - 6450
-  - 8600
-  pointsPerTile: 10
-  cascadeMultiplierStep: 1
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
   tutorialText: STOP THE CHOCOLATE SPREAD
   tutorialCells:
   - {x: 0, y: 7}
   - {x: 7, y: 7}
+  starScores: cc1000003219000098210000
+  pointsPerTile: 10
+  cascadeMultiplierStep: 1

@@ -38,9 +38,14 @@ MonoBehaviour:
   - {x: 0, y: 7}
   - {x: 7, y: 7}
   ingredientCount: 2
-  starScores:
-  - 5400
-  - 8100
-  - 10800
+  frostingCells: []
+  swirlCells: []
+  fountainCells: []
+  eggCells: []
+  bombCount: 0
+  bombTimerMoves: 9
+  tutorialText: 
+  tutorialCells: []
+  starScores: 18150000a41f0000302a0000
   pointsPerTile: 10
   cascadeMultiplierStep: 1

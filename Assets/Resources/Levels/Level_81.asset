@@ -36,6 +36,7 @@ MonoBehaviour:
   - {x: 5, y: 5, z: 1}
   swirlCells: []
   fountainCells: []
+  eggCells: []
   bombCount: 0
   bombTimerMoves: 9
   tutorialText: MATCH BESIDE THE FROSTING
@@ -44,9 +45,6 @@ MonoBehaviour:
   - {x: 3, y: 5}
   - {x: 4, y: 5}
   - {x: 5, y: 5}
-  starScores:
-  - 4900
-  - 7350
-  - 9800
+  starScores: 24130000b61c000048260000
   pointsPerTile: 10
   cascadeMultiplierStep: 1
