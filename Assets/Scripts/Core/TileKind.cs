@@ -61,5 +61,13 @@ namespace Match3.Core
         /// before the counter hits zero or the level is lost.
         /// </summary>
         Bomb,
+        /// <summary>
+        /// Mystery egg: colourless but MOBILE (falls, shuffles, swaps when the
+        /// partner makes a match). Any adjacent clear or direct blast cracks the
+        /// shell and it HATCHES into a random candy — usually plain, sometimes a
+        /// special (weights live in the resolver). The hatchling lands dormant and
+        /// joins play from the next wave on.
+        /// </summary>
+        MysteryEgg,
     }
 }

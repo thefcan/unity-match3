@@ -49,6 +49,7 @@ namespace Match3.Core
         public bool IsChocolate => Kind == TileKind.Chocolate;
         public bool IsIngredient => Kind == TileKind.Ingredient;
         public bool IsFish => Kind == TileKind.Fish;
+        public bool IsMysteryEgg => Kind == TileKind.MysteryEgg;
 
         /// <summary>
         /// Matches and clears like a plain candy (colour runs / squares, normal swap

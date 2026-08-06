@@ -282,6 +282,7 @@ namespace Match3.Core
             Collect(pos => board[pos].Value.Kind == TileKind.Frosting);
             Collect(pos => board[pos].Value.Kind == TileKind.Chocolate);
             Collect(pos => board[pos].Value.Kind == TileKind.Swirl);
+            Collect(pos => board[pos].Value.Kind == TileKind.MysteryEgg);
             Collect(pos => board[pos].Value.IsPlainCandy);
             Collect(pos => board[pos].Value.Kind != TileKind.Ingredient &&
                            board[pos].Value.Kind != TileKind.ChocolateFountain);
@@ -577,6 +578,47 @@ namespace Match3.Core
                     }
                 }
 
+                // ---- 2c3. Mystery eggs HATCH instead of clearing ----------------------
+                // A direct hit (the egg is in the clear set) or any orthogonally
+                // adjacent clear/creation cracks the shell. The cell never clears —
+                // the egg morphs into its hatchling in place, dormant for the rest
+                // of this wave (the next wave's match scan picks it up naturally).
+                // Cells are walked row-major so the hatch rolls consume the injected
+                // random in a board-derived order: same seed, same hatchlings.
+                var eggHatches = new List<EggHatch>();
+                if (HasEgg(board))
+                {
+                    var eggCells = new HashSet<GridPosition>();
+                    var eggSeeds = new List<GridPosition>();
+                    foreach (GridPosition pos in clearSet)
+                    {
+                        if (board[pos] is { } t && t.Kind == TileKind.MysteryEgg)
+                            eggCells.Add(pos);
+                        else
+                            eggSeeds.Add(pos);
+                    }
+                    foreach (SpecialCreation creation in creations)
+                        eggSeeds.Add(creation.Position);
+                    foreach (GridPosition seed in eggSeeds)
+                    {
+                        foreach (GridPosition n in OrthogonalNeighbors(board, seed))
+                            if (board[n] is { } t && t.Kind == TileKind.MysteryEgg &&
+                                (_locks == null || !_locks.HasLock(n)))
+                                eggCells.Add(n); // a caged egg sleeps through nearby clears
+                    }
+
+                    foreach (GridPosition pos in eggCells.OrderBy(p => p.X).ThenBy(p => p.Y))
+                    {
+                        clearSet.Remove(pos); // the shell cracks; the cell itself never clears
+                        if (_factory == null || _random == null)
+                            continue; // classic mode: the egg is inert scenery
+                        Tile shell = board[pos].Value;
+                        Tile hatched = RollHatch();
+                        board.SetTile(pos, hatched);
+                        eggHatches.Add(new EggHatch(pos, shell, hatched));
+                    }
+                }
+
                 // ---- 2d. Chocolate (and swirls) next to anything cleared crumble ------
                 var adjacencySeeds = new List<GridPosition>(clearSet);
                 foreach (SpecialCreation creation in creations)
@@ -606,7 +648,7 @@ namespace Match3.Core
                 }
 
                 if (clearSet.Count == 0 && creations.Count == 0 && lockBreaks.Count == 0 &&
-                    ingredientExits.Count == 0 && frostingHits.Count == 0)
+                    ingredientExits.Count == 0 && frostingHits.Count == 0 && eggHatches.Count == 0)
                     break; // e.g. a lone primed wrapped that vanished — nothing to do
 
                 // ---- 3. Snapshot + score (on the final clear set) ---------------------
@@ -663,7 +705,7 @@ namespace Match3.Core
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
                                           creations, detonations, jellyHits, lockBreaks,
                                           Array.Empty<ChocolateSpread>(), ingredientExits,
-                                          fishStrikes, frostingHits, Array.Empty<BombTick>()));
+                                          fishStrikes, frostingHits, Array.Empty<BombTick>(), eggHatches));
                 cascadeIndex++;
             }
 
@@ -781,6 +823,37 @@ namespace Match3.Core
             spawns[pick] = new TileSpawn(bomb, chosen.Position, chosen.SpawnHeightOffset);
             _bombs.Arm(bomb.Id, _bombTimerMoves);
             _bombsToSpawn--;
+        }
+
+        /// <summary>
+        /// What crawls out of a cracked shell. Weights (of 100): 70 plain, 15 striped
+        /// (orientation rolled like the finale's conversions), 10 wrapped, 5 fish.
+        /// Roll order is fixed — kind, colour, then stripe orientation — so scripted
+        /// tests can pin every boundary.
+        /// </summary>
+        private Tile RollHatch()
+        {
+            int kindRoll = _random.Next(100);
+            int color = _random.Next(_factory.ColorCount);
+            if (kindRoll < 70)
+                return _factory.Create(color);
+            if (kindRoll < 85)
+            {
+                TileKind stripe = _random.Next(2) == 0 ? TileKind.StripedV : TileKind.StripedH;
+                return _factory.CreateSpecial(color, stripe);
+            }
+            if (kindRoll < 95)
+                return _factory.CreateSpecial(color, TileKind.Wrapped);
+            return _factory.CreateSpecial(color, TileKind.Fish);
+        }
+
+        private static bool HasEgg(Board board)
+        {
+            for (int x = 0; x < board.Width; x++)
+                for (int y = 0; y < board.Height; y++)
+                    if (board[new GridPosition(x, y)] is { } tile && tile.Kind == TileKind.MysteryEgg)
+                        return true;
+            return false;
         }
 
         private static int CountBombs(Board board)

@@ -74,6 +74,9 @@ namespace Match3.Core
         /// <summary>Creates a chocolate fountain (colourless, immobile, indestructible chocolate source).</summary>
         public Tile CreateFountain() => new Tile(_nextId++, Tile.NoColor, TileKind.ChocolateFountain);
 
+        /// <summary>Creates a mystery egg (colourless, FALLS; hatches when hit — the roll is the resolver's job).</summary>
+        public Tile CreateMysteryEgg() => new Tile(_nextId++, Tile.NoColor, TileKind.MysteryEgg);
+
         /// <summary>Creates a bomb candy: coloured and matchable, with its countdown tracked in <see cref="BombTimers"/>.</summary>
         public Tile CreateBomb(int colorIndex)
         {

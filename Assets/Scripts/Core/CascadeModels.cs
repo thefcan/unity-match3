@@ -231,6 +231,27 @@ namespace Match3.Core
     }
 
     /// <summary>
+    /// A mystery egg cracking open this wave. <see cref="Replaced"/> is the shell
+    /// that stood in the cell; <see cref="Hatched"/> is the tile now standing there
+    /// (the view rebinds the cell's visual to it, exactly like a ChocolateSpread).
+    /// The hatchling lands DORMANT: it neither matches nor detonates until the
+    /// next wave picks it up naturally.
+    /// </summary>
+    public readonly struct EggHatch
+    {
+        public GridPosition Position { get; }
+        public Tile Replaced { get; }
+        public Tile Hatched { get; }
+
+        public EggHatch(GridPosition position, Tile replaced, Tile hatched)
+        {
+            Position = position;
+            Replaced = replaced;
+            Hatched = hatched;
+        }
+    }
+
+    /// <summary>
     /// A bomb candy's countdown falling by one at the end of a player move.
     /// <see cref="Remaining"/> is the value AFTER the tick — 0 means it exploded
     /// and the level is lost.
@@ -310,6 +331,9 @@ namespace Match3.Core
         /// <summary>Bomb countdowns ticking (only ever on a move's final, clear-less step).</summary>
         public IReadOnlyList<BombTick> BombTicks { get; }
 
+        /// <summary>Mystery eggs that cracked open this wave (their cells never clear).</summary>
+        public IReadOnlyList<EggHatch> EggHatches { get; }
+
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
@@ -386,6 +410,29 @@ namespace Match3.Core
             IReadOnlyList<FishStrike> fishStrikes,
             IReadOnlyList<FrostingHit> frostingHits,
             IReadOnlyList<BombTick> bombTicks)
+            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations,
+                   jellyHits, lockBreaks, chocolateSpreads, ingredientExits,
+                   fishStrikes, frostingHits, bombTicks, Array.Empty<EggHatch>())
+        {
+        }
+
+        public CascadeStep(
+            int cascadeIndex,
+            IReadOnlyList<ClearedTile> cleared,
+            IReadOnlyList<TileFall> falls,
+            IReadOnlyList<TileSpawn> spawns,
+            int points,
+            IReadOnlyList<int> runLengths,
+            IReadOnlyList<SpecialCreation> creations,
+            IReadOnlyList<Detonation> detonations,
+            IReadOnlyList<JellyHit> jellyHits,
+            IReadOnlyList<LockBreak> lockBreaks,
+            IReadOnlyList<ChocolateSpread> chocolateSpreads,
+            IReadOnlyList<IngredientExit> ingredientExits,
+            IReadOnlyList<FishStrike> fishStrikes,
+            IReadOnlyList<FrostingHit> frostingHits,
+            IReadOnlyList<BombTick> bombTicks,
+            IReadOnlyList<EggHatch> eggHatches)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -402,6 +449,7 @@ namespace Match3.Core
             FishStrikes = fishStrikes ?? throw new ArgumentNullException(nameof(fishStrikes));
             FrostingHits = frostingHits ?? throw new ArgumentNullException(nameof(frostingHits));
             BombTicks = bombTicks ?? throw new ArgumentNullException(nameof(bombTicks));
+            EggHatches = eggHatches ?? throw new ArgumentNullException(nameof(eggHatches));
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
