@@ -17,11 +17,11 @@ namespace Match3.Game
         {
             Game.BuildNewGame();
 
-            // Moves mode opens with the diagonal grow-in curtain; the Init phase
-            // itself keeps input blocked, so no extra gate is needed. Time attack
-            // starts instantly (the ticking clock is the show), and reduced
+            // Every mode opens with the diagonal grow-in curtain: the Init phase
+            // keeps input blocked, and the time-attack clock only ticks in
+            // Playing/Resolving — the reveal costs the player nothing. Reduced
             // motion skips straight to play.
-            if (Game.Mode == GameMode.Moves && !Prefs.ReducedMotionOn)
+            if (!Prefs.ReducedMotionOn)
             {
                 Game.RunCoroutine(RevealThenStart());
                 return;

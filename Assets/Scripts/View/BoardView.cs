@@ -783,6 +783,9 @@ namespace Match3.View
                 var hatches = new List<IEnumerator>();
                 foreach (EggHatch hatch in step.EggHatches)
                 {
+                    // A puff of shell fragments as the crack starts (reduced motion
+                    // shrinks the burst inside TileBurst itself).
+                    EffectsView.TileBurst(GridToWorld(hatch.Position), new Color(0.96f, 0.9f, 0.75f), 8);
                     if (_viewsById.TryGetValue(hatch.Replaced.Id, out TileView view))
                     {
                         _viewsById.Remove(hatch.Replaced.Id);

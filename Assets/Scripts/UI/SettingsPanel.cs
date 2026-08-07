@@ -293,11 +293,20 @@ namespace Match3.UI
             knob.raycastTarget = false;
 
             bool state = initial;
+            Coroutine glide = null;
             void SetVisual(bool on)
             {
                 state = on;
                 back.color = on ? UiTheme.Cta : UiTheme.Slot;
-                knobRect.anchoredPosition = new Vector2(on ? 31f : -31f, 0f);
+                float targetX = on ? 31f : -31f;
+                if (glide != null)
+                    StopCoroutine(glide);
+                // Glide only when the panel is actually on screen (build-time calls
+                // and reduced motion snap). Unscaled: this panel lives at timeScale 0.
+                if (isActiveAndEnabled && _root != null && _root.activeSelf && !Prefs.ReducedMotionOn)
+                    glide = StartCoroutine(GlideKnob(knobRect, targetX));
+                else
+                    knobRect.anchoredPosition = new Vector2(targetX, 0f);
             }
             SetVisual(initial);
 
@@ -312,6 +321,17 @@ namespace Match3.UI
             });
 
             return (SetVisual, button);
+        }
+
+        private static System.Collections.IEnumerator GlideKnob(RectTransform knob, float toX)
+        {
+            float fromX = knob.anchoredPosition.x;
+            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime / 0.12f)
+            {
+                knob.anchoredPosition = new Vector2(Mathf.Lerp(fromX, toX, Mathf.SmoothStep(0f, 1f, t)), 0f);
+                yield return null;
+            }
+            knob.anchoredPosition = new Vector2(toX, 0f);
         }
 
         private void BuildVolumeSlider(Transform parent, Vector2 position)
