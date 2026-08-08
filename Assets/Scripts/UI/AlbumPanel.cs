@@ -84,7 +84,8 @@ namespace Match3.UI
         {
             _card.color = UiTheme.ThemeCard;
             Refresh();
-            UiTween.OpenPanel(this, _root, _card.transform);
+            // Hide (not the default close) so a back press also folds the ceremony.
+            UiTween.OpenPanel(this, _root, _card.transform, Hide);
         }
 
         private void Hide()
@@ -247,6 +248,12 @@ namespace Match3.UI
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = OverlayColor;
 
+            // Tapping the dim outside the card closes the panel (the card's own
+            // raycast blocks pass-through - the album ceremony's idiom).
+            var dismiss = _root.AddComponent<Button>();
+            dismiss.transition = Selectable.Transition.None;
+            dismiss.onClick.AddListener(OnOpenerClicked);
+
             GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(880f, 1180f));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
@@ -319,7 +326,9 @@ namespace Match3.UI
             Stretch(_openLabel.rectTransform);
 
             GameObject closeGo = CreateRect("CloseButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 110f));
-            closeGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -530f);
+            // -560, not -530: OPEN PACK's bottom edge reaches -495 and the two
+            // pills were overlapping by 20px (mis-taps opened packs).
+            closeGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -560f);
             var closeImage = closeGo.AddComponent<Image>();
             UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
             var closeButton = closeGo.AddComponent<Button>();

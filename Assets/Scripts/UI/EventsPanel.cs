@@ -282,6 +282,12 @@ namespace Match3.UI
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = OverlayColor;
 
+            // Tapping the dim outside the card closes the panel (the card's own
+            // raycast blocks pass-through - the album ceremony's idiom).
+            var dismiss = _root.AddComponent<Button>();
+            dismiss.transition = Selectable.Transition.None;
+            dismiss.onClick.AddListener(OnOpenerClicked);
+
             GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(880f, 1180f));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
@@ -420,12 +426,15 @@ namespace Match3.UI
             for (int i = 0; i < _raceRows.Length; i++)
                 _raceRows[i] = BuildRaceRow(group, 244f - i * 112f);
 
-            _racePreview = CreateText("RewardPreview", group, new Vector2(0f, -448f), 26f, FontStyles.Bold);
+            _racePreview = CreateText("RewardPreview", group, new Vector2(0f, -515f), 26f, FontStyles.Bold);
             UiTheme.ApplyFont(_racePreview, UiTheme.BodyFont);
             _racePreview.color = UiTheme.TextDim;
 
+            // -420, not -382: the sixth racer row's bottom edge reaches -364 and
+            // the race-end CLAIM pill was riding over it (the preview moved down
+            // with it to keep clear).
             _raceClaimGo = CreateRect("RaceClaim", group, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 96f));
-            _raceClaimGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -382f);
+            _raceClaimGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -420f);
             var claimImage = _raceClaimGo.AddComponent<Image>();
             UiTheme.ApplySprite(claimImage, UiTheme.PillPink, Color.white);
             var claimButton = _raceClaimGo.AddComponent<Button>();

@@ -25,6 +25,7 @@ namespace Match3.UI
         private GameManager _game;
         private readonly Image[] _pills = new Image[3];
         private readonly TMP_Text[] _counts = new TMP_Text[3];
+        private readonly Button[] _buttons = new Button[3];
 
         public static BoosterTray Attach(Transform safe, GameManager game)
         {
@@ -81,9 +82,16 @@ namespace Match3.UI
                 if (_pills[i] == null)
                     continue;
                 bool armed = _game.ArmedBooster == Slots[i].kind;
-                _pills[i].color = armed ? UiTheme.Cta : UiTheme.ThemeSlot;
+                int count = MetaService.BoosterCount(Slots[i].kind);
+                // A spent booster reads as spent: dimmed pill, inert button —
+                // no full-colour pill that only plays a click sound.
+                Color pill = armed ? UiTheme.Cta : UiTheme.ThemeSlot;
+                pill.a = count > 0 ? 1f : 0.4f;
+                _pills[i].color = pill;
+                if (_buttons[i] != null)
+                    _buttons[i].interactable = count > 0;
                 if (_counts[i] != null)
-                    _counts[i].text = MetaService.BoosterCount(Slots[i].kind).ToString();
+                    _counts[i].text = count.ToString();
             }
         }
 
@@ -106,6 +114,7 @@ namespace Match3.UI
 
                 var button = pillGo.GetComponent<Button>();
                 pillGo.AddComponent<PressableButton>();
+                _buttons[i] = button;
                 button.targetGraphic = pill;
                 button.onClick.AddListener(() =>
                 {

@@ -140,6 +140,16 @@ namespace Match3.Cloud
             rootRect.sizeDelta = Vector2.zero;
             _root.GetComponent<Image>().color = OverlayColor;
 
+            // Tapping the dim outside the card closes the panel (the card's own
+            // raycast blocks pass-through - the album ceremony's idiom).
+            var dismiss = _root.AddComponent<Button>();
+            dismiss.transition = Selectable.Transition.None;
+            dismiss.onClick.AddListener(() =>
+            {
+                AudioManager.Play(Sfx.Button);
+                Hide();
+            });
+
             var cardGo = new GameObject("Card", typeof(RectTransform), typeof(Image));
             cardGo.transform.SetParent(_root.transform, false);
             var cardRect = (RectTransform)cardGo.transform;

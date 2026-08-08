@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Match3.Game;
@@ -24,18 +25,45 @@ namespace Match3.UI
         // replaces the old tween instead of letting two fades fight the alpha.
         private static readonly Dictionary<GameObject, Coroutine> Live = new Dictionary<GameObject, Coroutine>();
 
+        // Back-button support: every OpenPanel registers here, and the Android
+        // back key (Escape) closes the most recently opened panel before the
+        // app-level double-press-to-quit gets a say.
+        private static readonly List<(GameObject root, Action close)> OpenStack = new List<(GameObject, Action)>();
+
+        /// <summary>Closes the top-most open panel. False when nothing is open.</summary>
+        public static bool CloseTopPanel()
+        {
+            for (int i = OpenStack.Count - 1; i >= 0; i--)
+            {
+                (GameObject root, Action close) = OpenStack[i];
+                if (root == null || !root.activeSelf)
+                {
+                    OpenStack.RemoveAt(i); // scene changes leave dead entries behind
+                    continue;
+                }
+                close();
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>
         /// Activates the panel and plays fade-in + card SoftOpen. Raycasts block
         /// from frame one — the tween is dressing, never an input gap. Falls back
         /// to an instant show when the host can't run coroutines yet (build-time
         /// calls on an inactive hierarchy) or under reduced motion.
+        /// <paramref name="closeAction"/> is what the back button should invoke —
+        /// panels whose Hide does extra work (Album's ceremony) pass it explicitly.
         /// </summary>
-        public static void OpenPanel(MonoBehaviour host, GameObject root, Transform card)
+        public static void OpenPanel(MonoBehaviour host, GameObject root, Transform card, Action closeAction = null)
         {
             CanvasGroup group = EnsureGroup(root);
             Stop(host, root);
             root.SetActive(true);
             group.blocksRaycasts = true;
+
+            OpenStack.RemoveAll(entry => entry.root == root);
+            OpenStack.Add((root, closeAction ?? (() => ClosePanel(host, root))));
 
             if (host == null || !host.isActiveAndEnabled || Prefs.ReducedMotionOn)
             {
@@ -55,6 +83,7 @@ namespace Match3.UI
             if (root == null || !root.activeSelf)
                 return;
 
+            OpenStack.RemoveAll(entry => entry.root == root);
             Stop(host, root);
             CanvasGroup group = EnsureGroup(root);
             if (host == null || !host.isActiveAndEnabled || Prefs.ReducedMotionOn)

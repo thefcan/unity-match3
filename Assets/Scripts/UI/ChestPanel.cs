@@ -110,6 +110,12 @@ namespace Match3.UI
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = OverlayColor;
 
+            // Tapping the dim outside the card closes the panel (the card's own
+            // raycast blocks pass-through - the album ceremony's idiom).
+            var dismiss = _root.AddComponent<Button>();
+            dismiss.transition = Selectable.Transition.None;
+            dismiss.onClick.AddListener(OnOpenerClicked);
+
             GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 1000f));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);

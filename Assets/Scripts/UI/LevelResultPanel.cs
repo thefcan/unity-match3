@@ -34,6 +34,7 @@ namespace Match3.UI
         private GameObject _rescueButton;
         private TMP_Text _rescueLabel;
         private Image[] _starPips;
+        private Image _actionImage;
         private TMP_Text _buttonLabel;
         private GameObject _menuButton;
         private System.Action _primaryAction;
@@ -178,6 +179,12 @@ namespace Match3.UI
                     ? $"DEFUSE  +{GameManager.RescueMoves} MOVES  (×{MetaService.Rescues})"
                     : $"SAVE ME  +{GameManager.RescueMoves} MOVES  (×{MetaService.Rescues})";
                 _rescueButton.SetActive(true);
+
+                // Rescue is the star of this card — Retry steps down to the
+                // secondary style so two identical pink CTAs never compete.
+                // (Show resets the primary look on every outcome.)
+                UiTheme.ApplySprite(_actionImage, UiTheme.Pill, UiTheme.Slot);
+                _buttonLabel.color = UiTheme.TextDim;
             }
         }
 
@@ -214,6 +221,11 @@ namespace Match3.UI
         private void Show(string title, string summary, string buttonText, System.Action primaryAction)
         {
             _card.color = UiTheme.ThemeCard; // the ambience may have drifted since Build
+            // The fail path may have demoted the primary button — restore it.
+            UiTheme.ApplySprite(_actionImage, UiTheme.PillPink, Color.white);
+            if (_actionImage.sprite == null)
+                _actionImage.color = ButtonColor;
+            _buttonLabel.color = Color.white;
             _title.text = title;
             _summary.text = summary;
             _buttonLabel.text = buttonText;
@@ -313,6 +325,7 @@ namespace Match3.UI
             UiTheme.ApplySprite(buttonImage, UiTheme.PillPink, Color.white);
             if (buttonImage.sprite == null)
                 buttonImage.color = ButtonColor;
+            _actionImage = buttonImage;
             var button = buttonGo.AddComponent<Button>();
             buttonGo.AddComponent<PressableButton>();
             button.targetGraphic = buttonImage;

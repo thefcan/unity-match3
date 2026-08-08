@@ -214,6 +214,38 @@ namespace Match3.UI
 
             scroll.onValueChanged.AddListener(_ => RefreshVisibleRows());
             RefreshVisibleRows();
+            ScrollToCurrentLevel(viewport);
+        }
+
+        /// <summary>
+        /// Opens the map centred on the row the player will actually play next —
+        /// landing on level 1 every visit costs a late player ~15 screens of
+        /// scrolling on the 120-level campaign. Applied twice: once immediately
+        /// (no top-of-list flash) and again a frame later, because the viewport
+        /// rect only settles after the CanvasScaler's first layout pass.
+        /// </summary>
+        private void ScrollToCurrentLevel(RectTransform viewport)
+        {
+            ApplyCurrentLevelScroll(viewport);
+            StartCoroutine(ReapplyScrollAfterLayout(viewport));
+        }
+
+        private System.Collections.IEnumerator ReapplyScrollAfterLayout(RectTransform viewport)
+        {
+            yield return null;
+            ApplyCurrentLevelScroll(viewport);
+        }
+
+        private void ApplyCurrentLevelScroll(RectTransform viewport)
+        {
+            int index = Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1, _catalog.Count) - 1;
+            Canvas.ForceUpdateCanvases();
+            float rowCentre = ListPadding + index * RowPitch + RowHeight * 0.5f;
+            float viewportHeight = viewport.rect.height;
+            float maxScroll = Mathf.Max(0f, _listContent.sizeDelta.y - viewportHeight);
+            float target = Mathf.Clamp(rowCentre - viewportHeight * 0.5f, 0f, maxScroll);
+            _listContent.anchoredPosition = new Vector2(_listContent.anchoredPosition.x, target);
+            RefreshVisibleRows();
         }
 
         /// <summary>Rebinds the row pool to the catalog window under the viewport. No-op until the window moves.</summary>
@@ -394,7 +426,9 @@ namespace Match3.UI
                 _label.text = $"Level {number}";
                 _label.color = unlocked ? UiTheme.TextPrimary : UiTheme.TextDim;
 
-                bool chapterStart = number > 1 && (number - 1) % Match3.Core.ThemeCurve.ChapterLength == 0;
+                // Level 1 wears its chapter caption too — "CHAPTER 1 — PURPLE
+                // NIGHT" was authored but never shown.
+                bool chapterStart = (number - 1) % Match3.Core.ThemeCurve.ChapterLength == 0;
                 _chapter.gameObject.SetActive(chapterStart);
                 if (chapterStart)
                 {

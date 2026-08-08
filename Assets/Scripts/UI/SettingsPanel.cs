@@ -181,6 +181,12 @@ namespace Match3.UI
             _root = CreateRect("Overlay", transform, Vector2.zero, Vector2.one, Vector2.zero);
             _root.AddComponent<Image>().color = OverlayColor; // also blocks board input
 
+            // Tapping the dim outside the card closes the panel (the card's own
+            // raycast blocks pass-through - the album ceremony's idiom).
+            var dismiss = _root.AddComponent<Button>();
+            dismiss.transition = Selectable.Transition.None;
+            dismiss.onClick.AddListener(OnOpenerClicked);
+
             GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 1620f));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
@@ -310,15 +316,32 @@ namespace Match3.UI
             }
             SetVisual(initial);
 
-            var button = go.GetComponent<Button>();
-            go.AddComponent<PressableButton>();
-            button.targetGraphic = back;
-            button.onClick.AddListener(() =>
+            void Toggle()
             {
                 AudioManager.Play(Sfx.Button);
                 SetVisual(!state);
                 onChanged(state);
-            });
+            }
+
+            var button = go.GetComponent<Button>();
+            go.AddComponent<PressableButton>();
+            button.targetGraphic = back;
+            button.onClick.AddListener(Toggle);
+
+            // The whole row toggles, not just the 128px pill — tapping the label
+            // of an accessibility setting must count. Invisible, slotted UNDER
+            // the switch so the pill keeps its own press feedback.
+            var rowGo = new GameObject("RowTap", typeof(RectTransform), typeof(Image), typeof(Button));
+            rowGo.transform.SetParent(parent, false);
+            var rowRect = (RectTransform)rowGo.transform;
+            rowRect.anchorMin = rowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rowRect.sizeDelta = new Vector2(760f, 100f);
+            rowRect.anchoredPosition = new Vector2(0f, y);
+            rowGo.GetComponent<Image>().color = Color.clear;
+            var rowButton = rowGo.GetComponent<Button>();
+            rowButton.transition = Selectable.Transition.None;
+            rowButton.onClick.AddListener(Toggle);
+            rowGo.transform.SetSiblingIndex(go.transform.GetSiblingIndex());
 
             return (SetVisual, button);
         }
@@ -379,7 +402,9 @@ namespace Match3.UI
             var handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
             handleGo.transform.SetParent(handleArea.transform, false);
             var handleRect = (RectTransform)handleGo.transform;
-            handleRect.sizeDelta = new Vector2(52f, 52f);
+            // The Slider stretches the handle's cross axis to the 44px track, and
+            // sizeDelta ADDS to that — 8 yields a true 52x52 circle, not an ellipse.
+            handleRect.sizeDelta = new Vector2(52f, 8f);
             var handle = handleGo.GetComponent<Image>();
             UiTheme.ApplySprite(handle, UiTheme.CircleSprite, Color.white);
 

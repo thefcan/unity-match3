@@ -74,6 +74,11 @@ namespace Match3.Game
                 return;
             }
 
+            // Menu: an open overlay swallows the back press — panels close
+            // (most recent first) before the double-press-to-quit gets a say.
+            if (Match3.UI.UiTween.CloseTopPanel())
+                return;
+
             if (Time.unscaledTime - _lastBackPress < 2f)
                 Application.Quit();
             else
