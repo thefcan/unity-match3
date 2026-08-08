@@ -142,7 +142,12 @@ namespace Match3.UI
                 int progress = tracker.Progress(i);
                 count.text = $"{progress}/{objective.TargetAmount}";
                 count.color = done ? UiTheme.Gold : UiTheme.TextPrimary;
-                outline.gameObject.SetActive(done); // gold rim on finished goals (Stitch)
+                // The gold rim pops in the moment a goal completes (Stitch) — the
+                // rim used to blink on with no beat of its own.
+                bool wasDone = outline.gameObject.activeSelf;
+                outline.gameObject.SetActive(done);
+                if (done && !wasDone && !Prefs.ReducedMotionOn)
+                    StartCoroutine(UiTween.ScalePop(outline.transform, 0.25f));
 
                 // Sparks only on an INCREASE seen while the chip was already on
                 // screen — the first refresh of a level just sets the baseline.

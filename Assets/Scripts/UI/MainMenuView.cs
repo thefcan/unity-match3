@@ -27,8 +27,11 @@ namespace Match3.UI
 
         private LevelCatalog _catalog;
         private RectTransform _listContent;
+        private RectTransform _listViewport;
         private readonly System.Collections.Generic.List<LevelRow> _rows = new System.Collections.Generic.List<LevelRow>();
         private int _firstRowIndex = -1;
+        private TMP_Text _continueLabel;
+        private System.Func<int> _continueLabelFor;
 
         private void OnEnable()
         {
@@ -40,11 +43,19 @@ namespace Match3.UI
             CloudBridge.ProgressRefreshed -= HandleProgressRefreshed;
         }
 
-        /// <summary>A cloud merge changed the save — rebind the visible rows to it.</summary>
+        /// <summary>
+        /// A cloud merge changed the save — rebind the visible rows, re-label the
+        /// Continue CTA and jump the map to the (possibly much further) level the
+        /// merge unlocked.
+        /// </summary>
         private void HandleProgressRefreshed()
         {
             _firstRowIndex = -1;
             RefreshVisibleRows();
+            if (_continueLabel != null && _continueLabelFor != null)
+                _continueLabel.text = $"Continue  –  Level {_continueLabelFor()}  >";
+            if (_listContent != null && _listViewport != null)
+                ApplyCurrentLevelScroll(_listViewport);
         }
 
         private void Start()
@@ -214,6 +225,7 @@ namespace Match3.UI
 
             scroll.onValueChanged.AddListener(_ => RefreshVisibleRows());
             RefreshVisibleRows();
+            _listViewport = viewport;
             ScrollToCurrentLevel(viewport);
         }
 
@@ -459,12 +471,22 @@ namespace Match3.UI
         private void BuildButtons(Transform canvas)
         {
             var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
-            int next = Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1, catalog != null && catalog.Count > 0 ? catalog.Count : 1);
 
-            // primary CTA: jump straight into the furthest unlocked level
-            Button cta = NewButton("ContinueButton", canvas, $"Continue  –  Level {next}  >", UiTheme.PillPink, Color.white,
-                UiTheme.TextPrimary, () => StartLevel(catalog != null ? catalog.Get(next) : null, next));
+            // The CTA reads progress at CLICK time, not at build time: a cloud
+            // merge landing while the menu is open used to leave the button
+            // pointing at the old level (its label is refreshed alongside).
+            int NextLevel() => Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1,
+                                           catalog != null && catalog.Count > 0 ? catalog.Count : 1);
+
+            Button cta = NewButton("ContinueButton", canvas, $"Continue  –  Level {NextLevel()}  >", UiTheme.PillPink, Color.white,
+                UiTheme.TextPrimary, () =>
+                {
+                    int level = NextLevel();
+                    StartLevel(catalog != null ? catalog.Get(level) : null, level);
+                });
             Anchor((RectTransform)cta.transform, new Vector2(0.5f, 0f), new Vector2(0f, 260f), new Vector2(720f, 132f));
+            _continueLabel = cta.GetComponentInChildren<TMP_Text>();
+            _continueLabelFor = NextLevel;
 
             Button timeAttack = NewButton("TimeAttackButton", canvas, "Time Attack", UiTheme.Pill, UiTheme.Card,
                 UiTheme.TextDim, StartTimeAttack);

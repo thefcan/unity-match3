@@ -26,6 +26,7 @@ namespace Match3.UI
         private readonly Image[] _pills = new Image[3];
         private readonly TMP_Text[] _counts = new TMP_Text[3];
         private readonly Button[] _buttons = new Button[3];
+        private readonly Coroutine[] _pulses = new Coroutine[3];
 
         public static BoosterTray Attach(Transform safe, GameManager game)
         {
@@ -58,6 +59,15 @@ namespace Match3.UI
 
         private void OnDisable()
         {
+            // Coroutines die with the object — keep the pulse bookkeeping honest
+            // and leave every pill at rest scale for the next enable.
+            for (int i = 0; i < _pulses.Length; i++)
+            {
+                _pulses[i] = null;
+                if (_pills[i] != null)
+                    _pills[i].transform.localScale = Vector3.one;
+            }
+
             if (_game == null) return;
             _game.BoostersChanged -= Refresh;
             _game.PhaseChanged -= HandlePhaseChanged;
@@ -92,6 +102,29 @@ namespace Match3.UI
                     _buttons[i].interactable = count > 0;
                 if (_counts[i] != null)
                     _counts[i].text = count.ToString();
+
+                // The armed booster breathes, so "which one is loaded?" is
+                // readable from across the board and not just from its tint.
+                if (armed && _pulses[i] == null && !Prefs.ReducedMotionOn && isActiveAndEnabled)
+                    _pulses[i] = StartCoroutine(PulsePill(_pills[i].transform, i));
+                else if (!armed && _pulses[i] != null)
+                {
+                    StopCoroutine(_pulses[i]);
+                    _pulses[i] = null;
+                    _pills[i].transform.localScale = Vector3.one;
+                }
+            }
+        }
+
+        /// <summary>Armed-pill breathing: 1.0 → 1.05 sine, unscaled (a booster can be armed while paused).</summary>
+        private System.Collections.IEnumerator PulsePill(Transform pill, int index)
+        {
+            float phase = 0f;
+            while (true)
+            {
+                phase += Time.unscaledDeltaTime * 3.2f;
+                pill.localScale = Vector3.one * (1f + 0.05f * (0.5f + 0.5f * Mathf.Sin(phase)));
+                yield return null;
             }
         }
 

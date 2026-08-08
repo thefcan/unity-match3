@@ -93,7 +93,7 @@ namespace Match3.UI
             _card.color = UiTheme.ThemeCard;
             _title.text = definition.tutorialText;
             PositionRings(definition.tutorialCells);
-            _root.SetActive(true);
+            UiTween.OpenPanel(this, _root, _card.transform);
             if (_pulse != null)
                 StopCoroutine(_pulse);
             _pulse = StartCoroutine(Pulse());
@@ -107,7 +107,7 @@ namespace Match3.UI
                 _pulse = null;
             }
             if (_root != null)
-                _root.SetActive(false);
+                UiTween.ClosePanel(this, _root);
         }
 
         // ---- Construction ---------------------------------------------------------------

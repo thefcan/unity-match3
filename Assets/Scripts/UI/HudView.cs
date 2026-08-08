@@ -223,10 +223,43 @@ namespace Match3.UI
                 SetBanner(string.Empty);
         }
 
+        private Coroutine _bannerPop;
+
+        /// <summary>
+        /// The centre banner ("No Moves! Shuffling…", the finale's SWEET!). Words
+        /// that used to appear and vanish instantly now pop in on the house curve
+        /// — unscaled, because shuffles and the finale run while the board is
+        /// paused. Clearing it is still instant: play resumes, the word goes.
+        /// </summary>
         private void SetBanner(string text)
         {
-            if (messageText != null)
-                messageText.text = text;
+            if (messageText == null)
+                return;
+
+            if (_bannerPop != null)
+            {
+                StopCoroutine(_bannerPop);
+                _bannerPop = null;
+            }
+
+            messageText.text = text;
+            if (string.IsNullOrEmpty(text))
+            {
+                messageText.transform.localScale = Vector3.one;
+                return;
+            }
+            if (Prefs.ReducedMotionOn || !isActiveAndEnabled)
+            {
+                messageText.transform.localScale = Vector3.one;
+                return;
+            }
+            _bannerPop = StartCoroutine(PopBanner());
+        }
+
+        private System.Collections.IEnumerator PopBanner()
+        {
+            yield return UiTween.ScalePop(messageText.transform, 0.25f);
+            _bannerPop = null;
         }
 
         private void HandleTimeBonus(float seconds)

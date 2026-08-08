@@ -23,6 +23,8 @@ namespace Match3.UI
         private RectTransform _barFill;
         private TMP_Text _resultLine;
         private TMP_Text _claimLabel;
+        private Button _claimButton;
+        private Image _claimImage;
 
         public static ChestPanel Attach(Canvas canvas, Transform buttonHost)
         {
@@ -57,7 +59,12 @@ namespace Match3.UI
 
             int pending = StarChest.RepeatingChestsEarned(total, meta.LastChestStars) +
                           StarChest.MilestonesCrossed(total, meta.LastChestStars);
+            // Nothing to open reads as nothing to open: dim pill, inert button.
             _claimLabel.text = pending > 0 ? $"OPEN {pending}" : "CLAIM";
+            if (_claimButton != null)
+                _claimButton.interactable = pending > 0;
+            if (_claimImage != null)
+                _claimImage.color = new Color(1f, 1f, 1f, pending > 0 ? 1f : 0.4f);
             _nextLine.text = pending > 0
                 ? $"{pending} chest{(pending > 1 ? "s" : "")} ready!"
                 : $"{StarChest.StarsPerChest - into} stars to the next chest";
@@ -188,6 +195,8 @@ namespace Match3.UI
             claimGo.AddComponent<PressableButton>();
             claimButton.targetGraphic = claimImage;
             claimButton.onClick.AddListener(OnClaimClicked);
+            _claimButton = claimButton;
+            _claimImage = claimImage;
             _claimLabel = CreateText("Label", claimGo.transform, Vector2.zero, 48f, FontStyles.Bold);
             UiTheme.ApplyFont(_claimLabel, UiTheme.ButtonFont);
             Stretch(_claimLabel.rectTransform);
