@@ -24,6 +24,7 @@ namespace Match3.UI
         private static readonly Color OverlayColor = new Color(0f, 0f, 0f, 0.78f);
 
         private GameManager _game; // null => menu mode
+        private float _contentShift;  // menu's shorter card moves every row with its top edge
         private GameObject _root;
         private Image _card;
         private TMP_Text _title;
@@ -187,42 +188,82 @@ namespace Match3.UI
             dismiss.transition = Selectable.Transition.None;
             dismiss.onClick.AddListener(OnOpenerClicked);
 
-            GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, 1620f));
+            // The menu card carries one button instead of three, so it is shorter —
+            // and everything inside shifts with the top edge, which is why every
+            // y below goes through Y(). (A flat list of eight unlabelled rows was
+            // the readability problem; the sections are the fix.)
+            bool inGame = _game != null;
+            float cardHeight = inGame ? 1620f : 1400f;
+            _contentShift = (cardHeight - 1620f) * 0.5f;
+
+            GameObject cardGo = CreateRect("Card", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(860f, cardHeight));
             _card = cardGo.AddComponent<Image>();
             UiTheme.ApplySprite(_card, UiTheme.Round, UiTheme.ThemeCard);
             Transform content = cardGo.transform;
 
-            _title = CreateText("Title", content, new Vector2(0f, 700f), 72f, FontStyles.Bold);
+            _title = CreateText("Title", content, new Vector2(0f, Y(700f)), 72f, FontStyles.Bold);
             UiTheme.ApplyFont(_title, UiTheme.TitleFont);
-            _title.text = _game != null ? "PAUSED" : "SETTINGS";
+            _title.text = inGame ? "PAUSED" : "SETTINGS";
 
+            // ---- Sound ----------------------------------------------------------
+            BuildSectionHeader(content, "SOUND", 610f);
             // Music volume — the slider writes Prefs; MusicManager listens.
-            BuildRowLabel(content, "Music", 560f);
-            BuildVolumeSlider(content, new Vector2(160f, 560f));
+            BuildRowLabel(content, "Music", Y(545f));
+            BuildVolumeSlider(content, new Vector2(160f, Y(545f)));
+            (_setSfxVisual, _) = BuildToggleRow(content, "Sound FX", Y(445f), Prefs.SfxOn, on => Prefs.SfxOn = on);
+            (_setHapticsVisual, _) = BuildToggleRow(content, "Haptics", Y(345f), Prefs.HapticsOn, on => Prefs.HapticsOn = on);
 
-            (_setSfxVisual, _) = BuildToggleRow(content, "Sound FX", 455f, Prefs.SfxOn, on => Prefs.SfxOn = on);
-            (_setHapticsVisual, _) = BuildToggleRow(content, "Haptics", 350f, Prefs.HapticsOn, on => Prefs.HapticsOn = on);
-            (_setColorblindVisual, _) = BuildToggleRow(content, "Colorblind mode", 245f, Prefs.ColorblindOn, OnColorblindChanged);
-            (_setNotificationsVisual, _) = BuildToggleRow(content, "Daily reminders", 140f, Prefs.NotificationsOn, OnNotificationsChanged);
-            (_setRelaxedVisual, _) = BuildToggleRow(content, "Relaxed mode", 35f, Prefs.RelaxedOn, on => Prefs.RelaxedOn = on);
-            (_setReducedMotionVisual, _) = BuildToggleRow(content, "Reduced motion", -70f, Prefs.ReducedMotionOn, on => Prefs.ReducedMotionOn = on);
-            (_setBigTextVisual, _) = BuildToggleRow(content, "Big text", -175f, Prefs.BigTextOn, on => Prefs.BigTextOn = on);
+            // ---- Gameplay -------------------------------------------------------
+            BuildSectionHeader(content, "GAMEPLAY", 255f);
+            (_setRelaxedVisual, _) = BuildToggleRow(content, "Relaxed mode", Y(190f), Prefs.RelaxedOn, on => Prefs.RelaxedOn = on);
+            (_setNotificationsVisual, _) = BuildToggleRow(content, "Daily reminders", Y(90f), Prefs.NotificationsOn, OnNotificationsChanged);
 
-            _cloudStatus = CreateText("CloudStatus", content, new Vector2(0f, -285f), 30f, FontStyles.Normal);
+            // ---- Accessibility --------------------------------------------------
+            BuildSectionHeader(content, "ACCESSIBILITY", 0f);
+            (_setColorblindVisual, _) = BuildToggleRow(content, "Colorblind mode", Y(-65f), Prefs.ColorblindOn, OnColorblindChanged);
+            (_setReducedMotionVisual, _) = BuildToggleRow(content, "Reduced motion", Y(-165f), Prefs.ReducedMotionOn, on => Prefs.ReducedMotionOn = on);
+            (_setBigTextVisual, _) = BuildToggleRow(content, "Big text", Y(-265f), Prefs.BigTextOn, on => Prefs.BigTextOn = on);
+
+            _cloudStatus = CreateText("CloudStatus", content, new Vector2(0f, Y(-350f)), 30f, FontStyles.Normal);
             UiTheme.ApplyFont(_cloudStatus, UiTheme.BodyFont);
             _cloudStatus.color = UiTheme.TextDim;
             _cloudStatus.text = "Cloud sync: offline";
 
-            if (_game != null)
+            if (inGame)
             {
-                BuildActionButton(content, "Resume", new Vector2(0f, -430f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnResumeClicked);
-                BuildActionButton(content, "Restart", new Vector2(0f, -570f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextPrimary, OnRestartClicked);
-                BuildActionButton(content, "Level Map", new Vector2(0f, -700f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextDim, OnLevelMapClicked);
+                BuildActionButton(content, "Resume", new Vector2(0f, Y(-450f)), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnResumeClicked);
+                BuildActionButton(content, "Restart", new Vector2(0f, Y(-580f)), UiTheme.Pill, UiTheme.Slot, UiTheme.TextPrimary, OnRestartClicked);
+                BuildActionButton(content, "Level Map", new Vector2(0f, Y(-710f)), UiTheme.Pill, UiTheme.Slot, UiTheme.TextDim, OnLevelMapClicked);
             }
             else
             {
-                BuildActionButton(content, "Close", new Vector2(0f, -430f), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnCloseClicked);
+                BuildActionButton(content, "Close", new Vector2(0f, Y(-450f)), UiTheme.PillPink, Color.white, UiTheme.TextPrimary, OnCloseClicked);
             }
+        }
+
+        /// <summary>Shifts a card-centred y for the current card height (see Build).</summary>
+        private float Y(float y) => y + _contentShift;
+
+        /// <summary>
+        /// A small gold caps label with a hairline rule beside it — the same
+        /// caption voice as the HUD's "MOVES". Takes the UNSHIFTED y (it applies
+        /// the shift itself) so the layout above reads as one column of numbers.
+        /// </summary>
+        private void BuildSectionHeader(Transform parent, string caption, float y)
+        {
+            TMP_Text text = CreateText(caption + "Header", parent, new Vector2(-240f, Y(y)), 26f, FontStyles.Bold);
+            UiTheme.ApplyFont(text, UiTheme.BodyFont);
+            text.text = caption; // CreateText only names the object (the BuildRowLabel rule)
+            text.color = UiTheme.Gold;
+            text.characterSpacing = 8f;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.rectTransform.sizeDelta = new Vector2(400f, 40f);
+
+            GameObject ruleGo = CreateRect(caption + "Rule", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(760f, 2f));
+            ruleGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, Y(y) - 26f);
+            var rule = ruleGo.AddComponent<Image>();
+            rule.color = new Color(UiTheme.Gold.r, UiTheme.Gold.g, UiTheme.Gold.b, 0.25f);
+            rule.raycastTarget = false;
         }
 
         /// <summary>
