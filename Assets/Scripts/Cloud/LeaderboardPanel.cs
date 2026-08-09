@@ -185,7 +185,7 @@ namespace Match3.Cloud
             UiTheme.ApplyFont(_playerRow, UiTheme.ButtonFont);
             _playerRow.color = UiTheme.Gold;
 
-            BuildButton(content, "Close", new Vector2(0f, -520f), () =>
+            UiWidgets.ClosePill(content, new Vector2(0f, -520f), () =>
             {
                 AudioManager.Play(Sfx.Button);
                 Hide();
@@ -222,31 +222,6 @@ namespace Match3.Cloud
             labelRect.anchorMax = Vector2.one;
             labelRect.offsetMin = Vector2.zero;
             labelRect.offsetMax = Vector2.zero;
-        }
-
-        private void BuildButton(Transform parent, string label, Vector2 position, UnityEngine.Events.UnityAction onClick)
-        {
-            var go = new GameObject(label + "Button", typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(parent, false);
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(560f, 124f);
-            rect.anchoredPosition = position;
-            var image = go.GetComponent<Image>();
-            UiTheme.ApplySprite(image, UiTheme.PillPink, Color.white);
-            var button = go.GetComponent<Button>();
-            go.AddComponent<PressableButton>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(onClick);
-
-            TMP_Text text = NewText("Label", go.transform, Vector2.zero, 46f, FontStyles.Bold);
-            UiTheme.ApplyFont(text, UiTheme.ButtonFont);
-            text.text = label;
-            var textRect = text.rectTransform;
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
         }
 
         private static TMP_Text NewText(string name, Transform parent, Vector2 position, float fontSize, FontStyles style)

@@ -215,7 +215,7 @@ namespace Match3.UI
                 OnClaimClicked();
             });
 
-            BuildButton(content, "Close", new Vector2(0f, -380f), UiTheme.Pill, UiTheme.Slot, UiTheme.TextDim, () =>
+            UiWidgets.ClosePill(content, new Vector2(0f, -380f), () =>
             {
                 AudioManager.Play(Sfx.Button);
                 Hide();

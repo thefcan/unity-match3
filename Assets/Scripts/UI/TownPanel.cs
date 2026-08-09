@@ -186,19 +186,7 @@ namespace Match3.UI
             UiTheme.ApplyFont(_nextLine, UiTheme.BodyFont);
             _nextLine.color = UiTheme.TextDim;
 
-            GameObject closeGo = CreateRect("CloseButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 110f));
-            closeGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -480f);
-            var closeImage = closeGo.AddComponent<Image>();
-            UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
-            var closeButton = closeGo.AddComponent<Button>();
-            closeGo.AddComponent<PressableButton>();
-            closeButton.targetGraphic = closeImage;
-            closeButton.onClick.AddListener(OnOpenerClicked);
-            TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
-            UiTheme.ApplyFont(closeLabel, UiTheme.ButtonFont);
-            closeLabel.color = UiTheme.TextDim;
-            closeLabel.text = "Close";
-            Stretch(closeLabel.rectTransform);
+            UiWidgets.ClosePill(content, new Vector2(0f, -480f), OnOpenerClicked);
         }
 
         private void BuildOpener(Transform buttonHost)

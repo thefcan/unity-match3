@@ -325,21 +325,9 @@ namespace Match3.UI
             UiTheme.ApplyFont(_openLabel, UiTheme.ButtonFont);
             Stretch(_openLabel.rectTransform);
 
-            GameObject closeGo = CreateRect("CloseButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 110f));
             // -560, not -530: OPEN PACK's bottom edge reaches -495 and the two
             // pills were overlapping by 20px (mis-taps opened packs).
-            closeGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -560f);
-            var closeImage = closeGo.AddComponent<Image>();
-            UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
-            var closeButton = closeGo.AddComponent<Button>();
-            closeGo.AddComponent<PressableButton>();
-            closeButton.targetGraphic = closeImage;
-            closeButton.onClick.AddListener(OnOpenerClicked);
-            TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
-            UiTheme.ApplyFont(closeLabel, UiTheme.ButtonFont);
-            closeLabel.color = UiTheme.TextDim;
-            closeLabel.text = "Close";
-            Stretch(closeLabel.rectTransform);
+            UiWidgets.ClosePill(content, new Vector2(0f, -560f), OnOpenerClicked);
 
             BuildCeremony(content);
         }

@@ -202,19 +202,7 @@ namespace Match3.UI
             Stretch(_claimLabel.rectTransform);
             _claimLabel.text = "CLAIM";
 
-            GameObject closeGo = CreateRect("CloseButton", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(600f, 110f));
-            closeGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -420f);
-            var closeImage = closeGo.AddComponent<Image>();
-            UiTheme.ApplySprite(closeImage, UiTheme.Pill, UiTheme.Slot);
-            var closeButton = closeGo.AddComponent<Button>();
-            closeGo.AddComponent<PressableButton>();
-            closeButton.targetGraphic = closeImage;
-            closeButton.onClick.AddListener(OnOpenerClicked);
-            TMP_Text closeLabel = CreateText("Label", closeGo.transform, Vector2.zero, 42f, FontStyles.Normal);
-            UiTheme.ApplyFont(closeLabel, UiTheme.ButtonFont);
-            closeLabel.color = UiTheme.TextDim;
-            closeLabel.text = "Close";
-            Stretch(closeLabel.rectTransform);
+            UiWidgets.ClosePill(content, new Vector2(0f, -420f), OnOpenerClicked);
         }
 
         /// <summary>Star pip that lights up once the running total passes its milestone.</summary>
