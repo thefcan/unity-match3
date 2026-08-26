@@ -34,6 +34,9 @@ namespace Match3.UI
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+            // 24 pieces move every frame during a burst — its own Canvas keeps
+            // that off the result card's canvas (which is counting up a score).
+            go.AddComponent<Canvas>();
             var confetti = go.AddComponent<UiConfetti>();
             confetti.BuildPieces();
             return confetti;

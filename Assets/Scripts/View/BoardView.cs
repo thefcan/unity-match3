@@ -368,30 +368,29 @@ namespace Match3.View
         private readonly Dictionary<int, TMPro.TextMeshPro> _bombBadges = new Dictionary<int, TMPro.TextMeshPro>();
         private Transform _bombBadgeRoot;
 
+        /// <summary>
+        /// Badges chase their candies every frame. The steady-state pass walks the
+        /// BADGES (at most two on a board) instead of all 64 tile views — the full
+        /// scan only runs on the frame the armed set actually changes, which is
+        /// once or twice a level.
+        /// </summary>
         private void LateUpdate()
         {
             if (_bombs == null)
                 return;
 
-            foreach (KeyValuePair<int, TileView> entry in _viewsById)
+            List<int> stale = null;
+            foreach (KeyValuePair<int, TMPro.TextMeshPro> entry in _bombBadges)
             {
-                if (!_bombs.TryGet(entry.Key, out int remaining))
-                    continue;
-
-                if (!_bombBadges.TryGetValue(entry.Key, out TMPro.TextMeshPro badge) || badge == null)
+                if (entry.Value == null || !_bombs.TryGet(entry.Key, out _) ||
+                    !_viewsById.TryGetValue(entry.Key, out TileView view))
                 {
-                    badge = CreateBombBadge();
-                    badge.text = remaining.ToString();
-                    _bombBadges[entry.Key] = badge;
+                    (stale ??= new List<int>()).Add(entry.Key); // defused, popped or exited
+                    continue;
                 }
-                badge.transform.position = entry.Value.transform.position + new Vector3(0f, -0.03f, 0f);
+                entry.Value.transform.position = view.transform.position + new Vector3(0f, -0.03f, 0f);
             }
 
-            // Views that vanished (popped, exited) take their badges with them.
-            List<int> stale = null;
-            foreach (int id in _bombBadges.Keys)
-                if (!_viewsById.ContainsKey(id) || !_bombs.TryGet(id, out _))
-                    (stale ??= new List<int>()).Add(id);
             if (stale != null)
             {
                 foreach (int id in stale)
@@ -400,6 +399,23 @@ namespace Match3.View
                         Destroy(_bombBadges[id].gameObject);
                     _bombBadges.Remove(id);
                 }
+            }
+
+            // A count mismatch is the ONLY way a bomb can be missing a badge, so it
+            // gates the expensive pass (a same-frame defuse+arm leaves the counts
+            // equal for one frame, then the removal above forces the scan).
+            if (_bombs.Count == _bombBadges.Count)
+                return;
+
+            foreach (KeyValuePair<int, TileView> entry in _viewsById)
+            {
+                if (!_bombs.TryGet(entry.Key, out int remaining) || _bombBadges.ContainsKey(entry.Key))
+                    continue;
+
+                TMPro.TextMeshPro badge = CreateBombBadge();
+                badge.text = remaining.ToString();
+                _bombBadges[entry.Key] = badge;
+                badge.transform.position = entry.Value.transform.position + new Vector3(0f, -0.03f, 0f);
             }
         }
 

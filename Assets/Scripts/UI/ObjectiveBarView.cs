@@ -45,6 +45,11 @@ namespace Match3.UI
             rect.anchoredPosition = new Vector2(0f, -292f); // just under the 250-tall top bar
             rect.sizeDelta = new Vector2(1000f, ChipHeight);
 
+            // Chip pops, completion rims and fly-to-chip sparks all move UI
+            // transforms per frame; a nested Canvas keeps those rebuilds off the
+            // shared HUD canvas.
+            host.AddComponent<Canvas>();
+
             // Same lifecycle trick as LevelResultPanel: construct deactivated so
             // OnEnable subscribes with _game already wired.
             host.SetActive(false);

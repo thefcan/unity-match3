@@ -40,6 +40,14 @@ namespace Match3.UI
             rect.sizeDelta = new Vector2(3 * 200f + 2 * 20f, 110f);
             rect.anchoredPosition = new Vector2(0f, 28f);
 
+            // The armed pill breathes every frame; a nested Canvas confines that
+            // rebuild to the tray instead of dirtying the whole HUD canvas
+            // (the HudView.IsolateFrequentText idiom). Graphics register with
+            // their NEAREST canvas, so an interactive nested canvas needs its own
+            // raycaster — without it the pills go dead (caught in the smoke run).
+            host.AddComponent<Canvas>();
+            host.AddComponent<GraphicRaycaster>();
+
             host.SetActive(false);
             var tray = host.AddComponent<BoosterTray>();
             tray._game = game;
