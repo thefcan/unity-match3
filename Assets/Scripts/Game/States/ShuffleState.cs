@@ -6,9 +6,10 @@ namespace Match3.Game
     /// <summary>
     /// Recovers a dead board (no possible moves). The clock and input pause (this phase
     /// isn't Playing/Resolving), the HUD announces the shuffle, the board is rearranged
-    /// into a guaranteed-playable layout, the views glide to their new cells, and play
-    /// resumes. Reaching this state always exits to <see cref="PlayingState"/> because
-    /// <see cref="Match3.Core.Board.Shuffle"/> guarantees a move exists afterwards.
+    /// into a playable layout, the views glide to their new cells, and play resumes.
+    /// Shuffle is best-effort — it gives up after 100 attempts and accepts the last
+    /// permutation — so this state CHECKS the result: a board that still has no move
+    /// (blocker-heavy levels) ends the level instead of soft-locking the player.
     /// </summary>
     public sealed class ShuffleState : GameState
     {
@@ -41,7 +42,13 @@ namespace Match3.Game
             Game.Board.Shuffle(Game.Random);
             yield return Game.BoardView.AnimateReshuffle();
 
-            Game.SetState(new PlayingState(Game));
+            // The 100-attempt fallback can still land on a dead board. Failing the
+            // level routes into the normal fail panel (rescue offer included) —
+            // infinitely better than a board nobody can move.
+            if (Game.Board.HasPossibleMove())
+                Game.SetState(new PlayingState(Game));
+            else
+                Game.SetState(new LevelFailedState(Game));
         }
     }
 }

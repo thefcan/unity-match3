@@ -164,6 +164,7 @@ namespace Match3.UI
         private void HandleLevelFailed()
         {
             AudioManager.Play(Sfx.Lose);
+            Haptics.Heavy(); // the win beat has one; the loss deserves the same weight
             MusicManager.Duck();
             // A bomb loss happens with moves still on the counter — saying "out of
             // moves" there reads as a bug (seen in standalone play-testing).
@@ -206,6 +207,7 @@ namespace Match3.UI
         private void HandleGameEnded()
         {
             AudioManager.Play(Sfx.Lose);
+            Haptics.Heavy();
             MusicManager.Duck();
             Show("Time's Up!", $"Reached Level {_game.Level}\nScore {_game.Score}", "Restart", _game.Restart);
         }

@@ -151,8 +151,16 @@ namespace Match3.UI
                 // rim used to blink on with no beat of its own.
                 bool wasDone = outline.gameObject.activeSelf;
                 outline.gameObject.SetActive(done);
-                if (done && !wasDone && !Prefs.ReducedMotionOn)
-                    StartCoroutine(UiTween.ScalePop(outline.transform, 0.25f));
+                if (done && !wasDone)
+                {
+                    // A goal completing is the level's core progress beat and it was
+                    // entirely silent. Sound and haptic sit OUTSIDE the reduced-motion
+                    // gate — that pref suppresses movement, not feedback.
+                    AudioManager.Play(Sfx.SpecialCreate, 1.25f);
+                    Haptics.Light();
+                    if (!Prefs.ReducedMotionOn)
+                        StartCoroutine(UiTween.ScalePop(outline.transform, 0.25f));
+                }
 
                 // Sparks only on an INCREASE seen while the chip was already on
                 // screen — the first refresh of a level just sets the baseline.

@@ -162,6 +162,20 @@ namespace Match3.Game
             return reward;
         }
 
+        /// <summary>
+        /// Flushes only if the state was ever touched. Mission and event progress
+        /// accumulate in memory during a level (their docstrings say "no disk
+        /// write"), so a backgrounded app used to lose them — while a booster spent
+        /// in the same level hit the disk immediately.
+        /// Lazy-safe on purpose: touching Current would CREATE and persist a blank
+        /// state on a first launch that never played.
+        /// </summary>
+        public static void SaveNow()
+        {
+            if (_current != null)
+                Save();
+        }
+
         public static void Save()
         {
             try

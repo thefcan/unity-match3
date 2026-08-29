@@ -85,8 +85,20 @@ namespace Match3.Game
             if (!_clips.TryGetValue(sfx, out AudioClip clip) || clip == null)
                 return; // clips not generated yet — stay silent rather than throw
 
-            AudioSource source = _sources[_nextSource];
-            _nextSource = (_nextSource + 1) % _sources.Length;
+            // PlayOneShot inherits the source's LIVE pitch, so reusing a source
+            // that is still sounding bends the note already playing — exactly what
+            // happened on deep cascades, where one wave fires 7-8 sounds before the
+            // first yield. Prefer a free source; fall back to round-robin when all
+            // six are busy.
+            AudioSource source = null;
+            for (int i = 0; i < _sources.Length && source == null; i++)
+                if (!_sources[i].isPlaying)
+                    source = _sources[i];
+            if (source == null)
+            {
+                source = _sources[_nextSource];
+                _nextSource = (_nextSource + 1) % _sources.Length;
+            }
 
             source.pitch = pitch;
             source.PlayOneShot(clip, volume);

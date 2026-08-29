@@ -67,6 +67,19 @@ namespace Match3.Game
         public LevelDefinition LevelDefinition { get; private set; }
         /// <summary>Moves mode: swaps remaining. Meaningless in time attack.</summary>
         public int MovesLeft { get; private set; }
+
+        /// <summary>Relaxed mode as it stood when this run STARTED (see BuildNewGame).</summary>
+        public bool RelaxedThisRun { get; private set; }
+
+        /// <summary>
+        /// Moves the Sugar Crush finale may convert. Relaxed mode hands out 999
+        /// moves, and the finale turns 4/5 of the leftovers into striped candies —
+        /// unclamped that converts the WHOLE board and farms every mission in one
+        /// win, so relaxed runs spend the level's authored budget instead.
+        /// </summary>
+        public int FinaleMoveBudget => RelaxedThisRun && LevelDefinition != null
+            ? Mathf.Min(MovesLeft, LevelDefinition.movesLimit)
+            : MovesLeft;
         /// <summary>Moves mode: goal progress. Null in time attack.</summary>
         public ObjectiveTracker Objectives { get; private set; }
         /// <summary>Moves mode: the level's jelly layer. Null when the level (or mode) has none.</summary>
@@ -341,8 +354,11 @@ namespace Match3.Game
 
                 Level = GameSession.SelectedLevelIndex;
                 // Relaxed mode: effectively unlimited moves (the HUD shows ∞). Wins
-                // cap at one star (see LevelWonState), so the economy holds.
-                MovesLeft = Prefs.RelaxedOn ? RelaxedMovesLimit : LevelDefinition.movesLimit;
+                // cap at one star (see LevelWonState), so the economy holds. The
+                // flag is FROZEN for the run: the pause panel can flip the pref
+                // mid-level, and the move budget was already decided here.
+                RelaxedThisRun = Prefs.RelaxedOn;
+                MovesLeft = RelaxedThisRun ? RelaxedMovesLimit : LevelDefinition.movesLimit;
                 Objectives = new ObjectiveTracker(LevelDefinition.ToObjectives());
                 Jelly = LevelDefinition.jellyRows > 0
                     ? JellyGrid.BottomRows(LevelDefinition.width, LevelDefinition.height,

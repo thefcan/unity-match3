@@ -31,6 +31,10 @@ namespace Match3.Tests
             Assert.AreEqual(2, StarChest.MilestonesCrossed(130, 50));
             Assert.AreEqual(0, StarChest.MilestonesCrossed(59, 0));
             Assert.AreEqual(1, StarChest.MilestonesCrossed(300, 240));
+            // Chapter 6 pushed the campaign to 120 levels = 360 stars; the last
+            // milestone must exist or the final 60 stars pay nothing.
+            Assert.AreEqual(1, StarChest.MilestonesCrossed(360, 300));
+            Assert.AreEqual(LevelCurve.LevelCount * 3, StarChest.Milestones[StarChest.Milestones.Length - 1]);
         }
 
         [Test]

@@ -26,7 +26,7 @@ namespace Match3.Game
             // Sugar Crush: unused moves become striped candies and everything on the
             // board fires. The finale's own scoring REPLACES the old flat
             // moves-remaining bonus — the spectacle IS the bonus now.
-            ResolutionResult finale = Game.Resolver.ResolveFinale(Game.Board, Game.MovesLeft);
+            ResolutionResult finale = Game.Resolver.ResolveFinale(Game.Board, Game.FinaleMoveBudget);
             if (finale.Steps.Count > 0)
             {
                 Game.RaiseFinaleStarted();
@@ -41,7 +41,7 @@ namespace Match3.Game
 
             int stars = StarCalculator.Cap(
                 StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores),
-                Prefs.RelaxedOn);
+                Game.RelaxedThisRun);
             ProgressService.RecordWin(Game.Level, stars);
             MetaService.RegisterLevelOutcome(won: true);
             // Event progress writes no file of its own: MissionService.RegisterWin's

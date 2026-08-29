@@ -37,7 +37,12 @@ namespace Match3.Game
             // and reset the score before playing on (entering Playing clears the banner).
             yield return Game.BoardView.AnimateShowTiles();
             Game.AdvanceLevel();
-            Game.SetState(new PlayingState(Game));
+            // The board carries over between time-attack levels, so it can be dead
+            // on arrival — every OTHER exit into Playing checks this one first.
+            if (Game.Board.HasPossibleMove())
+                Game.SetState(new PlayingState(Game));
+            else
+                Game.SetState(new ShuffleState(Game));
         }
     }
 }

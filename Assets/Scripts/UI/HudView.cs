@@ -218,8 +218,11 @@ namespace Match3.UI
 
         private void HandlePhaseChanged(Match3.Game.GamePhase phase)
         {
-            // Banners belong to the paused states; clear them the moment play resumes.
-            if (phase == Match3.Game.GamePhase.Playing)
+            // Banners belong to the paused states; clear them the moment play
+            // resumes — INIT included, because "Next" restarts into Init without
+            // reloading the scene, and the finale's SWEET! used to hang over the
+            // next level's intro (LevelResultPanel already hides on Init too).
+            if (phase == Match3.Game.GamePhase.Playing || phase == Match3.Game.GamePhase.Init)
                 SetBanner(string.Empty);
         }
 

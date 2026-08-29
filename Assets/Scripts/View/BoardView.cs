@@ -487,7 +487,18 @@ namespace Match3.View
             }
 
             if (step.BombTicks.Count > 0)
-                AudioManager.Play(Sfx.Button, 0.5f); // a dry tick under the countdown
+            {
+                // The tick climbs as the shortest fuse shortens — a 1-move-left bomb
+                // must not sound identical to a 9-move-left one (the badge already
+                // turns red at 2; the ear had no such cue).
+                int shortest = int.MaxValue;
+                foreach (BombTick tick in step.BombTicks)
+                    shortest = Mathf.Min(shortest, tick.Remaining);
+                float urgency = Mathf.InverseLerp(6f, 1f, shortest); // 0 = calm, 1 = about to blow
+                AudioManager.Play(Sfx.Button, 0.5f + 0.5f * urgency, 0.6f + 0.4f * urgency);
+                if (shortest <= 2)
+                    Haptics.Light();
+            }
             if (exploded)
             {
                 AudioManager.Play(Sfx.ColorBomb);

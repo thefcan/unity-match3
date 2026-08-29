@@ -26,6 +26,12 @@ namespace Match3.Game
             if (Game.Board.IsImmobile(from) || Game.Board.IsImmobile(to))
                 return;
 
+            // An armed HAMMER waits for a tap, not a swipe: swallow the gesture
+            // rather than spending a move AND disarming the booster (SetState
+            // disarms). Tapping the pill again cancels it.
+            if (Game.ArmedBooster == BoosterKind.Hammer)
+                return;
+
             // An armed free-swap turns this gesture into the booster: no match
             // requirement, no bounce-back, no move spent.
             if (Game.ArmedBooster == BoosterKind.FreeSwap)

@@ -52,12 +52,14 @@ namespace Match3.Game
             if (!paused)
                 return;
             ProgressService.SaveNow();
+            MetaService.SaveNow(); // in-level mission/event progress lives in memory
             PlayerPrefs.Save(); // float prefs (volume) defer their save to here
         }
 
         private void OnApplicationQuit()
         {
             ProgressService.SaveNow();
+            MetaService.SaveNow();
             PlayerPrefs.Save();
         }
 

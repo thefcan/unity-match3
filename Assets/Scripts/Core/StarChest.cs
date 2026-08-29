@@ -32,8 +32,14 @@ namespace Match3.Core
     {
         public const int StarsPerChest = 20;
 
-        /// <summary>Cumulative-star milestones (60 per chapter, five chapters).</summary>
-        public static readonly int[] Milestones = { 60, 120, 180, 240, 300 };
+        /// <summary>
+        /// Cumulative-star milestones — 60 per chapter, one per chapter of the
+        /// campaign. Chapter 6 (levels 101-120) shipped without its 360 entry, so
+        /// the last 60 stars of the game paid no milestone chest and minted no
+        /// Rescue. APPEND-ONLY: the earlier values are watermarked in saves
+        /// (MetaState.LastChestStars), so re-ordering them would re-grant old chests.
+        /// </summary>
+        public static readonly int[] Milestones = { 60, 120, 180, 240, 300, 360 };
 
         /// <summary>How many repeating chests opened between the last counted total and now.</summary>
         public static int RepeatingChestsEarned(int totalStars, int lastCountedStars)

@@ -165,11 +165,17 @@ namespace Match3.UI
             UiTheme.ApplyFont(_nextLine, UiTheme.BodyFont);
             _nextLine.color = UiTheme.TextDim;
 
-            // Milestone dots (60..300) — filled once the total passes them.
-            for (int i = 0; i < StarChest.Milestones.Length; i++)
+            // Milestone dots (60..360) — filled once the total passes them. The row
+            // centres and spaces itself from the milestone COUNT: a hardcoded
+            // (i - 2) * 120 was tuned for five dots and would push the sixth off
+            // the card.
+            int dotCount = StarChest.Milestones.Length;
+            float dotSpacing = Mathf.Min(120f, 640f / dotCount);
+            float dotOffset = (dotCount - 1) * 0.5f;
+            for (int i = 0; i < dotCount; i++)
             {
                 GameObject dotGo = CreateRect($"Milestone{i}", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(56f, 56f));
-                dotGo.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 2) * 120f, -60f);
+                dotGo.GetComponent<RectTransform>().anchoredPosition = new Vector2((i - dotOffset) * dotSpacing, -60f);
                 var dot = dotGo.AddComponent<Image>();
                 UiTheme.ApplySprite(dot, UiTheme.StarSprite, UiTheme.StarDim);
                 dot.raycastTarget = false;

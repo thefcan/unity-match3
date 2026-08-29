@@ -193,5 +193,34 @@ namespace Match3.Tests
             Assert.That(result.Steps[0].Detonations.Any(d => d.Kind == DetonationKind.ColorClear), Is.True);
             Assert.That(result.Steps[0].Points, Is.GreaterThanOrEqualTo(5000));
         }
+
+        [Test]
+        public void FinaleQuota_ScalesWithTheMovesHandedIn_SoAClampMatters()
+        {
+            // The relaxed budget (999) would convert the whole board; GameManager
+            // clamps it to the level's authored limit (FinaleMoveBudget). This pins
+            // WHY that clamp exists: quota = moves * 4/5, unbounded by the board.
+            TileFactory factory = TestFactories.Seeded(5, seed: 4);
+            Board board = new Board(8, 8, factory);
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SystemRandom(9));
+
+            int converted = 0;
+            foreach (CascadeStep step in resolver.ResolveFinale(board, remainingMoves: 999).Steps)
+                converted += step.Creations.Count;
+
+            // 999 * 4/5 = 799 > 64 cells, so a relaxed win with no clamp turns
+            // EVERY normal candy on the board into a striped one.
+            Assert.That(converted, Is.GreaterThan(40));
+
+            TileFactory factory2 = TestFactories.Seeded(5, seed: 4);
+            Board board2 = new Board(8, 8, factory2);
+            var resolver2 = new CascadeResolver(new ScoreConfig(10, 1), factory2, new SystemRandom(9));
+
+            int clamped = 0;
+            foreach (CascadeStep step in resolver2.ResolveFinale(board2, remainingMoves: 5).Steps)
+                clamped += step.Creations.Count;
+
+            Assert.That(clamped, Is.LessThan(converted));
+        }
     }
 }
