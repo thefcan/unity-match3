@@ -60,21 +60,25 @@ no third-party assets — candy sprites, UI chrome, sound effects **and the musi
 are all **procedurally generated**, the UI implements a Figma-authored design
 language (Baloo 2 + Nunito), and all "juice" is hand-rolled coroutine tweens + one
 runtime-built ParticleSystem. Mobile-hardened: safe-area aware, 60 fps capped,
-pooled everything, virtualized level list, pause/settings with persisted options,
-haptics, and a colorblind sprite mode.
+pooled everything, virtualized level list, per-frame animated widgets isolated on
+their own nested canvases, pause/settings with persisted options, haptics, and a
+colorblind sprite mode.
 
 ## Gameplay
 
 ### Moves campaign (Candy Crush style — the main mode)
 
-- **100 authored levels** on a scrollable (virtualized) level map, sequentially
+- **120 authored levels** on a scrollable (virtualized) level map, sequentially
   unlocked, each with a **move limit** and **objectives** shown as icon chips over
   the board: reach a score, collect N candies of a colour, **clear all the jelly**,
-  **crush the chocolate**, **peel the frosting**, or **bring the ingredients home**.
+  **crush the chocolate**, **peel the frosting**, **hatch the mystery eggs**, or
+  **bring the ingredients home**. The map scrolls itself to the level you're on
+  the moment it opens.
 - **Chapters that drift, never jump.** Every 20 levels is a chapter with its own
-  ambience — purple night → ocean teal → dusk plum → warm ember — and each level
-  interpolates 1/20th of the way towards the next palette (`ThemeCurve`, unit-tested
-  to never shift a colour channel more than 0.02 per level) while `MusicComposer`'s
+  ambience — purple night → ocean teal → dusk plum → warm ember → golden dawn →
+  candy garden — and each level interpolates 1/20th of the way towards the next
+  palette (`ThemeCurve`, unit-tested to never shift a colour channel more than
+  0.02 per level) while `MusicComposer`'s
   chapter loop crossfades underneath. Difficulty repeats the chapter rhythm one
   notch harder; candy colours and controls never change.
 - **Jelly blockers** (from level 8): translucent cells under the candies, in one or
@@ -93,6 +97,16 @@ haptics, and a colorblind sprite mode.
   that fall like candy but *absorb striped beams* (the ray stops, cells behind
   survive); and the indestructible **chocolate fountain**, which revives the
   spread even after the last chocolate dies. The finale act runs two moves tighter.
+- **Chapter 6 — mystery eggs** (levels 101–120, four acts): colourless **eggs**
+  that fall and shuffle like candy but never form a run of their own. Any
+  adjacent clear — or a direct hit — cracks the shell instead of clearing the
+  cell, and what hatches is rolled on the spot: 70% a plain candy, 15% striped,
+  10% wrapped, 5% a jelly fish, landing dormant and joining play the next wave.
+  A striped beam cracks an egg rather than being absorbed, a fish prefers an egg
+  over a plain candy, chocolate refuses to eat one, jelly underneath takes no
+  damage, and a **caged** egg sleeps through nearby clears until its lock breaks.
+  The acts stage it: meet the clutch → eggs over a jelly encore → eggs waiting
+  behind a frosting shelf → a caged bar over the clutch with late bombs.
 - **The jelly fish** — the 2×2 square match (a dead shape in most match-3s) mints
   a fish that darts at the board's most urgent target: jelly → frosting →
   chocolate → swirl → a random candy. Fish+fish = a school of three; fish+striped
@@ -171,9 +185,12 @@ plausibility check** server-side (`ScoreBounds`: no run may score faster than
 physically possible).
 
 Shared by both modes: cascades with rising multipliers, auto-shuffle on dead boards
-(a board holding a colour bomb is never dead), idle move hints, drag-to-swap input,
-a pause/settings overlay (music + SFX + haptics + colorblind + reminders, all
-persisted), and Android back-button handling.
+(a board holding a colour bomb is never dead — and a shuffle that still can't find
+a move ends the level instead of soft-locking it), idle move hints, drag-to-swap
+input, a pause/settings overlay grouped into SOUND / GAMEPLAY / ACCESSIBILITY
+(music + SFX + haptics + colorblind + reminders + relaxed + reduced motion + big
+text, all persisted, whole-row tap targets), and Android back-button handling that
+closes the top-most open panel before it considers quitting.
 
 ### Cloud sync (optional, free)
 
@@ -212,9 +229,10 @@ Core rule units, each small and independently tested:
 - `DetonationRules` — pure blast geometry (rows, columns, blasts, colour/board wipes)
 - `SwapRules` — classifies special+special / bomb swaps
 - `CascadeResolver` — the wave loop: combos → matches → creations → detonation
-  worklist (chains, wrapped double-blast) → lock absorption → chocolate crumble →
-  ingredient exits → jelly damage → score → clear/morph → gravity → refill (+
-  ingredient injection), and the end-of-move chocolate spread
+  worklist (chains, wrapped double-blast) → lock absorption → frosting peel →
+  **egg hatching** → chocolate crumble → ingredient exits → jelly damage → score →
+  clear/morph → gravity → refill (+ ingredient injection), and the end-of-move
+  chocolate spread
 - `ObjectiveTracker` / `StarCalculator` / `PlayerProgress` / `ProgressMerger` —
   moves-mode win logic, save, and the conflict-free cloud merge
 - `DailyStreak` / `MetaState` — the login-streak rules and their tolerant save format
@@ -293,6 +311,20 @@ SmoothStep easing, pitch ladders that climb with cascade depth:
   ceremony: card pop → stars → UI-space confetti (one driver coroutine, zero
   per-burst allocs) → a 0→score count-up, while cleared-goal sparks fly from the
   board to their objective chips.
+- **Panels behave like an app** — every overlay closes three ways: its Close pill
+  (one shared widget, [`UiWidgets.ClosePill`](Assets/Scripts/UI/UiWidgets.cs), so
+  all seven panels dismiss identically), a tap on the dim outside the card, or the
+  Android back button, which pops `UiTween`'s open-panel stack before it ever
+  considers quitting. Settings is grouped under SOUND / GAMEPLAY / ACCESSIBILITY
+  headers with whole-row tap targets, and the level map scrolls itself to the level
+  you're on. Widgets that animate every frame (booster tray, objective chips,
+  confetti) each sit on their **own nested `Canvas`**, so a breathing badge
+  re-batches only itself — each with its own `GraphicRaycaster`, since uGUI
+  registers a graphic with its *nearest* canvas.
+- **The ear tracks the state too** — a completing objective lands with a sound +
+  haptic (outside the reduced-motion gate: that pref suppresses movement, not
+  feedback), the countdown-bomb tick climbs in pitch and volume as the shortest
+  fuse shortens, and the armed booster pill breathes until you spend it.
 - **The view stays rule-free** — everything above derives from the resolver's
   recordings (`Detonation.Origin/Kind/Area`, `CascadeIndex`, tracker deltas); no
   gameplay fact is ever recomputed in the view layer. **Reduced Motion** turns
@@ -303,13 +335,13 @@ SmoothStep easing, pitch ladders that climb with cascade depth:
 
 Everything visual/audible ships generated, and can be regenerated inside Unity:
 
-- **Match3 → Generate → Candy Sprites** — 74 PNGs drawn by `CandyArtist`: 5 colours
+- **Match3 → Generate → Candy Sprites** — 75 PNGs drawn by `CandyArtist`: 5 colours
   × normal/stripedH/stripedV/wrapped/**fish**/**bomb**, the same set again with
   **colorblind glyph badges**, the colour bomb, chocolate, the ingredient
   cherries, the licorice cage, the **frosting stack (3 thicknesses)**, the
-  **swirl**, the **chocolate fountain** and the five candy-town stages. One
-  silhouette per colour so candies stay tellable-apart without colour vision even
-  before the badge mode.
+  **swirl**, the **chocolate fountain**, the **mystery egg** and the five
+  candy-town stages. One silhouette per colour so candies stay tellable-apart
+  without colour vision even before the badge mode.
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
@@ -328,7 +360,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**531 EditMode tests, all green** — the core is tested without ever opening a scene:
+**535 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -366,7 +398,7 @@ Assets/Tests/EditMode/
 ├── DailyStreakTests.cs           streak rules (rollback-safe), 7-day reward cycle, meta roundtrip
 ├── MusicComposerTests.cs         byte determinism, exact bar lengths, stereo PCM headers
 ├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
-├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 100-level campaign rhythm,
+├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 120-level campaign rhythm,
 │                                 blocker acts, early-chapter immutability landmarks
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
@@ -396,8 +428,9 @@ Assets/
 │   │                  LevelCatalog, AudioManager, ProgressService, States/
 │   ├── View/        ← BoardView (incl. jelly overlay), TileView, TilePool,
 │   │                  InputController, EffectsView, ScorePopup, CameraFitter
-│   ├── UI/          ← UiTheme + HudView, ObjectiveBarView, LevelResultPanel,
-│   │                  MainMenuView (all runtime-built)
+│   ├── UI/          ← UiTheme + UiTween/UiWidgets/ScreenFader (the shared tween,
+│   │                  widget and scene-curtain kits), HudView, ObjectiveBarView,
+│   │                  LevelResultPanel, MainMenuView (all runtime-built)
 │   └── Editor/      ← Match3.Editor.asmdef — sprite/UI/level/SFX generators, scene setup
 ├── Tests/EditMode/  ← NUnit tests for the core (dotnet-runnable)
 ├── Tests/PlayMode/  ← scene-boot smoke tests
@@ -419,8 +452,9 @@ Assets/
 Kept out to leave obvious seams to grow from: **non-rectangular boards**,
 **account linking** (cloud identity is anonymous-only for now), and **any form of
 monetization** — no lives, no purchases; the rescue/continue economy is earned,
-never bought. Locks, chocolate, ingredients, the chapter-5 blockers, the booster
-kit, the candy calendar and the rescues all landed through the seams the jelly
+never bought. Locks, chocolate, ingredients, the chapter-5 blockers, the chapter-6
+mystery eggs, the booster kit, the candy calendar and the rescues all landed
+through the seams the jelly
 layer established — a state grid or tile kind beside the board, a per-step
 recording list, an append-only enum — which is exactly how the next mechanic
 should arrive too.
