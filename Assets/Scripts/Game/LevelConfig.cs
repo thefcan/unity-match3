@@ -10,9 +10,14 @@ namespace Match3.Game
     /// from the Inspector without touching code. (Closest Java analogy: an immutable
     /// config bean loaded from a file, but editable in the Unity Inspector.)
     ///
-    /// This is a TIME-ATTACK config: you get <see cref="timeLimit"/> seconds to reach
-    /// the level's target score; clearing a level raises the target and resets the
-    /// clock, so play loops endlessly until the timer runs out.
+    /// BOTH MODES read this asset, but they read different halves of it. Time attack
+    /// uses <see cref="timeLimit"/> and the target/bonus ladder: seconds to reach the
+    /// level's score, then a raised target and a fresh clock, endlessly. The moves
+    /// campaign ignores the clock and the target ladder entirely: it reads only the
+    /// shared bits — the colour <see cref="tileColors"/> palette, which caps how many
+    /// colours a level may ask for, and <see cref="hintDelaySeconds"/> — and takes
+    /// everything else (board size, moves, objectives, blockers, star scores) from
+    /// the generated <see cref="LevelDefinition"/> assets.
     ///
     /// Create via: Assets > Create > Match3 > Level Config.
     /// </summary>

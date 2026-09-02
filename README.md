@@ -1,5 +1,7 @@
 # Candy Match — a Candy-Crush-style match-3 built for architecture
 
+[![CI](https://github.com/thefcan/unity-match3/actions/workflows/ci.yml/badge.svg)](https://github.com/thefcan/unity-match3/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
 </p>
@@ -217,6 +219,37 @@ wave by wave) → `BoardView` animates the recording (staggered blast pops,
 converge-and-morph beats, jelly pops) → C# events update the HUD. The view never
 re-derives rules, so logic and presentation can't drift apart.
 
+```mermaid
+flowchart LR
+    subgraph engine["Match3.Game · View · UI — MonoBehaviours (engine side)"]
+        direction TB
+        input["InputController<br/>(swipe / tap)"]
+        state["GameState<br/>(Playing, Resolving, …)"]
+        view["BoardView · HudView<br/>(animate + display)"]
+    end
+    subgraph core["Match3.Core — noEngineReferences (no UnityEngine, at all)"]
+        direction TB
+        resolver["CascadeResolver<br/>(the wave loop)"]
+        board["Board + blocker grids<br/>ObjectiveTracker · progress"]
+    end
+
+    input -- "swap request" --> state
+    state -- "ResolveSwap(from, to)" --> resolver
+    resolver <--> board
+    resolver == "CascadeStep[] recording" ==> view
+    view -. "animation finished" .-> state
+
+    style core fill:#2b1b47,stroke:#f5c542,color:#fff
+    style engine fill:#1d2a44,stroke:#8ea9db,color:#fff
+```
+
+The one thick arrow is the whole contract: everything the view draws is read off
+that recording, so no gameplay fact is ever recomputed on the engine side. The
+boundary isn't a convention either — `Match3.Core.asmdef` sets
+`noEngineReferences: true` and `Match3.Tests.EditMode.asmdef` references only
+`Match3.Core`, which is exactly why the same sources compile and run under plain
+`dotnet test` with no Unity installed.
+
 Core rule units, each small and independently tested:
 
 - `Board` — match runs **and 2×2 squares**, gravity (immobile cells act as
@@ -394,6 +427,8 @@ Assets/Tests/EditMode/
 ├── EconomyTests.cs               star chest math, town stages, shields, mission determinism
 ├── EventTests.cs                 candy-calendar windows, clock-rollback freeze, race bots,
 │                                 rollover banking, tier claims (the freeze's first real coverage)
+├── AlbumTests.cs                 catalog integrity, deterministic pack rolls, the pity ladder,
+│                                 dupe payouts, page/album rewards, the meta.sav roundtrip
 ├── RescueTests.cs                rescue mints and spends, fuse re-arming, deferred streak break
 ├── DailyStreakTests.cs           streak rules (rollback-safe), 7-day reward cycle, meta roundtrip
 ├── MusicComposerTests.cs         byte determinism, exact bar lengths, stereo PCM headers
@@ -413,8 +448,13 @@ Run in Unity via **Window → General → Test Runner** (EditMode and PlayMode t
 or headless without Unity (the core is plain C#):
 
 ```bash
-dotnet test   # a csproj that links Assets/Scripts/Core + Assets/Tests/EditMode
+dotnet test tests/Match3.Core.Tests   # globs Assets/Scripts/Core + Assets/Tests/EditMode
 ```
+
+That project is **tracked** (the only `.csproj` this repo's `.gitignore` lets
+through), needs the .NET 9 SDK and nothing else, and is what CI runs on every
+push — the Unity-licensed EditMode job is an optional extra that skips itself
+when no `UNITY_LICENSE` secret is set.
 
 ## Project structure
 
@@ -436,6 +476,9 @@ Assets/
 ├── Tests/PlayMode/  ← scene-boot smoke tests
 ├── Resources/       ← CandySpriteLibrary, LevelCatalog, Levels/, Audio/, Fonts/, UI/
 ├── Prefabs/ · Scenes/ (MainMenu + Game) · ScriptableObjects/ · Sprites/Candies/
+tests/
+└── Match3.Core.Tests/  ← the tracked csproj that runs Core + EditMode under plain
+                           `dotnet test` (no Unity) — what CI executes
 ```
 
 ## Run it

@@ -13,10 +13,16 @@ namespace Match3.Game
     /// and the session numbers (score, level, clock) — and it is the only class that
     /// talks both "logic" and "Unity".
     ///
-    /// Game mode: TIME ATTACK with endless levels. You have a countdown to reach the
-    /// level's target score; clearing it bumps the level/target and resets the clock.
-    /// Big matches (4+ in a line) add bonus seconds. The run ends only when the clock
-    /// hits zero — there is no fixed move limit.
+    /// TWO MODES share this root (<see cref="GameMode"/>):
+    /// • MOVES — the 120-level campaign. A <see cref="LevelDefinition"/> hands over a
+    ///   move limit, objectives and blockers; <see cref="MovesLeft"/> counts down per
+    ///   counted move, the objectives decide the win, and leftover moves feed the
+    ///   Sugar Crush finale. Relaxed mode swaps the limit for
+    ///   <see cref="RelaxedMovesLimit"/> and caps the reward at one star.
+    /// • TIME ATTACK — endless levels against a countdown. Reach the level's target
+    ///   score; clearing it bumps the level/target and resets the clock, and big
+    ///   matches (4+ in a line) add bonus seconds. No move limit at all.
+    /// Everything below that is shared: board, resolver, cascade recording, boosters.
     ///
     /// OBSERVER PATTERN via C# events: the UI subscribes to ScoreChanged / LevelChanged /
     /// TimeBonusAwarded / GameEnded instead of being called directly. GameManager has no

@@ -20,6 +20,9 @@
 ExportedObj/
 .consulo/
 *.csproj
+# ...except the tracked headless test project, which is the whole point of
+# `dotnet test` working on a fresh clone (tests/Match3.Core.Tests).
+!tests/**/*.csproj
 *.unityproj
 *.sln
 *.suo
@@ -33,6 +36,11 @@ ExportedObj/
 *.mdb
 *.opendb
 *.VC.db
+
+# Build output of the tracked headless test project (the Unity rules above are
+# root-anchored, so they do not cover tests/).
+tests/**/bin/
+tests/**/obj/
 
 # Unity3D generated meta files for ignored content
 *.pidb.meta

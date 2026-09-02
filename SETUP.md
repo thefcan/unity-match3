@@ -1,186 +1,186 @@
-# Setup Guide — from zero Unity experience to a playable game
+# Setup Guide — run it, regenerate it, and how it was built
 
-Every script in this repo is complete; what's left is the part Unity stores in
-binary/scene assets: creating the scene, two assets, and connecting Inspector
-references. Follow this top to bottom — about 20 minutes the first time.
+The project in this repo is **complete and playable**: the scenes, the level
+assets, the sprites, the sounds and the music are all committed. Nothing needs
+wiring before you press Play.
+
+So this guide reads in the order you actually need it:
+
+1. **[Run it](#1-run-it)** — three steps, no Unity experience required.
+2. **[Play it](#2-play-it)** — controls and the two modes.
+3. **[Regenerate the assets](#3-regenerate-the-assets)** — the `Match3` editor menu,
+   for when you change the palette, the level curve or the synths.
+4. **[Run the tests](#4-run-the-tests)** — in the editor, or with no Unity at all.
+5. **[Appendix](#appendix--how-the-scene-was-originally-built)** — how the scene was
+   originally built. **Already done — do not follow it on a fresh clone.**
 
 > **Mental model for Unity newcomers:** a *scene* is a tree of GameObjects; a
 > GameObject is an empty shell you attach *components* (scripts) to; `[SerializeField]`
 > fields in a script show up in the *Inspector* panel, and you "dependency-inject" by
-> dragging another object onto that field. That wiring is saved in the scene file.
+> dragging another object onto that field. That wiring is saved in the scene file —
+> which is why it ships committed here and you never have to redo it.
 
 ---
 
-## 1. Install Unity
+## 1. Run it
 
-1. Install **Unity Hub** from <https://unity.com/download>.
-2. In Unity Hub → **Installs → Install Editor**, pick **Unity 2022.3 LTS** (any
-   2022.3.x patch works; if Hub complains the project wants 2022.3.45f1, just choose
-   *Open with* your installed 2022.3 version).
-3. No extra modules are needed to run in the editor. (Add *Android Build Support*
-   later only if you want an APK.)
+1. **Install Unity 2022.3 LTS.** Get **Unity Hub** from
+   <https://unity.com/download>, then **Installs → Install Editor → Unity 2022.3
+   LTS** (any 2022.3.x patch works; if Hub says the project wants a different patch,
+   pick *Open with* your installed 2022.3). No extra modules are needed to play in
+   the editor — *Android Build Support* is only for producing an APK.
+2. **Add the project.** Unity Hub → **Projects → Add → Add project from disk** →
+   select this repo folder (`unity-match3`), then open it. The first import takes a
+   few minutes while Unity restores `Packages/manifest.json` (URP, TextMeshPro, Test
+   Framework) and builds the git-ignored `Library/` folder.
+3. **Open `Assets/Scenes/MainMenu.unity` and press Play.** That's it.
 
-## 2. Open the project
+If a window titled **TMP Importer** appears, click **Import TMP Essentials**. (The
+game ships its own pre-baked Baloo 2 / Nunito font assets in
+`Assets/Resources/Fonts`, so this only affects Unity's own editor UI.)
 
-1. Unity Hub → **Projects → Add → Add project from disk** → select this repo folder
-   (`unity-match3`).
-2. Open it. The first import takes a few minutes — Unity downloads the packages in
-   `Packages/manifest.json` (URP, TextMeshPro, Test Framework) and generates the
-   `Library/` folder (which is git-ignored).
-3. If a window titled **TMP Importer** appears at any point: click
-   **Import TMP Essentials**. (If it doesn't appear now, it will when you create the
-   first text element in step 7 — import it then.)
+**No Unity installed?** The rule layer still runs — see
+[section 4](#4-run-the-tests).
 
-## 3. Set up URP (2D renderer)
+## 2. Play it
 
-The URP *package* is already installed; Unity just needs a pipeline asset:
+Swap adjacent candies by pressing on one and dragging towards its neighbour;
+useless swaps bounce back for free and cost nothing.
 
-1. In the **Project** panel, open the `Assets` folder. Right-click →
-   **Create → Rendering → URP Asset (with 2D Renderer)**. Keep the default names
-   (it creates two files). You can drag them into a `Assets/Settings` folder you create, to keep things tidy.
-2. **Edit → Project Settings → Graphics** → set **Scriptable Render Pipeline Settings**
-   to the created `New Universal Render Pipeline Asset`.
-3. Still in Project Settings → **Quality** → in the **Rendering** dropdown of the
-   active quality level, assign the same asset.
+- **Moves campaign** (the main mode) — from the menu's level map, or press Play in
+  `Assets/Scenes/Game.unity` to jump straight into `Resources/Levels/Level_01`.
+  Complete the objectives shown at the top before the move counter runs out. Make
+  4 / L / T / 5 shapes for striped, wrapped and colour-bomb candies, a 2×2 square
+  for the jelly fish, and swap two specials together for combos.
+- **Time attack** (the original endless mode) — the menu's TIME ATTACK button. A
+  countdown against a rising score target, driven by the `Level1` config asset;
+  big matches add seconds.
 
-*(Skip-able: the game renders identically on the built-in pipeline; URP is here
-because it's the standard mobile production setup.)*
+Sit idle and a hint pulses; if the board ever runs out of moves it auto-shuffles.
+Progress saves itself to `persistentDataPath/progress.sav` (and to the cloud, if
+UGS is configured — see [docs/UGS-SETUP.md](docs/UGS-SETUP.md)).
 
-## 4. Portrait aspect
+## 3. Regenerate the assets
 
-1. **Edit → Project Settings → Player → Resolution and Presentation** → set
-   **Default Orientation** to **Portrait**.
-2. In the **Game** view's resolution dropdown (top-left of the Game panel), click
-   **+** and add a **Aspect Ratio** entry `9:16`. Select it.
-
-## 5. Create the level config and tile sprite
-
-1. Project panel → right-click `Assets/ScriptableObjects` →
-   **Create → Match3 → Level Config**. Name it `Level1`. Click it once and look at
-   the Inspector — every gameplay number lives here: 8×8 board, **45s** time limit,
-   target **120** (+40 each level), **+5s** per 4-match, hint after 4s idle, five
-   colours. Tune these any time, even while playing, to rebalance the game.
-2. Right-click `Assets/Sprites` → **Create → 2D → Sprites → Circle** (or Square for a
-   blockier look). Name it `TileSprite`.
-
-## 6. Build the scene
-
-**File → New Scene** (2D template) → **File → Save As** → `Assets/Scenes/Game.unity`.
-Then add it to builds: **File → Build Settings → Add Open Scenes**.
-
-### 6a. The tile prefab
-
-1. Hierarchy panel → right-click → **Create Empty**, name it `Tile`.
-2. With `Tile` selected: **Add Component → Sprite Renderer**; drag `TileSprite` into
-   its **Sprite** field.
-3. **Add Component → Tile View** (our script). Drag the **Sprite Renderer** component
-   (grab its header) onto the script's **Sprite Renderer** field.
-4. Set the Tile's **Transform → Scale** to `(0.9, 0.9, 1)` — the 0.1 gap draws the grid.
-5. Drag the `Tile` object from the Hierarchy into `Assets/Prefabs` in the Project
-   panel — this creates the prefab. Then **delete** the `Tile` from the Hierarchy
-   (the pool will instantiate copies at runtime).
-
-### 6b. The game objects
-
-Create three empty GameObjects in the Hierarchy (right-click → Create Empty), all at
-position `(0, 0, 0)`:
-
-| GameObject | Components to add | Inspector wiring |
-|---|---|---|
-| `Board` | **Board View**, **Tile Pool** | BoardView.TilePool → the TilePool component on this same object. TilePool.TilePrefab → the `Tile` prefab from `Assets/Prefabs`. |
-| `Input` | **Input Controller** | BoardView → the `Board` object. |
-| `Game` | **Game Manager** | LevelConfig → `Level1` asset; BoardView → `Board`; InputController → `Input`. |
-
-On the existing **Main Camera**: **Add Component → Camera Fitter**; set its
-LevelConfig → `Level1`. Also set the camera's **Background** color to something dark
-(e.g. `#1E2430`) — Environment → Background Type: Solid Color.
-
-### 6c. The UI
-
-1. Hierarchy → right-click → **UI → Canvas**. On the Canvas:
-   - **Canvas Scaler** component → UI Scale Mode: **Scale With Screen Size**,
-     Reference Resolution **1080 × 1920**, Match: **0.5**.
-2. Right-click the Canvas → **UI → Text - TextMeshPro** (import TMP Essentials if
-   prompted — assign **LiberationSans SDF** as the Font Asset). Make five of them.
-   The first four are the readouts; `MessageText` is a big centre banner that stays
-   empty until a "Level Complete!" / "Shuffling…" moment fills it:
-
-   | Name | Anchor (Anchor Presets box, hold Alt+Shift while clicking) | Text | Font size |
-   |---|---|---|---|
-   | `ScoreText` | top-center | `0` | 80 |
-   | `TimeText` | top-left | `45.0s` | 64 |
-   | `LevelText` | top-right | `Level 1` | 48 |
-   | `TargetText` | top-center (below score) | `Target 120` | 40 |
-   | `MessageText` | middle-center | *(leave empty)* | 72 |
-
-   Nudge the readouts inwards so they don't touch the screen edge.
-3. Add the HUD script: select the **Canvas** → **Add Component → Hud View** → wire
-   GameManager → `Game`, then Score/Time/Target/Level Text → their labels, and
-   **Message Text → `MessageText`** (this last one is optional — without it the pause
-   still happens, just no banner). Leave the colour / threshold fields at defaults.
-4. That's the whole overlay story: the end-of-level panel (win / out-of-moves /
-   time's-up, with star pips and Next/Retry/Level Map buttons) is **built at
-   runtime** by `LevelResultPanel` — it attaches itself to any scene that has a
-   Canvas and a GameManager, so there is nothing to wire.
-
-5. Save the scene (Cmd+S).
-
-## 7. Run the tests
-
-**Window → General → Test Runner** → **EditMode** tab → **Run All**.
-All tests should be green — they exercise the board logic (match detection, gravity,
-cascades, scoring) with zero scene dependencies, which is exactly why that code lives
-in an engine-free assembly.
-
-## 8. Play
-
-Press **Play**. Swap adjacent candies by pressing on one and dragging towards its
-neighbour (useless swaps bounce back for free).
-
-- **Moves campaign (default):** the Game scene plays `Resources/Levels/Level_01`
-  unless you arrived via the level map. Complete the objectives shown at the top
-  before the move counter runs out; make 4 / L / T / 5 shapes for striped, wrapped
-  and colour-bomb candies, and swap specials into each other for combos.
-- **Time attack:** start it from the MainMenu scene's button — the original
-  countdown/target rules, driven by the `Level1` config asset.
-
-Sit idle and a hint pulses; if the board ever has no moves it auto-shuffles. None of
-these extras need wiring — they're pure code driven off data assets.
-
-## 8b. The Candy-Crush layer — everything is generated
-
-The campaign content and all art/audio ship as generated assets. To regenerate any
-of them (or after changing the palette / `LevelCurve`), use the **Match3** menu:
+Every sprite, sound, music loop and level asset in this repo was produced by code
+in `Assets/Scripts/Editor`, so all of it is reproducible. You only need this after
+changing a generator — the palette in `CandyArtist`, the campaign in `LevelCurve`,
+the synths in `SfxSynth` / `MusicComposer`.
 
 | Menu item | Produces |
 |---|---|
-| **Match3 → Generate → Candy Sprites** | `Assets/Sprites/Candies/*.png` (21) + `Assets/Resources/CandySpriteLibrary.asset` |
-| **Match3 → Generate → Level Definitions** | `Assets/Resources/Levels/Level_01..20.asset` + `Assets/Resources/LevelCatalog.asset` |
-| **Match3 → Generate → Sound Effects** | `Assets/Resources/Audio/*.wav` (10 synthesized clips) |
-| **Match3 → Setup → Add Scenes To Build** | Build list: `MainMenu` (0) + `Game` (1) — needed for scene switching |
+| **Match3 → Generate → Candy Sprites** | `Assets/Sprites/Candies/*.png` (70 — the five colours × normal/striped/wrapped/fish/bomb, the same set again with colorblind badges, every blocker and the mystery egg), the five candy-town stages in `Assets/Resources/UI/Town`, and `Assets/Resources/CandySpriteLibrary.asset` |
+| **Match3 → Generate → UI Sprites** | `Assets/Resources/UI/*.png` (10) — 9-slice cards and pills, outlines, star, padlock, circle, the baked gradients |
+| **Match3 → Generate → Level Definitions** | `Assets/Resources/Levels/Level_01 … Level_120.asset` (120) + `Assets/Resources/LevelCatalog.asset` (objectives, blockers, star scores, tutorial lines) |
+| **Match3 → Generate → Sound Effects** | `Assets/Resources/Audio/*.wav` — 10 synthesized clips |
+| **Match3 → Generate → Music** | `Assets/Resources/Audio/Music/*.wav` — one loop-perfect track per chapter (deterministic: same chapter, same bytes) |
+| **Match3 → Generate → Sprite Atlas** | `Assets/Sprites/CandyAtlas.spriteatlas` — one draw call for the candies |
+| **Match3 → Generate → Font Assets** | the TMP SDF assets in `Assets/Resources/Fonts` — no runtime rasterization hitch |
+| **Match3 → Setup → Apply Mobile Settings** | portrait lock, IL2CPP + ARM64, safe-area flag, vSync off, URP HDR/shadows off, Android ASTC overrides, mono SFX |
+| **Match3 → Setup → Add Scenes To Build** | build list: `MainMenu` (0) + `Game` (1) — needed for scene switching |
 
-Nothing in the scene references these directly: `BoardView` auto-loads the sprite
-library from Resources, `AudioManager` builds itself on the first sound, the result
-panel and main menu construct their own UI, and progress saves itself to
-`persistentDataPath/progress.sav`.
+Nothing in the scene references these assets directly: `BoardView` auto-loads the
+sprite library from Resources, `AudioManager` builds itself on the first sound, and
+every panel constructs its own UI at runtime.
 
-## 9. First commit
+## 4. Run the tests
 
-Unity has now generated a `.meta` file next to every asset — these carry the stable
-GUIDs that Inspector references point at, so they **must be committed** (the
-`.gitignore` already handles everything else):
+**In the editor:** **Window → General → Test Runner** → **EditMode** tab → **Run
+All**. Everything should be green. The **PlayMode** tab holds three scene-boot smoke
+tests.
+
+**Without Unity** — the rule layer is engine-free, so the same tests run on a plain
+.NET 9 SDK:
 
 ```bash
-git init && git add . && git commit -m "Match-3 puzzle game: engine-free core, tests, Unity view layer"
+dotnet test tests/Match3.Core.Tests
 ```
+
+That project is tracked in git (the one `.csproj` the `.gitignore` lets through) and
+globs `Assets/Scripts/Core` + `Assets/Tests/EditMode` straight out of the Unity
+folders — no copying, no linking. It is also what CI runs on every push.
+
+> Keep NUnit constraints **unchained** (`Assert.That(x, Is.EqualTo(y))`, not
+> `Is.EqualTo(y).Within(z)`): the Unity Test Runner ships an older NUnit than
+> `dotnet test`, so a chained form can pass headlessly and fail in the editor.
+
+---
+
+## Appendix — how the scene was originally built
+
+> **You do not need any of this.** `Game.unity`, `MainMenu.unity`, the prefabs, the
+> config assets and the URP settings are all committed. These steps are recorded so
+> the scene can be rebuilt from nothing if it is ever lost — following them on a
+> working clone means hand-editing exactly the scene and ProjectSettings files this
+> project keeps stable.
+
+<details>
+<summary>Expand the original build-from-scratch steps</summary>
+
+### A. URP (2D renderer)
+
+1. `Assets` → right-click → **Create → Rendering → URP Asset (with 2D Renderer)**.
+2. **Edit → Project Settings → Graphics** → set **Scriptable Render Pipeline
+   Settings** to the created asset.
+3. **Project Settings → Quality** → assign the same asset in the active level's
+   **Rendering** dropdown.
+
+*(The game renders identically on the built-in pipeline; URP is here because it is
+the standard mobile production setup.)*
+
+### B. Portrait aspect
+
+1. **Project Settings → Player → Resolution and Presentation** → **Default
+   Orientation: Portrait**.
+2. Game view resolution dropdown → **+** → an **Aspect Ratio** entry `9:16`.
+
+### C. The level config and tile sprite
+
+1. Right-click `Assets/ScriptableObjects` → **Create → Match3 → Level Config**, name
+   it `Level1`. Every time-attack number lives here: 8×8 board, 45s limit, target 120
+   (+40 per level), +5s per 4-match, hint after 4s idle, five colours.
+2. Right-click `Assets/Sprites` → **Create → 2D → Sprites → Circle**, name it
+   `TileSprite`.
+
+### D. The scene
+
+**File → New Scene** (2D) → **Save As** `Assets/Scenes/Game.unity`, then **File →
+Build Settings → Add Open Scenes**.
+
+**The tile prefab:** an empty GameObject `Tile` with a **Sprite Renderer**
+(`TileSprite`) and **Tile View** (drag the renderer onto its field), scale
+`(0.9, 0.9, 1)` so the 0.1 gap draws the grid. Drag it into `Assets/Prefabs` and
+delete it from the Hierarchy — the pool instantiates copies at runtime.
+
+**The game objects** — three empties at `(0, 0, 0)`:
+
+| GameObject | Components | Inspector wiring |
+|---|---|---|
+| `Board` | **Board View**, **Tile Pool** | BoardView.TilePool → the TilePool on this object. TilePool.TilePrefab → the `Tile` prefab. |
+| `Input` | **Input Controller** | BoardView → the `Board` object. |
+| `Game` | **Game Manager** | LevelConfig → `Level1`; BoardView → `Board`; InputController → `Input`. |
+
+On **Main Camera**: add **Camera Fitter**, set its LevelConfig → `Level1`, and set
+the background to a dark solid colour (e.g. `#1E2430`).
+
+**The UI:** a **Canvas** with **Canvas Scaler** → Scale With Screen Size, reference
+resolution 1080 × 1920, Match 0.5. Five TMP texts — `ScoreText` (top-center, 80),
+`TimeText` (top-left, 64), `LevelText` (top-right, 48), `TargetText` (below score,
+40) and an empty `MessageText` (middle-center, 72) for the "Level Complete!" /
+"Shuffling…" banner. Add **Hud View** to the Canvas and wire GameManager → `Game`
+plus each label. Everything else — the result panel, the menu, the settings overlay,
+the boosters, every meta panel — is **built at runtime** and needs no wiring at all.
+
+</details>
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| Everything renders **magenta/pink** | URP pipeline asset not assigned — redo step 3 (both Graphics *and* Quality). |
-| `InvalidOperationException: ... is not assigned` on Play | That's GameManager's fail-fast check — an Inspector reference from the 6b table is missing. |
+| Everything renders **magenta/pink** | URP pipeline asset not assigned — Project Settings → Graphics *and* Quality (appendix A). |
+| `InvalidOperationException: ... is not assigned` on Play | GameManager's fail-fast check — an Inspector reference is missing (appendix D). |
 | Text looks like squares / no text | TMP Essentials not imported — **Window → TextMeshPro → Import TMP Essential Resources**. |
-| Clicks do nothing | The scene needs an **EventSystem** for UI (created automatically with the Canvas) and the `Input` object must be wired to `Board`. Board clicks specifically: check `Main Camera` exists and is tagged `MainCamera`. |
+| Clicks do nothing | The scene needs an **EventSystem** (created with the Canvas), and `Main Camera` must exist and be tagged `MainCamera`. |
 | Tiles huge/tiny or off-screen | CameraFitter missing or its LevelConfig not assigned. |
-| Tests don't appear in Test Runner | Let the compile finish (spinner bottom-right), then reopen the Test Runner window. |
+| Tests don't appear in Test Runner | Let the compile finish (spinner, bottom-right), then reopen the Test Runner window. |
+| `dotnet test` says the project is not found | Run it from the repo root: `dotnet test tests/Match3.Core.Tests`. It needs the .NET 9 SDK. |

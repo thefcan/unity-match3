@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Runs the game's rule tests WITHOUT Unity.
+
+    Match3.Core is compiled by Unity with noEngineReferences:true, and
+    Match3.Tests.EditMode references nothing but Match3.Core and NUnit — so the
+    same two source trees also compile as a plain .NET library. That is the whole
+    point of the core/view split, and this project is the proof: `dotnet test`
+    runs every rule test on a machine with no Unity installed at all.
+
+    Sources are GLOBBED from the Unity folders rather than copied or linked one by
+    one, so a new test file needs no bookkeeping here. LangVersion is pinned to 9
+    to match Unity 2022.3's C# level — a newer construct that compiles here but
+    not in the editor would be a trap for the next person.
+
+    NUnit note: the Unity Test Runner ships an older NUnit than the package below.
+    Chained constraints (Is.EqualTo(x).Within(y), Has.Count.EqualTo(n)) can pass
+    here and fail there, so the suite deliberately keeps every constraint single.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>Match3.Core.Tests</AssemblyName>
+    <RootNamespace>Match3.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Core/**/*.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+  </ItemGroup>
+
+</Project>

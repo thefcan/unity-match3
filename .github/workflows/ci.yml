@@ -10,6 +10,24 @@ permissions:
   checks: write
 
 jobs:
+  # The rule tests, run WITHOUT Unity. Match3.Core is compiled with
+  # noEngineReferences, so the core + EditMode sources also build as a plain
+  # .NET project (tests/Match3.Core.Tests) — no license, no editor, ~30 seconds.
+  # This is the job that actually guards the suite; the Unity job below is the
+  # optional belt-and-braces run for anyone who adds a license secret.
+  core-tests:
+    name: Core rule tests (dotnet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: dotnet test
+        run: dotnet test tests/Match3.Core.Tests --logger "console;verbosity=normal"
+
   # Gate the Unity job on the license secret so the pipeline stays green — the
   # test job is *skipped*, not failed — until a UNITY_LICENSE secret is added.
   config:
