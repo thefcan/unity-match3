@@ -134,6 +134,13 @@ namespace Match3.UI
             var veil = _root.GetComponent<Image>();
             veil.color = new Color(0f, 0f, 0f, 0.6f);
 
+            // Rings and banner breathe every frame while the veil is up, so it gets its
+            // own canvas — WITH a raycaster, because uGUI registers a graphic with its
+            // NEAREST canvas and the veil below is itself the dismiss button (the
+            // BoosterTray lesson: a nested canvas without one leaves dead buttons).
+            _root.AddComponent<Canvas>();
+            _root.AddComponent<GraphicRaycaster>();
+
             // The whole veil is the dismiss button — "tap to start".
             var button = _root.GetComponent<Button>();
             button.transition = Selectable.Transition.None;

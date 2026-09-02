@@ -60,12 +60,32 @@ namespace Match3.Game
             set => SetBool(RelaxedKey, value);
         }
 
-        /// <summary>Accessibility: no camera shake, far fewer particles.</summary>
+        /// <summary>
+        /// Accessibility: no camera shake, far fewer particles.
+        ///
+        /// The one pref that is CACHED. The others are read when a panel opens or a
+        /// sound plays; this one is read per cleared tile (EffectsView), per falling
+        /// tile (TileView) and once per cell while a board is built — 64 PlayerPrefs
+        /// lookups before an 8x8 level has drawn its first frame. The cache can only go
+        /// stale if something writes the key behind this property's back, and nothing
+        /// does: every write in the game goes through the setter below.
+        /// </summary>
         public static bool ReducedMotionOn
         {
-            get => PlayerPrefs.GetInt(ReducedMotionKey, 0) != 0;
-            set => SetBool(ReducedMotionKey, value);
+            get
+            {
+                if (_reducedMotion < 0)
+                    _reducedMotion = PlayerPrefs.GetInt(ReducedMotionKey, 0);
+                return _reducedMotion != 0;
+            }
+            set
+            {
+                _reducedMotion = value ? 1 : 0;
+                SetBool(ReducedMotionKey, value);
+            }
         }
+
+        private static int _reducedMotion = -1; // -1 = not read yet
 
         /// <summary>Accessibility: ~10% larger UI via canvas reference resolution.</summary>
         public static bool BigTextOn

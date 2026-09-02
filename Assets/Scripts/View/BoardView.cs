@@ -49,6 +49,15 @@ namespace Match3.View
         private TileView _hintA;
         private TileView _hintB;
 
+        // Per-wave scratch, reused instead of reallocated. A cascade wave can clear 47
+        // cells; the old code asked "was this tile cleared?" with a closure-capturing
+        // LINQ Any over that list, once per surviving creation, twice per wave.
+        private readonly HashSet<int> _clearedIds = new HashSet<int>();
+        // RunAll consumes its list before the next call can start (every use is
+        // `yield return RunAll(...)` inside PlayStep), so one buffer serves clears,
+        // morphs and moves.
+        private readonly List<IEnumerator> _runBuffer = new List<IEnumerator>();
+
         /// <summary>Spawns a view for every tile. Safe to call again on restart — old views return to the pool.</summary>
         public void Initialize(Board board, LevelConfig config, JellyGrid jelly = null, LockGrid locks = null,
                                FrostingGrid frosting = null, BombTimers bombs = null)
@@ -57,6 +66,7 @@ namespace Match3.View
             _config = config != null ? config : throw new ArgumentNullException(nameof(config));
             _frosting = frosting;
             _bombs = bombs;
+            CacheOrigin(); // board size just changed; every GridToWorld depends on it
 
             if (spriteLibrary == null)
                 spriteLibrary = Resources.Load<CandySpriteLibrary>("CandySpriteLibrary");
@@ -513,13 +523,19 @@ namespace Match3.View
         /// </summary>
         public IEnumerator AnimateHideTiles()
         {
-            yield return RunAll(_viewsById.Values.Select(v => v.ShrinkOut(vanishDuration)).ToList());
+            var shrinks = new List<IEnumerator>(_viewsById.Count);
+            foreach (TileView view in _viewsById.Values)
+                shrinks.Add(view.ShrinkOut(vanishDuration));
+            yield return RunAll(shrinks);
         }
 
         /// <summary>Pops every tile back in after the wipe.</summary>
         public IEnumerator AnimateShowTiles()
         {
-            yield return RunAll(_viewsById.Values.Select(v => v.GrowIn(appearDuration)).ToList());
+            var grows = new List<IEnumerator>(_viewsById.Count);
+            foreach (TileView view in _viewsById.Values)
+                grows.Add(view.GrowIn(appearDuration));
+            yield return RunAll(grows);
         }
 
         /// <summary>
@@ -639,11 +655,25 @@ namespace Match3.View
             return _board.IsInside(pos) ? pos : (GridPosition?)null;
         }
 
-        private Vector3 Origin =>
-            transform.position - new Vector3(
-                (_board.Width - 1) * 0.5f * cellSize,
-                (_board.Height - 1) * 0.5f * cellSize,
-                0f);
+        /// <summary>
+        /// Bottom-left cell's world centre. Cached: it depends only on the board's size
+        /// and this transform, neither of which moves during a level (the shake lives on
+        /// the camera), while Centroid alone re-derived it once per cleared cell — 47
+        /// native transform reads for one wave, all returning the same vector.
+        /// </summary>
+        private Vector3 Origin => _origin;
+
+        private Vector3 _origin;
+
+        private void CacheOrigin()
+        {
+            _origin = _board == null
+                ? transform.position
+                : transform.position - new Vector3(
+                      (_board.Width - 1) * 0.5f * cellSize,
+                      (_board.Height - 1) * 0.5f * cellSize,
+                      0f);
+        }
 
         // ---- Animations (all driven by core data) -----------------------------------
 
@@ -656,13 +686,20 @@ namespace Match3.View
         public IEnumerator AnimateSwap(GridPosition a, GridPosition b)
         {
             AudioManager.Play(Sfx.Swap);
-            var moves = new List<IEnumerator>();
-            foreach (GridPosition pos in new[] { a, b })
-            {
-                if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
-                    moves.Add(view.MoveTo(GridToWorld(pos), swapDuration));
-            }
+            var moves = new List<IEnumerator>(2);
+            AddGlide(moves, a);
+            AddGlide(moves, b);
             yield return RunAll(moves);
+        }
+
+        /// <summary>Queues one cell's view gliding to where the board says it now belongs.</summary>
+        private void AddGlide(List<IEnumerator> moves, GridPosition pos, List<TileView> touched = null)
+        {
+            if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
+            {
+                moves.Add(view.MoveTo(GridToWorld(pos), swapDuration));
+                touched?.Add(view);
+            }
         }
 
         /// <summary>
@@ -674,16 +711,10 @@ namespace Match3.View
         {
             AudioManager.Play(Sfx.Swap, 0.75f);
             Match3.Game.Haptics.Light();
-            var moves = new List<IEnumerator>();
+            var moves = new List<IEnumerator>(2);
             var shaken = new List<TileView>(2);
-            foreach (GridPosition pos in new[] { a, b })
-            {
-                if (_board[pos] is { } tile && _viewsById.TryGetValue(tile.Id, out TileView view))
-                {
-                    moves.Add(view.MoveTo(GridToWorld(pos), swapDuration));
-                    shaken.Add(view);
-                }
-            }
+            AddGlide(moves, a, shaken);
+            AddGlide(moves, b, shaken);
             yield return RunAll(moves);
             foreach (TileView view in shaken)
                 view.StartWiggle();
@@ -726,6 +757,7 @@ namespace Match3.View
         /// </summary>
         public IEnumerator PlayStep(CascadeStep step)
         {
+            RememberCleared(step);
             ApplyBombTicks(step); // countdown-only steps carry nothing else
             ApplyLockBreaks(step); // cages shatter first — their candies stay
             PlayDetonationJuice(step);
@@ -746,7 +778,7 @@ namespace Match3.View
             var convergeTargets = new Dictionary<GridPosition, Vector3>();
             foreach (SpecialCreation creation in step.Creations)
             {
-                if (IsCleared(step, creation.Replaced.Id)) continue;
+                if (_clearedIds.Contains(creation.Replaced.Id)) continue;
                 foreach (GridPosition source in creation.SourcePositions)
                     if (source != creation.Position)
                         convergeTargets[source] = GridToWorld(creation.Position);
@@ -782,7 +814,7 @@ namespace Match3.View
             var morphs = new List<IEnumerator>();
             foreach (SpecialCreation creation in step.Creations)
             {
-                if (IsCleared(step, creation.Replaced.Id)) continue;
+                if (_clearedIds.Contains(creation.Replaced.Id)) continue;
                 if (_viewsById.TryGetValue(creation.Replaced.Id, out TileView view))
                 {
                     _viewsById.Remove(creation.Replaced.Id);
@@ -838,10 +870,12 @@ namespace Match3.View
                 yield return RunAll(exits);
             }
 
-            List<IEnumerator> moves = step.Falls.Select(AnimateFall)
-                .Concat(step.Spawns.Select(AnimateSpawn))
-                .ToList();
-            yield return RunAll(moves);
+            _runBuffer.Clear();
+            foreach (TileFall fall in step.Falls)
+                _runBuffer.Add(AnimateFall(fall));
+            foreach (TileSpawn spawn in step.Spawns)
+                _runBuffer.Add(AnimateSpawn(spawn));
+            yield return RunAll(_runBuffer);
 
             // The end-of-move chocolate creep: the eaten candy squashes into a block.
             foreach (ChocolateSpread spread in step.ChocolateSpreads)
@@ -865,8 +899,13 @@ namespace Match3.View
             tilePool.Release(view);
         }
 
-        private static bool IsCleared(CascadeStep step, int tileId) =>
-            step.Cleared.Any(cleared => cleared.Tile.Id == tileId);
+        /// <summary>Fills <see cref="_clearedIds"/> for one wave (see the field's note).</summary>
+        private void RememberCleared(CascadeStep step)
+        {
+            _clearedIds.Clear();
+            foreach (ClearedTile cleared in step.Cleared)
+                _clearedIds.Add(cleared.Tile.Id);
+        }
 
         /// <summary>
         /// Per-cell pop delays so a lane or blast reads as travelling outward from its

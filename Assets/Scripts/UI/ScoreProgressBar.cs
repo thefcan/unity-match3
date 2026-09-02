@@ -39,6 +39,14 @@ namespace Match3.UI
             UiTheme.ApplySprite(trackImage, UiTheme.Pill, UiTheme.Slot);
             trackImage.raycastTarget = false;
 
+            // The fill's anchorMax moves every frame for 0.3s after each cascade wave,
+            // which dirties whatever canvas owns it. Parked on the root gameplay canvas
+            // that meant re-batching every HUD graphic per wave, so the bar gets its own
+            // (the house idiom — HudView.IsolateFrequentText, BoosterTray,
+            // ObjectiveBarView, UiConfetti). No GraphicRaycaster: nothing here is
+            // clickable, unlike the BoosterTray case.
+            trackGo.AddComponent<Canvas>();
+
             var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(trackGo.transform, false);
             var fill = (RectTransform)fillGo.transform;
@@ -64,6 +72,10 @@ namespace Match3.UI
             caption.enableWordWrapping = false;
             caption.raycastTarget = false;
             UiTheme.ApplyFont(caption, UiTheme.BodyFont);
+            // Its string changes once per cascade wave — same treatment the HUD gives
+            // its score and clock (HudView.IsolateFrequentText). Kept parented to the
+            // top bar: the anchors below are measured against IT, not the track.
+            captionGo.AddComponent<Canvas>();
 
             var bar = trackGo.AddComponent<ScoreProgressBar>();
             bar._game = game;
