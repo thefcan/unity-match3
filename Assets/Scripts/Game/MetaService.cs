@@ -180,7 +180,9 @@ namespace Match3.Game
         {
             try
             {
-                File.WriteAllText(SavePath, MetaSerializer.Serialize(Current));
+                // Temp-then-replace, and it leaves the previous save as a ".bak" that
+                // Load falls back to when the live file turns up truncated.
+                AtomicFile.WriteAllText(SavePath, MetaSerializer.Serialize(Current));
             }
             catch (Exception)
             {
@@ -194,9 +196,23 @@ namespace Match3.Game
         {
             try
             {
-                return File.Exists(SavePath)
-                    ? MetaSerializer.Deserialize(File.ReadAllText(SavePath))
-                    : new MetaState();
+                if (!File.Exists(SavePath))
+                    return new MetaState();
+
+                if (MetaSerializer.TryDeserialize(File.ReadAllText(SavePath), out MetaState state))
+                    return state;
+
+                // No end marker. Either the file predates the marker (it parsed fine —
+                // nothing to do) or it was cut short, which the tolerant parser reads as
+                // a valid but SMALLER save: rescues, album packs and every owned sticker
+                // sit at the tail. If the atomic writer left a backup, that one is whole
+                // by construction, so prefer it over a possibly-shaved live file.
+                string backup = SavePath + AtomicFile.BackupSuffix;
+                if (File.Exists(backup) &&
+                    MetaSerializer.TryDeserialize(File.ReadAllText(backup), out MetaState restored))
+                    return restored;
+
+                return state;
             }
             catch (Exception)
             {

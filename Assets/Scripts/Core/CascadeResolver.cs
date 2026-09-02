@@ -172,7 +172,9 @@ namespace Match3.Core
                         Array.Empty<ClearedTile>(), Array.Empty<TileFall>(), Array.Empty<TileSpawn>(),
                         0, Array.Empty<int>(), conversions, Array.Empty<Detonation>(),
                         Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
-                        Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>()));
+                        Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>(),
+                        Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), Array.Empty<BombTick>(),
+                        Array.Empty<EggHatch>(), isFinale: true));
                 }
             }
 
@@ -710,7 +712,8 @@ namespace Match3.Core
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
                                           creations, detonations, jellyHits, lockBreaks,
                                           Array.Empty<ChocolateSpread>(), ingredientExits,
-                                          fishStrikes, frostingHits, Array.Empty<BombTick>(), eggHatches));
+                                          fishStrikes, frostingHits, Array.Empty<BombTick>(), eggHatches,
+                                          isFinale: finale));
                 cascadeIndex++;
             }
 

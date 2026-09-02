@@ -116,6 +116,11 @@ namespace Match3.Core
                 }
                 case MissionType.MakeStriped:
                 {
+                    // The finale mints striped candies FOR the player (4 per 5 leftover
+                    // moves) — crediting those would let a comfortable win finish a
+                    // "make 20 striped" mission on its own, without a single 4-run.
+                    if (step.IsFinale)
+                        return 0;
                     int count = 0;
                     foreach (SpecialCreation creation in step.Creations)
                         if (creation.Created.Kind == TileKind.StripedH || creation.Created.Kind == TileKind.StripedV)
@@ -124,6 +129,8 @@ namespace Match3.Core
                 }
                 case MissionType.MakeWrapped:
                 {
+                    if (step.IsFinale) // same payout-is-not-play rule as MakeStriped
+                        return 0;
                     int count = 0;
                     foreach (SpecialCreation creation in step.Creations)
                         if (creation.Created.Kind == TileKind.Wrapped)

@@ -439,6 +439,9 @@ Assets/Tests/EditMode/
 ├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
 ├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 120-level campaign rhythm,
 │                                 blocker acts, early-chapter immutability landmarks
+├── SaveIntegrityTests.cs         reflection-driven full MetaState roundtrip, truncation
+│                                 detection, atomic writes + their backup, and the
+│                                 finale paying out no mission credit
 └── ProgressTests.cs              save roundtrip, corrupt input, unlocks, level curve
 ```
 

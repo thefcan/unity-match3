@@ -268,6 +268,11 @@ namespace Match3.Core
                 }
                 case EventKind.SpecialistWeek:
                 {
+                    // Sugar Crush hands out specials as a REWARD; counting them would
+                    // let one comfortable win clear a tier sized for three days of play
+                    // (same rule as MissionCatalog's MakeStriped/MakeWrapped).
+                    if (step.IsFinale)
+                        return 0;
                     int count = 0;
                     foreach (SpecialCreation creation in step.Creations)
                     {

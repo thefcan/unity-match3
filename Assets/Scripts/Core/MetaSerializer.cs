@@ -12,6 +12,14 @@ namespace Match3.Core
     /// </summary>
     public static class MetaSerializer
     {
+        /// <summary>
+        /// The last line every serialized state ends with. Its absence means the file
+        /// was cut short — which the tolerant parser below cannot otherwise notice,
+        /// because a truncated file is just a shorter list of perfectly valid lines
+        /// (the tail keys — rescues, album pages — silently revert to defaults).
+        /// </summary>
+        public const string EndMarker = "end";
+
         public static string Serialize(MetaState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
@@ -67,6 +75,7 @@ namespace Match3.Core
                 sb.Append("albumPage").Append(page).Append('=').Append(state.AlbumPageOwned[page]).Append('\n');
             sb.Append("albumPagesRewarded=").Append(state.AlbumPagesRewarded).Append('\n');
             sb.Append("eventToastPacks=").Append(state.EventToastPacks).Append('\n');
+            sb.Append(EndMarker).Append("=1\n"); // must stay last: see TryDeserialize
             return sb.ToString();
         }
 
@@ -105,12 +114,6 @@ namespace Match3.Core
                     case "lastChestStars": state.LastChestStars = Math.Max(0, value); break;
                     case "lastSeenTownStage": state.LastSeenTownStage = Math.Max(0, value); break;
                     case "missionDay": state.MissionDay = Math.Max(0, value); break;
-                    case "missionProgress0": state.MissionProgress[0] = Math.Max(0, value); break;
-                    case "missionProgress1": state.MissionProgress[1] = Math.Max(0, value); break;
-                    case "missionProgress2": state.MissionProgress[2] = Math.Max(0, value); break;
-                    case "missionClaimed0": state.MissionClaimed[0] = value != 0; break;
-                    case "missionClaimed1": state.MissionClaimed[1] = value != 0; break;
-                    case "missionClaimed2": state.MissionClaimed[2] = value != 0; break;
                     case "rerolledSlot": state.RerolledSlot = Math.Max(-1, value); break;
                     case "missionWeek": state.MissionWeek = Math.Max(0, value); break;
                     case "weeklyProgress": state.WeeklyProgress = Math.Max(0, value); break;
@@ -119,20 +122,7 @@ namespace Match3.Core
                     case "eventKindId": state.EventKindId = Math.Max(0, value); break;
                     case "eventParam": state.EventParam = Math.Max(0, value); break;
                     case "eventProgress": state.EventProgress = Math.Max(0, value); break;
-                    case "eventClaimed0": state.EventTierClaimed[0] = value != 0; break;
-                    case "eventClaimed1": state.EventTierClaimed[1] = value != 0; break;
-                    case "eventClaimed2": state.EventTierClaimed[2] = value != 0; break;
                     case "eventRaceClaimed": state.EventRaceClaimed = value != 0; break;
-                    case "eventRaceLevel0": state.EventRaceLevels[0] = Math.Max(0, value); break;
-                    case "eventRaceLevel1": state.EventRaceLevels[1] = Math.Max(0, value); break;
-                    case "eventRaceLevel2": state.EventRaceLevels[2] = Math.Max(0, value); break;
-                    case "eventRaceLevel3": state.EventRaceLevels[3] = Math.Max(0, value); break;
-                    case "eventRaceLevel4": state.EventRaceLevels[4] = Math.Max(0, value); break;
-                    case "eventRaceLevel5": state.EventRaceLevels[5] = Math.Max(0, value); break;
-                    case "eventRaceLevel6": state.EventRaceLevels[6] = Math.Max(0, value); break;
-                    case "eventRaceLevel7": state.EventRaceLevels[7] = Math.Max(0, value); break;
-                    case "eventRaceLevel8": state.EventRaceLevels[8] = Math.Max(0, value); break;
-                    case "eventRaceLevel9": state.EventRaceLevels[9] = Math.Max(0, value); break;
                     case "trophyGold": state.TrophyGold = Math.Max(0, value); break;
                     case "trophySilver": state.TrophySilver = Math.Max(0, value); break;
                     case "trophyBronze": state.TrophyBronze = Math.Max(0, value); break;
@@ -150,20 +140,71 @@ namespace Match3.Core
                     case "albumPity": state.AlbumPity = Math.Max(0, value); break;
                     // Masks clamp Max FIRST then &63 — the other order would turn a
                     // negative into fabricated ownership ((-5) & 63 == 59).
-                    case "albumPage0": state.AlbumPageOwned[0] = Math.Max(0, value) & 63; break;
-                    case "albumPage1": state.AlbumPageOwned[1] = Math.Max(0, value) & 63; break;
-                    case "albumPage2": state.AlbumPageOwned[2] = Math.Max(0, value) & 63; break;
-                    case "albumPage3": state.AlbumPageOwned[3] = Math.Max(0, value) & 63; break;
-                    case "albumPage4": state.AlbumPageOwned[4] = Math.Max(0, value) & 63; break;
-                    case "albumPage5": state.AlbumPageOwned[5] = Math.Max(0, value) & 63; break;
                     case "albumPagesRewarded": state.AlbumPagesRewarded = Math.Max(0, value) & 63; break;
                     case "eventToastPacks": state.EventToastPacks = Math.Max(0, value); break;
-                    // unknown keys: ignored (forward compatibility);
-                    // files from before the booster patch simply keep the
-                    // starter-pack defaults — everyone gets the gift once
+
+                    // Indexed keys are parsed, not enumerated. Serialize LOOPS on these
+                    // constants, so hand-written case lists agreed with it only by
+                    // coincidence: bumping DailyCount to 4 would have written a fourth
+                    // mission every save and silently dropped it on every load.
+                    default:
+                        if (TryIndexed(key, "missionProgress", MissionCatalog.DailyCount, out int missionSlot))
+                            state.MissionProgress[missionSlot] = Math.Max(0, value);
+                        else if (TryIndexed(key, "missionClaimed", MissionCatalog.DailyCount, out int claimedSlot))
+                            state.MissionClaimed[claimedSlot] = value != 0;
+                        else if (TryIndexed(key, "eventClaimed", EventCalendar.TierCount, out int tier))
+                            state.EventTierClaimed[tier] = value != 0;
+                        else if (TryIndexed(key, "eventRaceLevel", EventCalendar.RaceTarget, out int racer))
+                            state.EventRaceLevels[racer] = Math.Max(0, value);
+                        else if (TryIndexed(key, "albumPage", AlbumCatalog.PageCount, out int page))
+                            state.AlbumPageOwned[page] = Math.Max(0, value) & 63;
+                        // anything else: ignored (forward compatibility); files from
+                        // before the booster patch simply keep the starter-pack
+                        // defaults — everyone gets the gift once
+                        break;
                 }
             }
             return state;
+        }
+
+        /// <summary>
+        /// Deserialize, and say whether the file was WHOLE. <paramref name="state"/> is
+        /// always the best-effort parse (identical to <see cref="Deserialize"/>), so a
+        /// caller with nothing better to fall back on can still use it.
+        /// False means the <see cref="EndMarker"/> line is missing: either a save
+        /// written before the marker existed, or one that was cut short.
+        /// </summary>
+        public static bool TryDeserialize(string text, out MetaState state)
+        {
+            state = Deserialize(text);
+            if (string.IsNullOrEmpty(text))
+                return false;
+
+            foreach (string rawLine in text.Split('\n'))
+            {
+                string line = rawLine.Trim();
+                if (line.Length == 0)
+                    continue;
+                if (line.StartsWith(EndMarker + "=", StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// "missionProgress2" → 2, rejected unless it lands inside the array the writer
+        /// loops over. A negative or over-long index would otherwise index straight
+        /// into an IndexOutOfRangeException on a hand-edited save file.
+        /// </summary>
+        private static bool TryIndexed(string key, string prefix, int count, out int index)
+        {
+            index = -1;
+            if (key.Length <= prefix.Length || !key.StartsWith(prefix, StringComparison.Ordinal))
+                return false;
+            if (!int.TryParse(key.Substring(prefix.Length), out int parsed) || parsed < 0 || parsed >= count)
+                return false;
+            index = parsed;
+            return true;
         }
     }
 }

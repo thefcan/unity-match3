@@ -40,10 +40,9 @@ namespace Match3.Core
 
             try
             {
-                string directory = Path.GetDirectoryName(_path);
-                if (!string.IsNullOrEmpty(directory))
-                    Directory.CreateDirectory(directory);
-                File.WriteAllText(_path, ProgressSerializer.Serialize(progress));
+                // Temp-then-replace: a process killed mid-save keeps the old file
+                // whole instead of leaving half of one (see AtomicFile).
+                AtomicFile.WriteAllText(_path, ProgressSerializer.Serialize(progress));
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {

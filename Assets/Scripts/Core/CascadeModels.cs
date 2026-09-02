@@ -334,6 +334,15 @@ namespace Match3.Core
         /// <summary>Mystery eggs that cracked open this wave (their cells never clear).</summary>
         public IReadOnlyList<EggHatch> EggHatches { get; }
 
+        /// <summary>
+        /// True for every wave of the Sugar Crush celebration — the leftover-move
+        /// conversions AND the blast waves that sweep them up. The finale is a payout,
+        /// not play: anything that rewards the PLAYER for making specials has to look
+        /// at this, or a won level quietly finishes a "make 6 striped candies" mission
+        /// on its own.
+        /// </summary>
+        public bool IsFinale { get; }
+
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
@@ -432,7 +441,8 @@ namespace Match3.Core
             IReadOnlyList<FishStrike> fishStrikes,
             IReadOnlyList<FrostingHit> frostingHits,
             IReadOnlyList<BombTick> bombTicks,
-            IReadOnlyList<EggHatch> eggHatches)
+            IReadOnlyList<EggHatch> eggHatches,
+            bool isFinale = false)
         {
             CascadeIndex = cascadeIndex;
             Cleared = cleared ?? throw new ArgumentNullException(nameof(cleared));
@@ -450,6 +460,7 @@ namespace Match3.Core
             FrostingHits = frostingHits ?? throw new ArgumentNullException(nameof(frostingHits));
             BombTicks = bombTicks ?? throw new ArgumentNullException(nameof(bombTicks));
             EggHatches = eggHatches ?? throw new ArgumentNullException(nameof(eggHatches));
+            IsFinale = isFinale;
         }
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
