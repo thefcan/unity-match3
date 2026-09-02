@@ -254,7 +254,14 @@ namespace Match3.Core
                 }
             }
 
-            const int maxAttempts = 100;
+            // Blind deals are cheap, but the acceptance test is strict and a crowded
+            // palette makes a clean one rare: on the campaign's 8x8 board with four
+            // colours (levels 1-3) only ~1 deal in 200 comes out settled. At 100 tries
+            // that conceded a dirty board ~60% of the time — and a conceded board is
+            // not cosmetic: the player's next move detonates a cascade they never made,
+            // banking its points and objective credit. The loop still exits on the
+            // first settled deal, so the common case costs exactly what it did before.
+            const int maxAttempts = 2000;
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 // Fisher–Yates, driven by the injected IRandom.
@@ -267,17 +274,90 @@ namespace Match3.Core
                 for (int i = 0; i < cells.Count; i++)
                     _tiles[cells[i].X, cells[i].Y] = tiles[i];
 
-                // With squares live, a dealt board must also be square-free (the
-                // FillWithoutMatches invariant) — a pre-formed square would clear
-                // itself on the next resolve with no player input.
-                if (FindMatches().Count == 0 &&
-                    (!SquaresLive || FindSquares().Count == 0) &&
-                    HasPossibleMove())
+                if (IsSettledDeal())
                     return;
             }
-            // Degenerate fallback (e.g. far too few colours): accept the last
-            // permutation — in full mode that can concede a formed square, which
-            // the resolver then clears on the next settle (self-healing).
+
+            // Still stuck: repair rather than concede. Trading one offending tile for a
+            // random other mobile tile converges where more blind deals would not — a
+            // single bad run needs one cell moved, not a whole new permutation.
+            const int maxRepairs = 400;
+            for (int repair = 0; repair < maxRepairs && cells.Count > 1; repair++)
+            {
+                if (IsSettledDeal())
+                    return;
+
+                GridPosition source = FirstOffendingCell() ?? cells[random.Next(cells.Count)];
+                GridPosition target = cells[random.Next(cells.Count)];
+                if (target.Equals(source))
+                    continue;
+                (_tiles[source.X, source.Y], _tiles[target.X, target.Y]) =
+                    (_tiles[target.X, target.Y], _tiles[source.X, source.Y]);
+            }
+            // Degenerate mix (e.g. two colours left on a wide board): accept the last
+            // layout — the resolver clears whatever formed on the next settle.
+        }
+
+        /// <summary>
+        /// The shuffle's acceptance test. A dealt board must have nothing already
+        /// matched, no live 2x2 square (the <see cref="FillWithoutMatches"/> invariant —
+        /// a pre-formed square would clear itself with no player input), no ingredient
+        /// parked on the exit row (the resolver hands those in for free on the next
+        /// move), and at least one move to make.
+        /// </summary>
+        private bool IsSettledDeal() =>
+            FindMatches().Count == 0 &&
+            (!SquaresLive || FindSquares().Count == 0) &&
+            FirstFloorIngredient() == null &&
+            HasPossibleMove();
+
+        /// <summary>
+        /// One movable cell that breaks the acceptance test, scanned in board order so
+        /// the choice is platform-independent. Null when the only thing missing is a
+        /// possible move — nothing specific to blame there, so the caller trades a
+        /// random cell instead.
+        /// </summary>
+        private GridPosition? FirstOffendingCell()
+        {
+            if (FirstFloorIngredient() is { } floor)
+                return floor;
+
+            HashSet<GridPosition> matched = FindMatches();
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    var pos = new GridPosition(x, y);
+                    if (!IsImmobile(pos) && matched.Contains(pos))
+                        return pos;
+                }
+            }
+
+            if (SquaresLive)
+            {
+                foreach (MatchSquare square in FindSquares())
+                {
+                    foreach (GridPosition pos in square.Positions)
+                    {
+                        if (!IsImmobile(pos))
+                            return pos;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>A movable ingredient sitting on the bottom row, if there is one.</summary>
+        private GridPosition? FirstFloorIngredient()
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                var pos = new GridPosition(x, 0);
+                if (_tiles[x, 0] is { } tile && tile.Kind == TileKind.Ingredient && !IsImmobile(pos))
+                    return pos;
+            }
+            return null;
         }
 
         /// <summary>

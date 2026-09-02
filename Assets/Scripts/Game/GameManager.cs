@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Match3.Core;
 using Match3.UI;
 using Match3.View;
@@ -392,9 +393,20 @@ namespace Match3.Game
                 }
                 if (LevelDefinition.lockCells is { Length: > 0 })
                 {
-                    Locks = LockGrid.FromCells(Board.Width, Board.Height,
-                        System.Linq.Enumerable.Select(LevelDefinition.lockCells,
-                            cell => new GridPosition(cell.x, cell.y)));
+                    // Out-of-range cells are dropped, exactly as every sibling blocker
+                    // list below does. LockGrid.Set throws on a bad cell, and this runs
+                    // inside InitState.Enter — one mistyped authored cell would take the
+                    // board, the state machine and the result panel down with it.
+                    var lockCells = new List<GridPosition>(LevelDefinition.lockCells.Length);
+                    foreach (Vector2Int cell in LevelDefinition.lockCells)
+                    {
+                        var pos = new GridPosition(cell.x, cell.y);
+                        if (Board.IsInside(pos))
+                            lockCells.Add(pos);
+                    }
+                    Locks = lockCells.Count > 0
+                        ? LockGrid.FromCells(Board.Width, Board.Height, lockCells)
+                        : null;
                 }
                 else
                 {

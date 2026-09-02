@@ -393,7 +393,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**535 EditMode tests, all green** — the core is tested without ever opening a scene:
+**610 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -402,7 +402,9 @@ Assets/Tests/EditMode/
 ├── GravityTests.cs               falling, identity preservation, refill stacking
 ├── CascadeResolverTests.cs       chain reactions, multipliers, board stability after resolve
 ├── MatchRunTests.cs              per-run lengths → big-match (4+) detection
-├── BoardRecoveryTests.cs         find-a-move, dead boards, colour-preserving shuffle
+├── BoardRecoveryTests.cs         find-a-move, dead boards, colour-preserving shuffle that
+│                                 settles the 4-colour campaign board and never parks an
+│                                 ingredient on the exit row
 ├── SpecialMatchAnalyzerTests.cs  4/L/T/5 shapes → striped/wrapped/bomb, placement rules
 ├── DetonationTests.cs            blast geometry + wrapped double-blast + chain order
 ├── SwapComboTests.cs             all special+special / bomb swaps, no-bounce activation
@@ -417,6 +419,8 @@ Assets/Tests/EditMode/
 ├── FishTests.cs                  2×2 shape priority, target priority, the fish combo matrix
 ├── BlockerTests.cs               frosting layers, bomb fuses (birth-move grace), swirl beam
 │                                 absorption, fountain revival — and their recordings
+├── LevelAuthoringTests.cs        campaign-wide invariants: every authored cell inside its
+│                                 board, no two blockers on one cell, star bars in order
 ├── Chapter5Tests.cs              level 81-100 landmarks, tutorial lines, 1-80 bit-identical
 ├── Chapter6Tests.cs              level 101-120 egg acts, jelly encore, 1-100 landmark pins
 ├── EggTests.cs                   mystery-egg hatching: weights, row-major rolls, cage/jelly/

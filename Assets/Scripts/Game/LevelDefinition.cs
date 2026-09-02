@@ -32,8 +32,6 @@ namespace Match3.Game
 
         [Header("Moves")]
         [Min(1)] public int movesLimit = 20;
-        [Tooltip("Points banked per unused move when the level is won (cashout).")]
-        [Min(0)] public int movesBonusPoints = 30;
 
         [Header("Objectives")]
         public ObjectiveSpec[] objectives =

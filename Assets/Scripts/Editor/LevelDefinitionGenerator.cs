@@ -40,7 +40,6 @@ namespace Match3.EditorTools
                 level.height = parameters.Height;
                 level.colorCount = parameters.ColorCount;
                 level.movesLimit = parameters.MovesLimit;
-                level.movesBonusPoints = parameters.MovesBonusPoints;
                 level.objectives = parameters.Objectives
                     .Select(objective => new LevelDefinition.ObjectiveSpec
                     {

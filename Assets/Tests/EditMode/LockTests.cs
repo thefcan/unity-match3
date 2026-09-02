@@ -138,7 +138,9 @@ namespace Match3.Tests
             board.AttachLocks(locks);
             Tile lockedTile = board[new GridPosition(0, 0)].Value;
 
-            board.Shuffle(new SequenceRandom(new int[700])); // all-zero draws; fallback path is fine
+            // A 3x3 with two planted cells rarely settles, so this deliberately runs
+            // the shuffle to its repair pass — seeded, so it is still deterministic.
+            board.Shuffle(new SystemRandom(11));
 
             Assert.That(board[new GridPosition(1, 1)].Value.Kind, Is.EqualTo(TileKind.Chocolate));
             Assert.That(board[new GridPosition(0, 0)].Value.Id, Is.EqualTo(lockedTile.Id));

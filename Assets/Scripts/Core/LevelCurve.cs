@@ -23,7 +23,6 @@ namespace Match3.Core
         public int Height { get; }
         public int ColorCount { get; }
         public int MovesLimit { get; }
-        public int MovesBonusPoints { get; }
         public IReadOnlyList<Objective> Objectives { get; }
         public IReadOnlyList<int> StarScores { get; }
 
@@ -66,7 +65,7 @@ namespace Match3.Core
         /// <summary>Cells starting as mystery eggs. Chapter 6 onwards.</summary>
         public IReadOnlyList<GridPosition> EggCells { get; }
 
-        public LevelParameters(int width, int height, int colorCount, int movesLimit, int movesBonusPoints,
+        public LevelParameters(int width, int height, int colorCount, int movesLimit,
                                IReadOnlyList<Objective> objectives, IReadOnlyList<int> starScores,
                                int jellyRows = 0, int jellyLayers = 1,
                                IReadOnlyList<GridPosition> lockCells = null,
@@ -84,7 +83,6 @@ namespace Match3.Core
             Height = height;
             ColorCount = colorCount;
             MovesLimit = movesLimit;
-            MovesBonusPoints = movesBonusPoints;
             Objectives = objectives ?? throw new ArgumentNullException(nameof(objectives));
             StarScores = starScores ?? throw new ArgumentNullException(nameof(starScores));
             JellyRows = jellyRows;
@@ -211,7 +209,7 @@ namespace Match3.Core
             (string tutorialText, IReadOnlyList<GridPosition> tutorialCells) =
                 TutorialFor(level, lockCells, chocolateCells, frostingCells, eggCells);
 
-            return new LevelParameters(8, 8, colorCount, movesLimit, 30, objectives, starScores,
+            return new LevelParameters(8, 8, colorCount, movesLimit, objectives, starScores,
                                        jellyRows, jellyLayers, lockCells, chocolateCells, ingredientCount,
                                        frostingCells, swirlCells, fountainCells, bombCount, bombTimer,
                                        tutorialText, tutorialCells, eggCells);
