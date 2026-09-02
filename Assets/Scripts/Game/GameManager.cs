@@ -218,6 +218,15 @@ namespace Match3.Game
 
         private void TickHint()
         {
+            // The tutorial veil sits over a Playing board and swallows every touch,
+            // so idle time there is the overlay's, not the player's — the hint used
+            // to fire (and pulse tiles) behind the dim.
+            if (TutorialOverlay.VeilOpen)
+            {
+                _idleTime = 0f;
+                return;
+            }
+
             _idleTime += Time.deltaTime;
             if (_hintActive || _idleTime < levelConfig.hintDelaySeconds)
                 return;

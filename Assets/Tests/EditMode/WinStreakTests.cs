@@ -90,5 +90,18 @@ namespace Match3.Tests
             Assert.AreEqual(3, StarCalculator.Cap(3, relaxedMode: false));
             Assert.AreEqual(0, StarCalculator.Cap(0, relaxedMode: false));
         }
+
+        [Test]
+        public void LosingWithNoStreak_KeepsTheShield()
+        {
+            var state = new MetaState { WinStreak = 0, StreakShields = 1 };
+
+            WinStreakRules.RegisterOutcome(state, won: false);
+
+            // Nothing to protect: the shield is for BREAKING a streak, and repeated
+            // retries on a hard level used to burn the whole shelf.
+            Assert.That(state.StreakShields, Is.EqualTo(1));
+            Assert.That(state.WinStreak, Is.EqualTo(0));
+        }
     }
 }

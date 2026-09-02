@@ -39,6 +39,8 @@ namespace Match3.Core
         /// <summary>A shield (chest loot) absorbs one break; otherwise the streak resets.</summary>
         private static void BreakStreak(MetaState state)
         {
+            if (state.WinStreak <= 0)
+                return; // nothing to protect — spending a shield here is pure waste
             if (state.StreakShields > 0)
                 state.StreakShields--;
             else

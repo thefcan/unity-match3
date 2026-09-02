@@ -1066,6 +1066,17 @@ namespace Match3.View
 
         private IEnumerator AnimateSpawn(TileSpawn spawn)
         {
+            // A cell UNDER a fixed blocker (frosting, chocolate, a fountain, a caged
+            // candy) still refills — gravity treats the blocker as a floor — but a
+            // tile falling in from the top would visibly pass THROUGH it. Those
+            // candies appear in place instead.
+            if (IsCoveredByBlocker(spawn.Position))
+            {
+                TileView sealed_ = SpawnView(spawn.Tile, GridToWorld(spawn.Position));
+                yield return sealed_.GrowIn(appearDuration);
+                yield break;
+            }
+
             // New tiles start above the board (stacked per column via SpawnHeightOffset)
             // and fall into place, so refills read as "pouring in from the top".
             var startCell = new GridPosition(spawn.Position.X, _board.Height - 1 + spawn.SpawnHeightOffset);
@@ -1073,6 +1084,15 @@ namespace Match3.View
 
             float duration = FallDuration(startCell.Y - spawn.Position.Y);
             yield return view.FallTo(GridToWorld(spawn.Position), duration);
+        }
+
+        /// <summary>True when an immobile tile sits anywhere above this cell in its column.</summary>
+        private bool IsCoveredByBlocker(GridPosition cell)
+        {
+            for (int y = cell.Y + 1; y < _board.Height; y++)
+                if (_board.IsImmobile(new GridPosition(cell.X, y)))
+                    return true;
+            return false;
         }
 
         private TileView SpawnView(Tile tile, Vector3 worldPosition)

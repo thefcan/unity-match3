@@ -113,9 +113,13 @@ namespace Match3.Core
         /// swap cells lets wave 0 fire special+special combos and place created specials
         /// at the cell the player actually touched. Returns an empty result — without
         /// mutating anything — when the swap achieved nothing, so the caller can revert.
+        /// <paramref name="countsAsMove"/> is false for the FREE-SWAP booster: like the
+        /// hammer it costs no move, so it must not feed the end-of-move chocolate creep
+        /// either ("a booster is not a move" — see <see cref="ResolveHammer"/>).
         /// </summary>
-        public ResolutionResult ResolveSwap(Board board, GridPosition from, GridPosition to) =>
-            ResolveInternal(board, from, to);
+        public ResolutionResult ResolveSwap(Board board, GridPosition from, GridPosition to,
+                                            bool countsAsMove = true) =>
+            ResolveInternal(board, from, to, countsAsMove: countsAsMove);
 
         /// <summary>
         /// The end-of-level "Sugar Crush": unused moves convert normal candies into
@@ -293,7 +297,8 @@ namespace Match3.Core
         }
 
         private ResolutionResult ResolveInternal(Board board, GridPosition? swapFrom, GridPosition? swapTo,
-                                                 bool finale = false, GridPosition? hammer = null)
+                                                 bool finale = false, GridPosition? hammer = null,
+                                                 bool countsAsMove = true)
         {
             if (board == null) throw new ArgumentNullException(nameof(board));
 
@@ -710,9 +715,10 @@ namespace Match3.Core
             }
 
             // ---- 5. End of move: ignored chocolate creeps ------------------------------
-            // Only after a real player move (swap context + at least one wave), and only
-            // when the whole move destroyed no chocolate — the classic pressure rule.
-            if (steps.Count > 0 && swapFrom.HasValue && _factory != null && !chocolateDestroyed &&
+            // Only after a real player MOVE (swap context + at least one wave, and the
+            // free-swap booster doesn't count), and only when the whole move destroyed
+            // no chocolate — the classic pressure rule.
+            if (steps.Count > 0 && swapFrom.HasValue && countsAsMove && _factory != null && !chocolateDestroyed &&
                 TrySpreadChocolate(board) is { } spread)
             {
                 steps.Add(new CascadeStep(cascadeIndex,

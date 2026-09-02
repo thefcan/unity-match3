@@ -109,5 +109,31 @@ namespace Match3.Tests
             Assert.That(SwapRules.Classify(bomb, ingredient), Is.EqualTo(SwapKind.None));
             Assert.That(SwapRules.IsActivationSwap(ingredient, bomb), Is.False);
         }
+
+        [Test]
+        public void ResolveNeverHandsBackAnIngredientSittingOnTheFloor()
+        {
+            // Why this matters: Board.FindPossibleMove only understands COLOUR runs,
+            // so a board whose only remaining "move" was an ingredient exiting would
+            // read as dead. It cannot happen — the resolver keeps the cascade alive
+            // while HasBottomIngredient is true and exits it in the same resolve —
+            // and this pins that invariant so the hint stays honest.
+            TileFactory factory = TestFactories.Seeded(5, seed: 12);
+            Board board = Board.FromLayout(new[,]
+            {
+                { B, C, D, E },
+                { C, D, E, B },
+                { D, E, B, C },
+                { A, A, A, D },
+            }, factory);
+            board.SetTile(new GridPosition(3, 1), factory.CreateIngredient());
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SystemRandom(3));
+            resolver.AttachIngredients(1);
+            resolver.Resolve(board);
+
+            for (int x = 0; x < board.Width; x++)
+                Assert.That(board[new GridPosition(x, 0)].Value.Kind, Is.Not.EqualTo(TileKind.Ingredient));
+        }
     }
 }

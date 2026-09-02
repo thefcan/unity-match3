@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Match3.Core;
 
@@ -42,11 +43,18 @@ namespace Match3.Game
             int stars = StarCalculator.Cap(
                 StarCalculator.Calculate(Game.Score, Game.LevelDefinition.starScores),
                 Game.RelaxedThisRun);
+            // Star events must count what this win ADDED: progress stores the
+            // per-level maximum, so replaying a 3-star level used to feed the
+            // StarSprint three more stars every time (the Race branch beside it
+            // already guards with distinct levels).
+            int starsBefore = ProgressService.Current.StarsFor(Game.Level);
+            int starsEarned = Math.Max(0, stars - starsBefore);
+
             ProgressService.RecordWin(Game.Level, stars);
             MetaService.RegisterLevelOutcome(won: true);
             // Event progress writes no file of its own: MissionService.RegisterWin's
             // save (next line) flushes the shared MetaState — keep this line above it.
-            EventService.RegisterWin(Game.Level, stars);
+            EventService.RegisterWin(Game.Level, starsEarned);
             MissionService.RegisterWin();
 
             yield return Game.BoardView.AnimateHideTiles();

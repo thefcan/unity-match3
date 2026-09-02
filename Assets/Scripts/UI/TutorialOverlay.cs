@@ -57,6 +57,7 @@ namespace Match3.UI
 
         private void OnDisable()
         {
+            VeilOpen = false; // a scene change must never leave the flag stuck on
             if (_game == null) return;
             _game.LevelChanged -= HandleLevelChanged;
             _game.PhaseChanged -= HandlePhaseChanged;
@@ -76,6 +77,13 @@ namespace Match3.UI
             StartCoroutine(ShowAfterLayout(definition));
         }
 
+        /// <summary>
+        /// True while the teaching veil is on screen. The veil covers a PLAYING
+        /// board and eats every touch, so the idle-hint timer must not treat that
+        /// as the player thinking (GameManager.TickHint).
+        /// </summary>
+        public static bool VeilOpen { get; private set; }
+
         /// <summary>Anything that takes the board out of Playing sweeps the overlay away.</summary>
         private void HandlePhaseChanged(GamePhase phase)
         {
@@ -94,6 +102,7 @@ namespace Match3.UI
             _title.text = definition.tutorialText;
             PositionRings(definition.tutorialCells);
             UiTween.OpenPanel(this, _root, _card.transform);
+            VeilOpen = true;
             if (_pulse != null)
                 StopCoroutine(_pulse);
             _pulse = StartCoroutine(Pulse());
@@ -101,6 +110,7 @@ namespace Match3.UI
 
         private void Hide()
         {
+            VeilOpen = false;
             if (_pulse != null)
             {
                 StopCoroutine(_pulse);

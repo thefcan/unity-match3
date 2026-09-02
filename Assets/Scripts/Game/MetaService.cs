@@ -182,9 +182,11 @@ namespace Match3.Game
             {
                 File.WriteAllText(SavePath, MetaSerializer.Serialize(Current));
             }
-            catch (IOException)
+            catch (Exception)
             {
-                // full disk / permissions — losing a streak beat is acceptable
+                // Full disk, permissions, or a serializer that choked — losing a
+                // streak beat is acceptable, crashing the app is not. (Load and
+                // FileProgressRepository already catch this broadly.)
             }
         }
 

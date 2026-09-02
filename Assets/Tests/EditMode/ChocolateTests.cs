@@ -171,5 +171,31 @@ namespace Match3.Tests
             Assert.That(board[new GridPosition(1, 1)].Value.IsSpecial, Is.False,
                         "chocolate is a blocker, not a detonating special");
         }
+
+        [Test]
+        public void FreeSwapBooster_DoesNotFeedTheChocolate()
+        {
+            // Same board and same swap as IgnoredChocolateSpreads_AfterARealMove —
+            // only the booster flag differs, so the spread's absence is the flag's
+            // doing. "A booster is not a move" (the hammer already obeyed it).
+            TileFactory factory = TestFactories.Scripted(5, A, B, B, A, A, B);
+            Board board = Board.FromLayout(new[,]
+            {
+                { D, E, D, C },
+                { E, D, E, B },
+                { B, A, B, E },
+                { A, B, A, C },
+            }, factory);
+            board.SetTile(new GridPosition(3, 3), factory.CreateChocolate());
+
+            var resolver = new CascadeResolver(new ScoreConfig(10, 1), factory, new SequenceRandom(1));
+            var from = new GridPosition(1, 0);
+            var to = new GridPosition(1, 1);
+            board.Swap(from, to);
+            ResolutionResult result = resolver.ResolveSwap(board, from, to, countsAsMove: false);
+
+            Assert.That(result.HadMatches, Is.True);
+            Assert.That(result.Steps.SelectMany(s => s.ChocolateSpreads), Is.Empty);
+        }
     }
 }

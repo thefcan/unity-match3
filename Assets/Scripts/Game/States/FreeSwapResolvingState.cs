@@ -38,7 +38,7 @@ namespace Match3.Game
 
             // Empty result = the pair simply stays swapped (ResolveSwap never
             // mutates when nothing matched, so the board is exactly the new layout).
-            ResolutionResult result = Game.Resolver.ResolveSwap(Game.Board, _from, _to);
+            ResolutionResult result = Game.Resolver.ResolveSwap(Game.Board, _from, _to, countsAsMove: false);
 
             foreach (CascadeStep step in result.Steps)
             {
