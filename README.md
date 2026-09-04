@@ -375,6 +375,10 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
   **swirl**, the **chocolate fountain**, the **mystery egg** and the five
   candy-town stages. One silhouette per colour so candies stay tellable-apart
   without colour vision even before the badge mode.
+- **Match3 → Generate → App Icons** — the launcher icon, Android's two adaptive
+  layers and the 1024×500 Play feature graphic from `IconArtist`, coloured by the
+  campaign's own level-1 palette and drawn from the real candy silhouettes — so the
+  icon can't drift from the game. Assigns them in PlayerSettings too.
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
   9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
   baked background/CTA gradients.
@@ -393,7 +397,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**610 EditMode tests, all green** — the core is tested without ever opening a scene:
+**632 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -439,6 +443,8 @@ Assets/Tests/EditMode/
 ├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
 ├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 120-level campaign rhythm,
 │                                 blocker acts, early-chapter immutability landmarks
+├── IconArtistTests.cs            the generated app icon: opaque background layer, nothing
+│                                 outside Android's adaptive safe zone, rounded corners
 ├── SaveIntegrityTests.cs         reflection-driven full MetaState roundtrip, truncation
 │                                 detection, atomic writes + their backup, and the
 │                                 finale paying out no mission credit
@@ -496,6 +502,16 @@ tests/
    guide is only needed if you rebuild the Game scene from scratch.
 3. Drag a candy towards a neighbour to swap. Make 4/L/T/5 shapes for specials, swap
    specials together for combos, finish the objectives before the moves run out.
+
+## Shipping it
+
+[docs/RELEASE.md](docs/RELEASE.md) is the path from this repo to a Play listing:
+what the two editor menu items already set (package name, version + derived
+versionCode, pinned targetSdk, icons), what only a human can do (the Android module,
+the upload keystore — never in this repo, the developer account), the scripted AAB
+build (**Match3 → Build → Android AAB**, which refuses to produce a debug-signed
+bundle Play would reject), and the Data safety answers implied by what the game
+actually collects: a UGS anonymous player id and nothing else.
 
 ## Scope cuts (deliberate)
 

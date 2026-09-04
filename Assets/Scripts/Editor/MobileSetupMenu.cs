@@ -20,6 +20,34 @@ namespace Match3.EditorTools
     /// </summary>
     public static class MobileSetupMenu
     {
+        /// <summary>
+        /// The Android package name. PERMANENT once a build is published — Play keys
+        /// every listing, review and install off it, and it can never be changed for
+        /// that app. Change it HERE before the first upload, not after.
+        /// </summary>
+        private const string AndroidApplicationId = "com.thefcan.candymatch";
+
+        /// <summary>
+        /// Marketing version (what the store shows). versionCode is derived from it
+        /// below, so bumping this one line is the whole release ritual.
+        /// </summary>
+        private const string BundleVersion = "1.0.0";
+
+        /// <summary>
+        /// Play REJECTS an upload whose versionCode it has seen before, so this must
+        /// rise monotonically and can never be reused — even for a build that was later
+        /// discarded. Derived as major*10000 + minor*100 + patch, which keeps it
+        /// readable (1.2.3 -> 10203) and leaves room for 99 patches per minor.
+        /// </summary>
+        private static int VersionCodeFor(string version)
+        {
+            string[] parts = version.Split('.');
+            int major = parts.Length > 0 && int.TryParse(parts[0], out int m) ? m : 0;
+            int minor = parts.Length > 1 && int.TryParse(parts[1], out int n) ? n : 0;
+            int patch = parts.Length > 2 && int.TryParse(parts[2], out int p) ? p : 0;
+            return major * 10000 + minor * 100 + patch;
+        }
+
         [MenuItem("Match3/Setup/Apply Mobile Settings")]
         public static void ApplyMobileSettings()
         {
@@ -53,7 +81,40 @@ namespace Match3.EditorTools
             // The HUD now lives in a SafeAreaFitter container; stop drawing under notches.
             PlayerSettings.Android.renderOutsideSafeArea = false;
 
+            ApplyReleaseIdentity(report);
+
             report.AppendLine("- Player: portrait kilidi, IL2CPP + ARM64/ARMv7, renderOutsideSafeArea=false");
+        }
+
+        /// <summary>
+        /// Who the app IS, as far as the store is concerned. Without this the package
+        /// name falls out of companyName + productName at build time
+        /// (com.DefaultCompany.unity-match3), which is both unclaimable on Play and
+        /// impossible to change once uploaded.
+        ///
+        /// productName is deliberately NOT touched here: on desktop it also decides
+        /// persistentDataPath, so renaming it silently orphans every local save. That
+        /// rename is a documented, deliberate step in docs/RELEASE.md, not a side
+        /// effect of running this menu.
+        /// </summary>
+        private static void ApplyReleaseIdentity(StringBuilder report)
+        {
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidApplicationId);
+            PlayerSettings.bundleVersion = BundleVersion;
+            PlayerSettings.Android.bundleVersionCode = VersionCodeFor(BundleVersion);
+
+            // "Automatic (highest installed)" makes the shipped targetSdk a property of
+            // whichever SDK the build machine happens to have — the manifest changes
+            // under you. Pin it: Play's current floor for new apps is 34.
+            // Cast rather than the enum member: AndroidApiLevel34 only exists in newer
+            // 2022.3 patches, and the value is what actually lands in the manifest.
+            PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)34;
+            // minSdk is left where the project set it (22): raising it drops real
+            // devices for nothing this game needs.
+
+            report.AppendLine($"- Identity: {AndroidApplicationId} v{BundleVersion} " +
+                              $"(versionCode {VersionCodeFor(BundleVersion)}), targetSdk 34 pinned, " +
+                              $"minSdk {(int)PlayerSettings.Android.minSdkVersion} unchanged");
         }
 
         private static void ApplyQualitySettings(StringBuilder report)

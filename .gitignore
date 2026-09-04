@@ -56,6 +56,11 @@ sysinfo.txt
 *.unitypackage
 *.app
 
+# Signing material — losing this file means never updating the listing again, and
+# committing it means anyone can. Neither. See docs/RELEASE.md.
+*.keystore
+*.jks
+
 # Crashlytics
 crashlytics-build.properties
 
