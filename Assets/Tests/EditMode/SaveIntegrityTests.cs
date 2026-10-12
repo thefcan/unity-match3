@@ -39,6 +39,7 @@ namespace Match3.Tests
                 EventToastShields = 7, EventToastTrophy = 3, EventToastRescues = 2,
                 AlbumSalt = 12345, AlbumPacks = 9, AlbumPacksOpened = 21, AlbumStarsCounted = 300,
                 AlbumPity = 4, AlbumPagesRewarded = 63, EventToastPacks = 5,
+                MissionFrontier = 37,
             };
 
             for (int i = 0; i < MissionCatalog.DailyCount; i++)

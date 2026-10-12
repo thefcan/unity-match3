@@ -81,6 +81,14 @@ Keystore*, select the file, and enter the passwords there.
 One-off fee, [play.google.com/console](https://play.google.com/console). Everything
 below waits on it.
 
+**Budget two weeks you cannot skip.** A *personal* developer account created after
+November 2023 must run a **closed test with at least 12 opted-in testers for 14
+continuous days** before Play will let the app into production at all. So the
+calendar is: account → internal build → recruit 12 testers → 14 days → apply for
+production access. An *organisation* account is exempt, but needs a D-U-N-S number.
+(Checked July 2026 — Play changes these thresholds, so re-read the console's own
+requirements page when you get there.)
+
 ## 3. Building the AAB
 
 ```bash

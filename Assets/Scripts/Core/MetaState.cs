@@ -112,6 +112,15 @@ namespace Match3.Core
         /// <summary>Packs banked from an unclaimed race podium (display-only toast).</summary>
         public int EventToastPacks;
 
+        /// <summary>
+        /// The highest level the player could attempt when <see cref="MissionDay"/>
+        /// rolled over — the snapshot the day's missions are generated against (see
+        /// <see cref="MissionCatalog.DailyFor"/>). Frozen for the whole day on purpose:
+        /// slot progress is stored per slot, so the set must not shift mid-day.
+        /// 0 = a save from before this existed; generation then filters nothing.
+        /// </summary>
+        public int MissionFrontier;
+
         public int BoosterCount(BoosterKind kind)
         {
             switch (kind)

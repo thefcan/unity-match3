@@ -124,6 +124,78 @@ namespace Match3.Tests
 
             Assert.That(repository.Load().HighestUnlocked, Is.EqualTo(1));
         }
+
+        // ---- The campaign's goal (what the main menu points at) -------------------------
+
+        private static PlayerProgress Beaten(int levels, int stars)
+        {
+            var progress = new PlayerProgress();
+            for (int level = 1; level <= levels; level++)
+                progress.RecordResult(level, stars);
+            return progress;
+        }
+
+        [Test]
+        public void AFreshProfile_ContinuesAtLevelOne()
+        {
+            CampaignGoal goal = new PlayerProgress().NextGoal(120);
+
+            Assert.That(goal.Kind, Is.EqualTo(CampaignGoalKind.Continue));
+            Assert.That(goal.Level, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MidCampaign_ContinuesAtTheFirstUnbeatenLevel()
+        {
+            CampaignGoal goal = Beaten(47, 1).NextGoal(120);
+
+            Assert.That(goal.Kind, Is.EqualTo(CampaignGoalKind.Continue));
+            Assert.That(goal.Level, Is.EqualTo(48), "low stars behind you never outrank a new level");
+        }
+
+        [Test]
+        public void BeatingTheLastLevel_TurnsTheGoalToTheEarliestMissingStars()
+        {
+            // This is the moment the old menu got stuck on "Continue - Level 120".
+            PlayerProgress progress = Beaten(120, 3);
+            var gaps = new PlayerProgress();
+            for (int level = 1; level <= 120; level++)
+                gaps.RecordResult(level, level == 33 || level == 90 ? 2 : 3);
+
+            CampaignGoal goal = gaps.NextGoal(120);
+
+            Assert.That(goal.Kind, Is.EqualTo(CampaignGoalKind.Improve));
+            Assert.That(goal.Level, Is.EqualTo(33), "the earliest gap, not the latest");
+            Assert.That(progress.NextGoal(120).Kind, Is.EqualTo(CampaignGoalKind.Perfect));
+        }
+
+        [Test]
+        public void APerfectCampaign_SaysSo_AndStaysInsideTheCatalog()
+        {
+            CampaignGoal goal = Beaten(120, 3).NextGoal(120);
+
+            Assert.That(goal.Kind, Is.EqualTo(CampaignGoalKind.Perfect));
+            Assert.That(goal.Level, Is.EqualTo(120), "never level 121 - there is no such level");
+        }
+
+        [Test]
+        public void AZeroStarWin_StillCountsAsBeaten_ButIsTheFirstThingToImprove()
+        {
+            PlayerProgress progress = Beaten(120, 3);
+            var withZero = new PlayerProgress();
+            for (int level = 1; level <= 120; level++)
+                withZero.RecordResult(level, level == 5 ? 0 : 3);
+
+            Assert.That(withZero.NextGoal(120).Kind, Is.EqualTo(CampaignGoalKind.Improve));
+            Assert.That(withZero.NextGoal(120).Level, Is.EqualTo(5));
+            Assert.That(progress.NextGoal(120).Level, Is.EqualTo(120));
+        }
+
+        [Test]
+        public void AnEmptyCatalog_FallsBackToLevelOne()
+        {
+            Assert.That(Beaten(3, 3).NextGoal(0).Level, Is.EqualTo(1));
+        }
     }
 
     public sealed class LevelCurveTests

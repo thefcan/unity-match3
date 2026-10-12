@@ -91,6 +91,39 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void StarSprint_StepsAside_WhenThereAreNoStarsLeftToEarn()
+        {
+            // StarSprint banks the stars a win ADDS. A player who has three-starred the
+            // whole campaign cannot move that bar, so their window would be a dead one.
+            Assert.AreEqual(EventKind.StarSprint, EventCalendar.KindFor(6, 121, starsLeftToEarn: true));
+            Assert.AreEqual(EventKind.CandyRush, EventCalendar.KindFor(6, 121, starsLeftToEarn: false));
+
+            // ...and nothing else in the rotation is touched by the flag.
+            Assert.AreEqual(EventKind.SpecialistWeek, EventCalendar.KindFor(2, 121, starsLeftToEarn: false));
+            Assert.AreEqual(EventKind.BlockerBash, EventCalendar.KindFor(4, 121, starsLeftToEarn: false));
+            Assert.AreEqual(EventKind.Race, EventCalendar.KindFor(7, 121, starsLeftToEarn: false));
+        }
+
+        [Test]
+        public void AWindowOpenedForAPerfectPlayer_SnapshotsTheSubstitute()
+        {
+            // The kind is snapshotted at window open, so the substitution has to happen
+            // there — a later re-derivation would never see it.
+            int day = 0;
+            while (EventCalendar.KindFor(EventCalendar.WindowIdFor(day), 121) != EventKind.StarSprint ||
+                   EventCalendar.PhaseFor(day) == EventPhase.Off)
+                day++;
+
+            var perfect = new MetaState();
+            Assert.IsTrue(EventRules.EnsureWindow(perfect, day, 121, starsLeftToEarn: false));
+            Assert.AreEqual(EventKind.CandyRush, EventRules.KindOf(perfect));
+
+            var stillClimbing = new MetaState();
+            Assert.IsTrue(EventRules.EnsureWindow(stillClimbing, day, 121, starsLeftToEarn: true));
+            Assert.AreEqual(EventKind.StarSprint, EventRules.KindOf(stillClimbing));
+        }
+
+        [Test]
         public void OddWindows_AlwaysRace()
         {
             Assert.AreEqual(EventKind.Race, EventCalendar.KindFor(1, 100));

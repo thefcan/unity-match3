@@ -75,6 +75,7 @@ namespace Match3.Core
                 sb.Append("albumPage").Append(page).Append('=').Append(state.AlbumPageOwned[page]).Append('\n');
             sb.Append("albumPagesRewarded=").Append(state.AlbumPagesRewarded).Append('\n');
             sb.Append("eventToastPacks=").Append(state.EventToastPacks).Append('\n');
+            sb.Append("missionFrontier=").Append(state.MissionFrontier).Append('\n');
             sb.Append(EndMarker).Append("=1\n"); // must stay last: see TryDeserialize
             return sb.ToString();
         }
@@ -142,6 +143,7 @@ namespace Match3.Core
                     // negative into fabricated ownership ((-5) & 63 == 59).
                     case "albumPagesRewarded": state.AlbumPagesRewarded = Math.Max(0, value) & 63; break;
                     case "eventToastPacks": state.EventToastPacks = Math.Max(0, value); break;
+                    case "missionFrontier": state.MissionFrontier = Math.Max(0, value); break;
 
                     // Indexed keys are parsed, not enumerated. Serialize LOOPS on these
                     // constants, so hand-written case lists agreed with it only by

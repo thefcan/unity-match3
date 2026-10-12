@@ -28,6 +28,10 @@ namespace Match3.Game
                     state.MissionClaimed[i] = false;
                 }
                 state.RerolledSlot = -1;
+                // Snapshot the frontier ONCE per day: today's missions are generated
+                // against it, and it must not move when a level is won or when the
+                // boot-time cloud merge catches this device up.
+                state.MissionFrontier = ProgressService.Current.HighestUnlocked;
                 changed = true;
             }
 
@@ -49,8 +53,8 @@ namespace Match3.Game
         {
             MetaState state = MetaService.Current;
             return state.RerolledSlot == slot
-                ? MissionCatalog.RerollFor(state.MissionDay, slot)
-                : MissionCatalog.DailyFor(state.MissionDay)[slot];
+                ? MissionCatalog.RerollFor(state.MissionDay, slot, state.MissionFrontier)
+                : MissionCatalog.DailyFor(state.MissionDay, state.MissionFrontier)[slot];
         }
 
         public static MissionDef WeeklyDef => MissionCatalog.WeeklyFor(MetaService.Current.MissionWeek);

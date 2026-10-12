@@ -75,7 +75,9 @@ colorblind sprite mode.
   the board: reach a score, collect N candies of a colour, **clear all the jelly**,
   **crush the chocolate**, **peel the frosting**, **hatch the mystery eggs**, or
   **bring the ingredients home**. The map scrolls itself to the level you're on
-  the moment it opens.
+  the moment it opens — and once the last level is beaten the menu stops saying
+  "Continue": it points at the earliest level still short of three stars, and only
+  when none is left does it say so.
 - **Chapters that drift, never jump.** Every 20 levels is a chapter with its own
   ambience — purple night → ocean teal → dusk plum → warm ember → golden dawn →
   candy garden — and each level interpolates 1/20th of the way towards the next
@@ -125,7 +127,10 @@ colorblind sprite mode.
   and chest-earned **streak shields** can absorb one loss.
 - **Star chest + daily missions:** every 20 stars opens a booster chest (milestone
   chests pay more); three deterministic daily missions + one weekly ride along on
-  the cascade recording — no separate counters to desync.
+  the cascade recording — no separate counters to desync. The dailies **follow the
+  player**: a mission for content you haven't unlocked (jelly before level 8,
+  chocolate before 66) is never rolled, against a frontier snapshotted once per day
+  so the set can't shift under its own stored progress.
 - **Candy Town:** total stars silently build a five-stage night town per chapter —
   a decor meta with zero choices to grind.
 - **Tutorial overlays:** each act opener dims the board once, rings the mechanic's
@@ -397,7 +402,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**632 EditMode tests, all green** — the core is tested without ever opening a scene:
+**647 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -433,6 +438,8 @@ Assets/Tests/EditMode/
 ├── BoosterTests.cs               inventory roundtrip, hammer/free-swap/shuffle behaviour
 ├── WinStreakTests.cs             streak growth/reset, structural abandon, preload ladder
 ├── EconomyTests.cs               star chest math, town stages, shields, mission determinism
+├── MissionFrontierTests.cs       dailies never ask for locked content; veterans' missions
+│                                 stay byte-identical; the roll can always terminate
 ├── EventTests.cs                 candy-calendar windows, clock-rollback freeze, race bots,
 │                                 rollover banking, tier claims (the freeze's first real coverage)
 ├── AlbumTests.cs                 catalog integrity, deterministic pack rolls, the pity ladder,

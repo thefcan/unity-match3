@@ -4,6 +4,30 @@ using System.Linq;
 
 namespace Match3.Core
 {
+    /// <summary>What the campaign is asking of the player right now.</summary>
+    public enum CampaignGoalKind
+    {
+        /// <summary>There is a level they have never beaten: play it.</summary>
+        Continue,
+        /// <summary>Every level is beaten, but some are short of three stars.</summary>
+        Improve,
+        /// <summary>Every level is beaten with three stars — nothing left to earn.</summary>
+        Perfect,
+    }
+
+    /// <summary>The level the main menu should point at, and why.</summary>
+    public readonly struct CampaignGoal
+    {
+        public CampaignGoalKind Kind { get; }
+        public int Level { get; }
+
+        public CampaignGoal(CampaignGoalKind kind, int level)
+        {
+            Kind = kind;
+            Level = level;
+        }
+    }
+
     /// <summary>
     /// The player's campaign progress: which levels are completed and the best star
     /// rating for each. Levels unlock sequentially — level N is playable once N-1 is
@@ -23,6 +47,31 @@ namespace Match3.Core
             _starsByLevel.Count == 0 ? 1 : _starsByLevel.Keys.Max() + 1;
 
         public bool IsUnlocked(int level) => level >= 1 && level <= HighestUnlocked;
+
+        /// <summary>
+        /// Where a campaign of <paramref name="levelCount"/> levels should send the
+        /// player next. Beating the last level leaves <see cref="HighestUnlocked"/> one
+        /// past the end, and a menu that simply clamps it reads "Continue – Level 120"
+        /// forever: the game never admits it was finished, and never offers the one
+        /// thing still worth doing. So once everything is beaten the goal becomes the
+        /// EARLIEST level short of three stars — earliest because those are the
+        /// cheapest stars to go back for — and only when none is left does it say so.
+        /// </summary>
+        public CampaignGoal NextGoal(int levelCount)
+        {
+            if (levelCount < 1)
+                return new CampaignGoal(CampaignGoalKind.Continue, 1);
+
+            if (HighestUnlocked <= levelCount)
+                return new CampaignGoal(CampaignGoalKind.Continue, HighestUnlocked);
+
+            for (int level = 1; level <= levelCount; level++)
+            {
+                if (StarsFor(level) < 3)
+                    return new CampaignGoal(CampaignGoalKind.Improve, level);
+            }
+            return new CampaignGoal(CampaignGoalKind.Perfect, levelCount);
+        }
 
         /// <summary>Records a win; a worse re-run never downgrades the stored stars.</summary>
         public void RecordResult(int level, int stars)

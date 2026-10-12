@@ -48,8 +48,23 @@ namespace Match3.Core
     {
         public const int DailyCount = 3;
 
-        /// <summary>The three missions for a given day — types are always distinct.</summary>
-        public static MissionDef[] DailyFor(int dayNumber)
+        /// <summary>
+        /// The three missions for a given day — types are always distinct, and never
+        /// ask for content the player cannot reach yet.
+        ///
+        /// <paramref name="frontier"/> is the highest level the player could attempt
+        /// WHEN THE DAY ROLLED OVER — a snapshot, never the live value. Slot progress
+        /// and claims are stored per slot, not per mission, so a set that shifted the
+        /// moment a level was won (or the moment a cloud merge jumped the player from
+        /// level 1 to 60) would leave stored progress attached to a different mission.
+        /// 0 means "unknown" — a save from before the snapshot existed — and filters
+        /// nothing, which reproduces the old behaviour exactly.
+        ///
+        /// Unreachable rolls are skipped rather than remapped: for a player who has
+        /// everything unlocked the sequence of draws is untouched, so their missions
+        /// are byte-identical to what this always produced.
+        /// </summary>
+        public static MissionDef[] DailyFor(int dayNumber, int frontier = 0)
         {
             var missions = new MissionDef[DailyCount];
             var usedTypes = new HashSet<MissionType>();
@@ -62,16 +77,18 @@ namespace Match3.Core
                 {
                     seed = Hash(seed);
                     candidate = FromRoll(seed);
-                } while (!usedTypes.Add(candidate.Type));
+                    // Reachability first, so usedTypes only ever holds what the day
+                    // really offered.
+                } while (!IsReachable(candidate.Type, frontier) || !usedTypes.Add(candidate.Type));
                 missions[slot] = candidate;
             }
             return missions;
         }
 
         /// <summary>The replacement offered when the player rerolls a slot (one per day).</summary>
-        public static MissionDef RerollFor(int dayNumber, int slot)
+        public static MissionDef RerollFor(int dayNumber, int slot, int frontier = 0)
         {
-            MissionDef[] daily = DailyFor(dayNumber);
+            MissionDef[] daily = DailyFor(dayNumber, frontier);
             var usedTypes = new HashSet<MissionType>();
             foreach (MissionDef def in daily)
                 usedTypes.Add(def.Type);
@@ -82,8 +99,83 @@ namespace Match3.Core
             {
                 seed = Hash(seed);
                 candidate = FromRoll(seed);
-            } while (usedTypes.Contains(candidate.Type)); // never a duplicate of the day's set
+                // never a duplicate of the day's set, never something out of reach
+            } while (usedTypes.Contains(candidate.Type) || !IsReachable(candidate.Type, frontier));
             return candidate;
+        }
+
+        /// <summary>
+        /// Can a player whose frontier is <paramref name="frontier"/> make ANY progress
+        /// on this mission type? A level-3 player asked to crumble five chocolates
+        /// (first seen around level 66) holds a mission that is not hard, just dead —
+        /// and it eats one of three daily slots until the single reroll is spent on it.
+        ///
+        /// The thresholds are read off <see cref="LevelCurve"/> rather than typed in,
+        /// so re-authoring where a mechanic debuts moves the missions with it.
+        ///
+        /// INVARIANT: at every frontier at least <see cref="DailyCount"/> + 1 types must
+        /// stay reachable — three distinct ones for the day plus a fourth for the
+        /// reroll — or the roll loops above never terminate. Five types have no content
+        /// gate at all, and a test pins that margin.
+        /// </summary>
+        public static bool IsReachable(MissionType type, int frontier)
+        {
+            if (frontier <= 0)
+                return true; // unknown frontier: behave exactly as before the filter
+
+            switch (type)
+            {
+                case MissionType.ClearJelly: return frontier >= FirstLevelWith(Mechanic.Jelly);
+                case MissionType.ClearChocolate: return frontier >= FirstLevelWith(Mechanic.Chocolate);
+                case MissionType.CollectIngredients: return frontier >= FirstLevelWith(Mechanic.Ingredient);
+                default: return true;
+            }
+        }
+
+        /// <summary>
+        /// Every type the daily roll can produce — read off <see cref="FromRoll"/>'s own
+        /// cases, so the reachability invariant above is checked against the real table
+        /// rather than a second list that could drift from it.
+        /// </summary>
+        public static IReadOnlyCollection<MissionType> RollableTypes
+        {
+            get
+            {
+                var types = new HashSet<MissionType>();
+                for (uint roll = 0; roll < RollCases; roll++)
+                    types.Add(FromRoll(roll).Type);
+                return types;
+            }
+        }
+
+        private enum Mechanic { Jelly, Chocolate, Ingredient }
+
+        private static int[] _firstLevelWith;
+
+        /// <summary>
+        /// The first campaign level that contains a mechanic; int.MaxValue if none does.
+        /// One scan of the curve, cached — the answer cannot change at runtime.
+        /// </summary>
+        private static int FirstLevelWith(Mechanic mechanic)
+        {
+            if (_firstLevelWith == null)
+            {
+                var first = new[] { int.MaxValue, int.MaxValue, int.MaxValue };
+                for (int level = 1; level <= LevelCurve.LevelCount; level++)
+                {
+                    LevelParameters p = LevelCurve.For(level);
+                    if (p.JellyRows > 0 && first[(int)Mechanic.Jelly] == int.MaxValue)
+                        first[(int)Mechanic.Jelly] = level;
+                    // A fountain mints chocolate on its own, so it counts as chocolate.
+                    if ((p.ChocolateCells.Count > 0 || p.FountainCells.Count > 0) &&
+                        first[(int)Mechanic.Chocolate] == int.MaxValue)
+                        first[(int)Mechanic.Chocolate] = level;
+                    if (p.IngredientCount > 0 && first[(int)Mechanic.Ingredient] == int.MaxValue)
+                        first[(int)Mechanic.Ingredient] = level;
+                }
+                _firstLevelWith = first;
+            }
+            return _firstLevelWith[(int)mechanic];
         }
 
         /// <summary>One bigger weekly mission, cycling three evergreen shapes.</summary>
@@ -185,9 +277,12 @@ namespace Match3.Core
 
         public static ChestReward WeeklyReward() => new ChestReward(2, 2, 2, 1);
 
+        /// <summary>How many cases <see cref="FromRoll"/> switches over.</summary>
+        private const uint RollCases = 8u;
+
         private static MissionDef FromRoll(uint seed)
         {
-            switch (seed % 8u)
+            switch (seed % RollCases)
             {
                 case 0: return new MissionDef(MissionType.ClearColor, (int)(Hash(seed) % 5u), 60);
                 case 1: return new MissionDef(MissionType.ClearColor, (int)(Hash(seed) % 5u), 80);

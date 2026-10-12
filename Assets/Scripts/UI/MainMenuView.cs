@@ -1,3 +1,4 @@
+using Match3.Core;
 using Match3.Game;
 using TMPro;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace Match3.UI
         private readonly System.Collections.Generic.List<LevelRow> _rows = new System.Collections.Generic.List<LevelRow>();
         private int _firstRowIndex = -1;
         private TMP_Text _continueLabel;
-        private System.Func<int> _continueLabelFor;
+        private System.Func<string> _continueLabelFor;
 
         private void OnEnable()
         {
@@ -53,7 +54,7 @@ namespace Match3.UI
             _firstRowIndex = -1;
             RefreshVisibleRows();
             if (_continueLabel != null && _continueLabelFor != null)
-                _continueLabel.text = $"Continue  –  Level {_continueLabelFor()}  >";
+                _continueLabel.text = _continueLabelFor();
             if (_listContent != null && _listViewport != null)
                 ApplyCurrentLevelScroll(_listViewport);
         }
@@ -250,7 +251,9 @@ namespace Match3.UI
 
         private void ApplyCurrentLevelScroll(RectTransform viewport)
         {
-            int index = Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1, _catalog.Count) - 1;
+            // Centre on the campaign's GOAL, not just the frontier: once every level is
+            // beaten that is the earliest one still short of three stars.
+            int index = Mathf.Clamp(ProgressService.Current.NextGoal(_catalog.Count).Level, 1, _catalog.Count) - 1;
             Canvas.ForceUpdateCanvases();
             float rowCentre = ListPadding + index * RowPitch + RowHeight * 0.5f;
             float viewportHeight = viewport.rect.height;
@@ -475,18 +478,33 @@ namespace Match3.UI
             // The CTA reads progress at CLICK time, not at build time: a cloud
             // merge landing while the menu is open used to leave the button
             // pointing at the old level (its label is refreshed alongside).
-            int NextLevel() => Mathf.Clamp(ProgressService.Current.HighestUnlocked, 1,
-                                           catalog != null && catalog.Count > 0 ? catalog.Count : 1);
+            // ...and it follows the campaign's GOAL (PlayerProgress.NextGoal): the next
+            // unbeaten level, then — once all are beaten — the earliest one short of
+            // three stars, so finishing the game changes what the button says instead
+            // of leaving it on "Continue – Level 120" for good.
+            CampaignGoal Goal() =>
+                ProgressService.Current.NextGoal(catalog != null && catalog.Count > 0 ? catalog.Count : 1);
 
-            Button cta = NewButton("ContinueButton", canvas, $"Continue  –  Level {NextLevel()}  >", UiTheme.PillPink, Color.white,
+            string GoalLabel()
+            {
+                CampaignGoal goal = Goal();
+                switch (goal.Kind)
+                {
+                    case CampaignGoalKind.Improve: return $"3-Star  –  Level {goal.Level}  >";
+                    case CampaignGoalKind.Perfect: return "All Stars!  –  Replay  >";
+                    default: return $"Continue  –  Level {goal.Level}  >";
+                }
+            }
+
+            Button cta = NewButton("ContinueButton", canvas, GoalLabel(), UiTheme.PillPink, Color.white,
                 UiTheme.TextPrimary, () =>
                 {
-                    int level = NextLevel();
+                    int level = Goal().Level;
                     StartLevel(catalog != null ? catalog.Get(level) : null, level);
                 });
             Anchor((RectTransform)cta.transform, new Vector2(0.5f, 0f), new Vector2(0f, 260f), new Vector2(720f, 132f));
             _continueLabel = cta.GetComponentInChildren<TMP_Text>();
-            _continueLabelFor = NextLevel;
+            _continueLabelFor = GoalLabel;
 
             Button timeAttack = NewButton("TimeAttackButton", canvas, "Time Attack", UiTheme.Pill, UiTheme.Card,
                 UiTheme.TextDim, StartTimeAttack);

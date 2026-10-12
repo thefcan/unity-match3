@@ -119,10 +119,18 @@ namespace Match3.Core
         /// <summary>
         /// The kind a window runs. Odd windows race; even ones cycle the midweek
         /// rotation, substituting CandyRush while the campaign hasn't taught
-        /// blockers yet. Callers snapshot the result into MetaState at window
-        /// open — nothing downstream ever re-derives it.
+        /// blockers yet — or when StarSprint has nothing left to hand out. Callers
+        /// snapshot the result into MetaState at window open — nothing downstream
+        /// ever re-derives it.
+        ///
+        /// <paramref name="starsLeftToEarn"/>: StarSprint banks the stars a win ADDS
+        /// (LevelWonState credits the delta, which is what stops a 3-starred level
+        /// being farmed for it). A player who has three-starred the whole campaign
+        /// therefore cannot move that bar at all, so for them the window would be
+        /// three days of a dead event. The fix belongs here, at the roll — loosening
+        /// the delta rule would reopen the farm for everybody else.
         /// </summary>
-        public static EventKind KindFor(int windowId, int highestUnlocked)
+        public static EventKind KindFor(int windowId, int highestUnlocked, bool starsLeftToEarn = true)
         {
             if (((windowId % 2) + 2) % 2 == 1)
                 return EventKind.Race;
@@ -143,6 +151,8 @@ namespace Match3.Core
                 {
                     EventKind kind = MidweekRotation[i];
                     if (kind == EventKind.BlockerBash && highestUnlocked < BlockerContentLevel)
+                        return EventKind.CandyRush;
+                    if (kind == EventKind.StarSprint && !starsLeftToEarn)
                         return EventKind.CandyRush;
                     return kind;
                 }
@@ -213,7 +223,8 @@ namespace Match3.Core
         /// fields, then snapshots the new window. Returns true when state
         /// changed and the caller should save.
         /// </summary>
-        public static bool EnsureWindow(MetaState state, int dayNumber, int highestUnlocked)
+        public static bool EnsureWindow(MetaState state, int dayNumber, int highestUnlocked,
+                                        bool starsLeftToEarn = true)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
 
@@ -223,7 +234,7 @@ namespace Match3.Core
 
             BankOutgoing(state);
 
-            EventKind kind = EventCalendar.KindFor(current, highestUnlocked);
+            EventKind kind = EventCalendar.KindFor(current, highestUnlocked, starsLeftToEarn);
             state.EventWindowId = current;
             state.EventKindId = (int)kind;
             state.EventParam = EventCalendar.ParamFor(current, kind);

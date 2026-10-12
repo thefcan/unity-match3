@@ -17,8 +17,11 @@ namespace Match3.Game
         /// <summary>Rolls the window forward when the calendar moved (banking the old one).</summary>
         public static void EnsureFresh()
         {
+            PlayerProgress progress = ProgressService.Current;
+            // Three stars on every campaign level leaves StarSprint nothing to count.
+            bool starsLeftToEarn = progress.TotalStars < LevelCurve.LevelCount * 3;
             if (EventRules.EnsureWindow(MetaService.Current, MetaService.TodayDayNumber,
-                                        ProgressService.Current.HighestUnlocked))
+                                        progress.HighestUnlocked, starsLeftToEarn))
                 MetaService.Save();
         }
 
