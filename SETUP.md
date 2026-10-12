@@ -71,7 +71,7 @@ the synths in `SfxSynth` / `MusicComposer`.
 |---|---|
 | **Match3 → Generate → Candy Sprites** | `Assets/Sprites/Candies/*.png` (70 — the five colours × normal/striped/wrapped/fish/bomb, the same set again with colorblind badges, every blocker and the mystery egg), the five candy-town stages in `Assets/Resources/UI/Town`, and `Assets/Resources/CandySpriteLibrary.asset` |
 | **Match3 → Generate → App Icons** | `Assets/Icons/*.png` — the launcher icon, Android's adaptive background/foreground layers and the 1024×500 Play feature graphic, plus the PlayerSettings icon slots (see [docs/RELEASE.md](docs/RELEASE.md)) |
-| **Match3 → Generate → UI Sprites** | `Assets/Resources/UI/*.png` (10) — 9-slice cards and pills, outlines, star, padlock, circle, the baked gradients |
+| **Match3 → Generate → UI Sprites** | `Assets/Resources/UI/*.png` (11) — 9-slice cards and pills, outlines, star, padlock, circle, trophy, the swap icon, the baked gradients |
 | **Match3 → Generate → Level Definitions** | `Assets/Resources/Levels/Level_01 … Level_120.asset` (120) + `Assets/Resources/LevelCatalog.asset` (objectives, blockers, star scores, tutorial lines) |
 | **Match3 → Generate → Sound Effects** | `Assets/Resources/Audio/*.wav` — 10 synthesized clips |
 | **Match3 → Generate → Music** | `Assets/Resources/Audio/Music/*.wav` — one loop-perfect track per chapter (deterministic: same chapter, same bytes) |

@@ -76,9 +76,16 @@ namespace Match3.Core
             new ThemeParameters( // chapter 5 — candy garden (levels 101-120 open here)
                 new ThemeColor(0.13f, 0.24f, 0.16f), new ThemeColor(0.06f, 0.13f, 0.09f),
                 new ThemeColor(0.16f, 0.27f, 0.19f), new ThemeColor(0.11f, 0.20f, 0.13f), 5),
-            new ThemeParameters( // tail — berry twilight (approached after level 120)
-                new ThemeColor(0.22f, 0.10f, 0.26f), new ThemeColor(0.11f, 0.05f, 0.14f),
-                new ThemeColor(0.25f, 0.13f, 0.29f), new ThemeColor(0.18f, 0.09f, 0.22f), 6),
+            // tail — jade lagoon (approached after level 120). Deliberately a NEIGHBOUR
+            // of the garden's green on the colour wheel. The first tail was a berry
+            // purple, almost its complement, and a straight RGB line between two
+            // complements runs through grey: the cards of levels 105-115 dropped to a
+            // saturation of 0.15 (every other chapter stays above 0.32), which made the
+            // middle of "candy garden" the greyest stretch of the campaign. A test pins
+            // the floor now, so the next anchor cannot repeat it.
+            new ThemeParameters(
+                new ThemeColor(0.06f, 0.22f, 0.21f), new ThemeColor(0.03f, 0.11f, 0.11f),
+                new ThemeColor(0.09f, 0.26f, 0.25f), new ThemeColor(0.06f, 0.19f, 0.18f), 6),
         };
 
         public static ThemeParameters For(int level)

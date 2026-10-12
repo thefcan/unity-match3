@@ -62,6 +62,35 @@ namespace Match3.Tests
             Assert.That(MaxChannelDelta(far.BgTop, farther.BgTop), Is.EqualTo(0f).Within(0.0001f));
         }
 
+        [Test]
+        public void NoLevel_FadesToGrey()
+        {
+            // Each level is a straight RGB blend between two chapter anchors, and a
+            // straight line between two near-complementary colours passes through grey.
+            // That is not hypothetical: the first chapter-6 tail was a berry purple
+            // opposite the garden's green, and the cards of levels 105-115 sank to a
+            // saturation of 0.15 while every other chapter stayed above 0.32. The drift
+            // bound above cannot see it — a slow fade to grey is perfectly gentle.
+            const float floor = 0.30f;
+
+            for (int level = 1; level <= LevelCurve.LevelCount; level++)
+            {
+                ThemeParameters theme = ThemeCurve.For(level);
+                Assert.That(Saturation(theme.BgTop), Is.GreaterThan(floor), $"level {level} background (top) is washed out");
+                Assert.That(Saturation(theme.BgBottom), Is.GreaterThan(floor), $"level {level} background (bottom) is washed out");
+                Assert.That(Saturation(theme.Card), Is.GreaterThan(floor), $"level {level} cards are washed out");
+                Assert.That(Saturation(theme.Slot), Is.GreaterThan(floor), $"level {level} slots are washed out");
+            }
+        }
+
+        /// <summary>HSV saturation: 0 is grey, 1 is a pure hue.</summary>
+        private static float Saturation(ThemeColor color)
+        {
+            float max = Math.Max(color.R, Math.Max(color.G, color.B));
+            float min = Math.Min(color.R, Math.Min(color.G, color.B));
+            return max <= 0f ? 0f : (max - min) / max;
+        }
+
         private static float MaxChannelDelta(ThemeColor a, ThemeColor b)
         {
             float dr = Math.Abs(a.R - b.R);

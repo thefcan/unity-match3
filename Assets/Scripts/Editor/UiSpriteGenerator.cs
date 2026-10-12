@@ -28,10 +28,11 @@ namespace Match3.EditorTools
             Write("ui_star", 128, 128, UiArtist.Star(128), 0);
             Write("ui_lock", 96, 96, UiArtist.Lock(96), 0);
             Write("ui_trophy", 96, 96, UiArtist.Trophy(96), 0);
+            Write("ui_swap", 96, 96, UiArtist.Swap(96), 0);
             Write("ui_bg_gradient", 16, 512, UiArtist.BackgroundGradient(16, 512), 0);
 
             AssetDatabase.Refresh();
-            Debug.Log($"UiSpriteGenerator: wrote 9 sprites to {UiFolder}.");
+            Debug.Log($"UiSpriteGenerator: wrote 11 sprites to {UiFolder}.");
         }
 
         private static void Write(string name, int width, int height, byte[] topDownRgba, int border)

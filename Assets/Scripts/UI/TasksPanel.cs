@@ -23,8 +23,15 @@ namespace Match3.UI
             public Button Claim;
             public TMP_Text ClaimLabel;
             public Image ClaimImage;
+            public RectTransform ClaimRect;
             public Button Reroll;
         }
+
+        // Row geometry, measured from the row pill's RIGHT edge. The swap button used
+        // to sit at -24: half over the Claim pill and 8px outside the row itself.
+        private const float SwapX = -52f;            // 64px circle, fully inside the row
+        private const float ClaimXBesideSwap = -190f; // 170px pill, clear of the circle
+        private const float ClaimXAlone = -104f;      // no swap to make room for
 
         private GameObject _root;
         private Image _card;
@@ -59,11 +66,22 @@ namespace Match3.UI
                 MissionDef def = MissionService.DefForSlot(slot);
                 RefreshRow(_rows[slot], def, meta.MissionProgress[slot], meta.MissionClaimed[slot]);
                 bool rerollable = meta.RerolledSlot == -1 && !meta.MissionClaimed[slot];
-                _rows[slot].Reroll.gameObject.SetActive(rerollable);
+                SetSwapVisible(_rows[slot], rerollable);
             }
 
             RefreshRow(_weeklyRow, MissionService.WeeklyDef, meta.WeeklyProgress, meta.WeeklyClaimed);
-            _weeklyRow.Reroll.gameObject.SetActive(false);
+            SetSwapVisible(_weeklyRow, false);
+        }
+
+        /// <summary>
+        /// Shows or hides a row's swap button and slides Claim to match: beside the
+        /// circle when it is there, back out to the row's edge when it is not, so a
+        /// spent reroll never leaves a hole where the button was.
+        /// </summary>
+        private static void SetSwapVisible(Row row, bool visible)
+        {
+            row.Reroll.gameObject.SetActive(visible);
+            row.ClaimRect.anchoredPosition = new Vector2(visible ? ClaimXBesideSwap : ClaimXAlone, 0f);
         }
 
         private static void RefreshRow(Row row, MissionDef def, int progress, bool claimed)
@@ -143,13 +161,15 @@ namespace Match3.UI
             for (int slot = 0; slot < _rows.Length; slot++)
                 _rows[slot] = BuildRow(content, 300f - slot * 180f, slot);
 
-            TMP_Text weeklyTitle = CreateText("WeeklyTitle", content, new Vector2(0f, -280f), 34f, FontStyles.Bold);
+            // The weekly block sits 70px under the last daily row. It used to hang 145px
+            // below it, which left its own row flush against the Close pill (0px gap).
+            TMP_Text weeklyTitle = CreateText("WeeklyTitle", content, new Vector2(0f, -205f), 34f, FontStyles.Bold);
             UiTheme.ApplyFont(weeklyTitle, UiTheme.BodyFont);
             weeklyTitle.color = UiTheme.Gold;
             weeklyTitle.characterSpacing = 4f;
             weeklyTitle.text = "WEEKLY";
 
-            _weeklyRow = BuildRow(content, -380f, -1);
+            _weeklyRow = BuildRow(content, -305f, -1);
 
             UiWidgets.ClosePill(content, new Vector2(0f, -510f), OnOpenerClicked);
         }
@@ -164,20 +184,27 @@ namespace Match3.UI
             UiTheme.ApplySprite(pill, UiTheme.Pill, UiTheme.Slot);
             pill.raycastTarget = false;
 
-            row.Description = CreateText("Desc", pillGo.transform, new Vector2(-60f, 30f), 34f, FontStyles.Bold);
+            // Text column: same left edge as before (50px in), but 470 wide instead of
+            // 520 so it ends before Claim's leftmost position. The description shrinks
+            // rather than clips if a long mission ever needs the room.
+            row.Description = CreateText("Desc", pillGo.transform, new Vector2(-115f, 30f), 34f, FontStyles.Bold);
             row.Description.alignment = TextAlignmentOptions.MidlineLeft;
-            row.Description.rectTransform.sizeDelta = new Vector2(520f, 60f);
-            row.Description.rectTransform.anchoredPosition = new Vector2(-90f, 30f);
+            row.Description.rectTransform.sizeDelta = new Vector2(470f, 60f);
+            row.Description.rectTransform.anchoredPosition = new Vector2(-115f, 30f);
+            row.Description.enableAutoSizing = true;
+            row.Description.fontSizeMin = 24f;
+            row.Description.fontSizeMax = 34f;
             UiTheme.ApplyFont(row.Description, UiTheme.BodyFont);
 
-            row.Progress = CreateText("Progress", pillGo.transform, new Vector2(-90f, -32f), 30f, FontStyles.Normal);
+            row.Progress = CreateText("Progress", pillGo.transform, new Vector2(-115f, -32f), 30f, FontStyles.Normal);
             row.Progress.alignment = TextAlignmentOptions.MidlineLeft;
-            row.Progress.rectTransform.sizeDelta = new Vector2(520f, 44f);
+            row.Progress.rectTransform.sizeDelta = new Vector2(470f, 44f);
             UiTheme.ApplyFont(row.Progress, UiTheme.BodyFont);
             row.Progress.color = UiTheme.TextDim;
 
             GameObject claimGo = CreateRect("Claim", pillGo.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(170f, 84f));
-            claimGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(-104f, 0f);
+            row.ClaimRect = claimGo.GetComponent<RectTransform>();
+            row.ClaimRect.anchoredPosition = new Vector2(ClaimXAlone, 0f);
             row.ClaimImage = claimGo.AddComponent<Image>();
             UiTheme.ApplySprite(row.ClaimImage, UiTheme.Pill, UiTheme.Cta);
             row.Claim = claimGo.AddComponent<Button>();
@@ -190,19 +217,33 @@ namespace Match3.UI
             Stretch(row.ClaimLabel.rectTransform);
 
             GameObject rerollGo = CreateRect("Reroll", pillGo.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(64f, 64f));
-            rerollGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(-24f, 0f);
+            rerollGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(SwapX, 0f);
             var rerollImage = rerollGo.AddComponent<Image>();
             UiTheme.ApplySprite(rerollImage, UiTheme.CircleSprite, UiTheme.OutlineDim);
             row.Reroll = rerollGo.AddComponent<Button>();
             rerollGo.AddComponent<PressableButton>();
             row.Reroll.targetGraphic = rerollImage;
             row.Reroll.onClick.AddListener(() => OnReroll(captured));
-            TMP_Text rerollLabel = CreateText("Label", rerollGo.transform, Vector2.zero, 32f, FontStyles.Bold);
-            UiTheme.ApplyFont(rerollLabel, UiTheme.ButtonFont);
-            rerollLabel.text = "↺";
-            if (rerollLabel.font == null || !rerollLabel.font.HasCharacter('↺'))
-                rerollLabel.text = "~"; // glyph-safe fallback
-            Stretch(rerollLabel.rectTransform);
+
+            // A drawn icon, not a character: no shipped font carries a refresh arrow,
+            // and the old "~" stand-in read as a minus sign — "remove this task".
+            Sprite swapIcon = UiTheme.SwapSprite;
+            if (swapIcon != null)
+            {
+                GameObject iconGo = CreateRect("Icon", rerollGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(40f, 40f));
+                var icon = iconGo.AddComponent<Image>();
+                icon.sprite = swapIcon;
+                icon.color = UiTheme.TextPrimary;
+                icon.raycastTarget = false; // the circle underneath is the button
+            }
+            else
+            {
+                // Sprite not generated yet (Match3 > Generate > UI Sprites): say it in words.
+                TMP_Text rerollLabel = CreateText("Label", rerollGo.transform, Vector2.zero, 18f, FontStyles.Bold);
+                UiTheme.ApplyFont(rerollLabel, UiTheme.ButtonFont);
+                rerollLabel.text = "SWAP";
+                Stretch(rerollLabel.rectTransform);
+            }
 
             return row;
         }

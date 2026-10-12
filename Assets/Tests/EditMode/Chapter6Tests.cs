@@ -132,12 +132,16 @@ namespace Match3.Tests
         }
 
         [Test]
-        public void Theme_DriftsTowardBerryTwilight_AfterTheGarden()
+        public void Theme_DriftsTowardJadeLagoon_AfterTheGarden()
         {
-            // The berry tail is REDDER than the garden — the R channel must climb
-            // across chapter 6 (0.13 → 0.22) without touching earlier levels.
-            Assert.That(ThemeCurve.For(120).BgTop.R, Is.GreaterThan(ThemeCurve.For(110).BgTop.R));
-            Assert.That(ThemeCurve.For(110).BgTop.R, Is.GreaterThan(ThemeCurve.For(101).BgTop.R));
+            // The lagoon tail is BLUER and less red than the garden: across chapter 6
+            // the B channel climbs (0.16 → 0.21) while R falls (0.13 → 0.06), without
+            // touching earlier levels. (It was a berry purple once — the garden's
+            // complement — and the blend between them went grey mid-chapter; see
+            // ThemeCurveTests.NoLevel_FadesToGrey.)
+            Assert.That(ThemeCurve.For(120).BgTop.B, Is.GreaterThan(ThemeCurve.For(110).BgTop.B));
+            Assert.That(ThemeCurve.For(110).BgTop.B, Is.GreaterThan(ThemeCurve.For(101).BgTop.B));
+            Assert.That(ThemeCurve.For(120).BgTop.R, Is.LessThan(ThemeCurve.For(101).BgTop.R));
         }
 
         [Test]

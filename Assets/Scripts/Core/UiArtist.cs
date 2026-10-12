@@ -117,6 +117,63 @@ namespace Match3.Core
         }
 
         /// <summary>
+        /// White "swap this for another" glyph: two arcs chasing each other round a
+        /// ring, each ending in an arrowhead. Drawn rather than typed because none of
+        /// the shipped fonts carry a refresh arrow — the daily-task reroll button fell
+        /// back to "~", which at button size reads as a minus sign, i.e. "remove".
+        /// </summary>
+        public static byte[] Swap(int size)
+        {
+            float unit = size / 24f; // designed on a 24 grid, like Lock and Trophy
+            const float centre = 12f, outer = 8.4f, inner = 5.8f, mid = (outer + inner) * 0.5f;
+
+            // Angles in degrees, screen space (y down): -90 is the top, 0 the right.
+            // Each arc stops short of the other so its arrowhead has room to land.
+            const float topStart = -175f, topEnd = -40f, bottomStart = 5f, bottomEnd = 140f;
+
+            // An arrowhead at the END of an arc, pointing the way the arc travels.
+            void Head(float degrees, out float tipX, out float tipY, out float aX, out float aY, out float bX, out float bY)
+            {
+                double a = degrees * Math.PI / 180.0;
+                float nx = (float)Math.Cos(a), ny = (float)Math.Sin(a); // radial, outward
+                float tx = -ny, ty = nx;                                // tangent, clockwise
+                float px = centre + mid * nx, py = centre + mid * ny;
+                tipX = px + tx * 4.6f; tipY = py + ty * 4.6f;
+                aX = px + nx * 3.5f; aY = py + ny * 3.5f;
+                bX = px - nx * 3.5f; bY = py - ny * 3.5f;
+            }
+
+            Head(topEnd, out float t1x, out float t1y, out float a1x, out float a1y, out float b1x, out float b1y);
+            Head(bottomEnd, out float t2x, out float t2y, out float a2x, out float a2y, out float b2x, out float b2y);
+
+            return RenderMask(size, (px, py) =>
+            {
+                float x = px / unit, y = py / unit;
+                if (InTriangle(x, y, t1x, t1y, a1x, a1y, b1x, b1y) ||
+                    InTriangle(x, y, t2x, t2y, a2x, a2y, b2x, b2y))
+                    return true;
+
+                float dx = x - centre, dy = y - centre;
+                float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+                if (dist > outer || dist < inner)
+                    return false;
+
+                float angle = (float)(Math.Atan2(dy, dx) * 180.0 / Math.PI);
+                return (angle >= topStart && angle <= topEnd) || (angle >= bottomStart && angle <= bottomEnd);
+            }, White);
+        }
+
+        private static bool InTriangle(float px, float py, float ax, float ay, float bx, float by, float cx, float cy)
+        {
+            float d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by);
+            float d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
+            float d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
+            bool negative = d1 < 0f || d2 < 0f || d3 < 0f;
+            bool positive = d1 > 0f || d2 > 0f || d3 > 0f;
+            return !(negative && positive);
+        }
+
+        /// <summary>
         /// The screen background: a NEUTRAL vertical luminance gradient (white top
         /// fading to mid-gray). Kept hueless on purpose — the UI tints it with the
         /// current chapter's theme colour, so one sprite serves every ambience.
