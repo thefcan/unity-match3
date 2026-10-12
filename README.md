@@ -20,6 +20,13 @@ C# core, a thin MonoBehaviour view layer, and classic design patterns used where
 they pull their weight.
 
 <p align="center">
+  <img src="docs/gameplay.gif" alt="Eleven seconds of level 108: a match beside the clutch cracks the mystery eggs, one hatches striped, a jelly fish darts off, and the egg objective fills and rings gold" width="270">
+  &nbsp;
+  <img src="docs/screenshots/mystery-eggs.png" alt="Level 108 at rest — six mystery eggs over two rows of jelly, in chapter 6's candy-garden palette" width="270">
+</p>
+<p align="center"><sub><i>Chapter 6, recorded from a player build: the game playing itself through its real input path on a fixed seed, so the take can be re-shot whenever the art changes.</i></sub></p>
+
+<p align="center">
   <img src="docs/screenshots/menu.png" alt="Main menu — level map, DAILY/TASKS/TOWN and RANKS/CHEST/EVENT openers" width="170">
   &nbsp;
   <img src="docs/screenshots/weekend-race.png" alt="Weekend race — five seeded bot racers, the trophy shelf and the podium rewards" width="170">
@@ -53,8 +60,6 @@ candy garden), one gentle step per level, and each chapter hums its own
   &nbsp;
   <img src="docs/design-hud-plum.png" alt="Chapter 3 ambience — dusk plum" width="230">
 </p>
-
-> 🎬 *gameplay GIF placeholder — record with Cmd+Shift+5 on macOS and drop it here as `docs/gameplay.gif`*
 
 **Stack:** Unity 2022.3 LTS · 2D URP · TextMeshPro · Unity Test Framework (NUnit) ·
 Unity Gaming Services (optional, anonymous auth + cloud save + leaderboards) ·
@@ -385,8 +390,9 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
   campaign's own level-1 palette and drawn from the real candy silhouettes — so the
   icon can't drift from the game. Assigns them in PlayerSettings too.
 - **Match3 → Generate → UI Sprites** — the design's chrome from `UiArtist`:
-  9-slice rounded cards and pills (+outline rings), star, padlock, circle, and the
-  baked background/CTA gradients.
+  9-slice rounded cards and pills (+outline rings), star, padlock, circle, trophy,
+  the daily-task **swap icon** (drawn, because no shipped font carries a refresh
+  arrow), and the baked background/CTA gradients.
 - **Match3 → Generate → Level Definitions** — the 120 campaign levels + catalog
   from `LevelCurve` (jelly, locks, chocolate, frosting, swirls, fountains, bombs,
   mystery eggs, ingredient counts and tutorial lines included).
@@ -402,7 +408,7 @@ Everything visual/audible ships generated, and can be regenerated inside Unity:
 
 ## Testing
 
-**647 EditMode tests, all green** — the core is tested without ever opening a scene:
+**651 EditMode tests, all green** — the core is tested without ever opening a scene:
 
 ```
 Assets/Tests/EditMode/
@@ -448,8 +454,10 @@ Assets/Tests/EditMode/
 ├── DailyStreakTests.cs           streak rules (rollback-safe), 7-day reward cycle, meta roundtrip
 ├── MusicComposerTests.cs         byte determinism, exact bar lengths, stereo PCM headers
 ├── ProgressMergerTests.cs        max-stars merge, order independence, ScoreBounds pinning
-├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, 120-level campaign rhythm,
-│                                 blocker acts, early-chapter immutability landmarks
+├── ThemeCurveTests.cs            chapter anchors, drift-rate bound, no level fades to grey,
+│                                 campaign rhythm, blocker acts, early-chapter immutability
+├── UiArtistTests.cs              generated UI glyphs are tintable white masks; the swap
+│                                 icon is the same arrow twice, half a turn apart
 ├── IconArtistTests.cs            the generated app icon: opaque background layer, nothing
 │                                 outside Android's adaptive safe zone, rounded corners
 ├── SaveIntegrityTests.cs         reflection-driven full MetaState roundtrip, truncation
