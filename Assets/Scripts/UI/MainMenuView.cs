@@ -276,11 +276,18 @@ namespace Match3.UI
                 return;
             _firstRowIndex = first;
 
+            // Once the campaign is beaten the row the CTA points at is a finished level
+            // like any other — the map centres on it, and then gives the eye nothing to
+            // land on. Resolved once per pass, not once per row.
+            CampaignGoal goal = ProgressService.Current.NextGoal(_catalog.Count);
+            int improveLevel = goal.Kind == CampaignGoalKind.Improve ? goal.Level : 0;
+
             for (int i = 0; i < _rows.Count; i++)
             {
                 int number = first + i + 1;
                 if (number <= _catalog.Count)
-                    _rows[i].Bind(number, _catalog.Get(number), ListPadding + (number - 1) * RowPitch);
+                    _rows[i].Bind(number, _catalog.Get(number), ListPadding + (number - 1) * RowPitch,
+                                  number == improveLevel);
                 else
                     _rows[i].Hide();
             }
@@ -418,7 +425,7 @@ namespace Match3.UI
                 _lock.raycastTarget = false;
             }
 
-            public void Bind(int number, LevelDefinition definition, float top)
+            public void Bind(int number, LevelDefinition definition, float top, bool isImproveGoal = false)
             {
                 _levelNumber = number;
                 _definition = definition;
@@ -432,7 +439,9 @@ namespace Match3.UI
 
                 _group.alpha = unlocked ? 1f : 0.55f;
                 _button.interactable = unlocked;
-                _outline.gameObject.SetActive(isCurrent);
+                // The pink ring means "this is the one to play": the frontier during the
+                // campaign, the earliest level short of three stars after it.
+                _outline.gameObject.SetActive(isCurrent || isImproveGoal);
 
                 _chip.color = unlocked ? UiTheme.CandyColors[(number - 1) % UiTheme.CandyColors.Length] : UiTheme.ThemeSlot;
                 _number.text = number.ToString();
@@ -461,8 +470,9 @@ namespace Match3.UI
                 _badge.gameObject.SetActive(showBadge);
                 if (showBadge)
                 {
-                    _badge.color = isCurrent ? UiTheme.Cta : BadgeDone;
-                    _badgeLabel.text = isCurrent ? "PLAY" : "DONE";
+                    bool callToPlay = isCurrent || isImproveGoal;
+                    _badge.color = callToPlay ? UiTheme.Cta : BadgeDone;
+                    _badgeLabel.text = isCurrent ? "PLAY" : isImproveGoal ? "3-STAR" : "DONE";
                 }
 
                 _lock.gameObject.SetActive(!unlocked);
