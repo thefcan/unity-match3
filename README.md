@@ -20,11 +20,11 @@ C# core, a thin MonoBehaviour view layer, and classic design patterns used where
 they pull their weight.
 
 <p align="center">
-  <img src="docs/gameplay.gif" alt="Eleven seconds of level 108: a match beside the clutch cracks the mystery eggs, one hatches striped, a jelly fish darts off, and the egg objective fills and rings gold" width="270">
+  <img src="docs/gameplay.gif" alt="Eleven seconds of level 108: a match beside the clutch cracks the mystery eggs, one hatches striped and another wrapped, the wrapped one blasts, and the egg objective fills and rings gold" width="270">
   &nbsp;
   <img src="docs/screenshots/mystery-eggs.png" alt="Level 108 at rest — six mystery eggs over two rows of jelly, in chapter 6's candy-garden palette" width="270">
 </p>
-<p align="center"><sub><i>Chapter 6, recorded from a player build: the game playing itself through its real input path on a fixed seed, so the take can be re-shot whenever the art changes.</i></sub></p>
+<p align="center"><sub><i>Chapter 6, recorded from a player build: the game playing itself through its real input path on a fixed seed — <a href="tools/smoke">tools/smoke</a> re-shoots it with one command whenever the art changes.</i></sub></p>
 
 <p align="center">
   <img src="docs/screenshots/menu.png" alt="Main menu — level map, DAILY/TASKS/TOWN and RANKS/CHEST/EVENT openers" width="170">
@@ -507,6 +507,9 @@ Assets/
 tests/
 └── Match3.Core.Tests/  ← the tracked csproj that runs Core + EditMode under plain
                            `dotnet test` (no Unity) — what CI executes
+tools/
+└── smoke/              ← drives a real player build with no input: screenshots of
+                           any save state, and the recorder behind docs/gameplay.gif
 ```
 
 ## Run it
