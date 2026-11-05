@@ -17,6 +17,7 @@ namespace Match3.UI
     /// Mode comes from persistentDataPath/probe-mode.txt:
     ///   menu                              - label + missions + menu/tasks screenshots
     ///   record LEVEL SEED SECONDS         - jump into a level, auto-play, dump frames
+    ///   panels LEVEL                      - open every menu panel, then a level's HUD + pause
     /// </summary>
     public sealed class SmokeProbe : MonoBehaviour
     {
@@ -32,7 +33,9 @@ namespace Match3.UI
             var go = new GameObject("SmokeProbe");
             DontDestroyOnLoad(go);
             var probe = go.AddComponent<SmokeProbe>();
-            if (parts[0] == "record")
+            if (parts[0] == "panels")
+                probe.StartCoroutine(probe.Panels(int.Parse(parts[1])));
+            else if (parts[0] == "record")
                 probe.StartCoroutine(probe.Record(int.Parse(parts[1]), int.Parse(parts[2]),
                                                   float.Parse(parts[3], CultureInfo.InvariantCulture)));
             else
@@ -76,6 +79,61 @@ namespace Match3.UI
                 }
                 ScreenCapture.CaptureScreenshot(Path.Combine(Dir, "tasks.png"), 2);
                 yield return new WaitForSecondsRealtime(0.8f);
+            }
+            Debug.Log("PROBE done");
+        }
+
+        /// <summary>Every opener on the main menu, one screenshot each, then the in-game chrome.</summary>
+        private IEnumerator Panels(int level)
+        {
+            yield return new WaitForSecondsRealtime(3f);
+            ScreenCapture.CaptureScreenshot(Path.Combine(Dir, "panel_0_menu.png"), 2);
+            yield return new WaitForSecondsRealtime(0.8f);
+
+            string[] openers = { "DailyButton", "TasksButton", "TownButton", "AlbumButton",
+                                 "ChestButton", "EventsButton", "SettingsButton" };
+            for (int i = 0; i < openers.Length; i++)
+            {
+                GameObject opener = GameObject.Find(openers[i]);
+                if (opener == null)
+                {
+                    Debug.Log($"PROBE panel {openers[i]}: not found");
+                    continue;
+                }
+                opener.GetComponent<Button>().onClick.Invoke();
+                yield return new WaitForSecondsRealtime(1.4f);
+                ScreenCapture.CaptureScreenshot(Path.Combine(Dir, $"panel_{i + 1}_{openers[i]}.png"), 2);
+                yield return new WaitForSecondsRealtime(0.6f);
+                Debug.Log($"PROBE panel {openers[i]}: captured, closed={UiTween.CloseTopPanel()}");
+                yield return new WaitForSecondsRealtime(0.8f);
+            }
+
+            var catalog = Resources.Load<LevelCatalog>("LevelCatalog");
+            GameSession.Mode = GameMode.Moves;
+            GameSession.SelectedLevel = catalog.Get(level);
+            GameSession.SelectedLevelIndex = level;
+            SceneManager.LoadScene("Game");
+            GameManager game = null;
+            while (game == null)
+            {
+                game = FindObjectOfType<GameManager>();
+                yield return null;
+            }
+            while (game.CurrentPhase != GamePhase.Playing)
+                yield return null;
+            yield return new WaitForSecondsRealtime(2.5f); // past any tutorial veil fade-in
+            ScreenCapture.CaptureScreenshot(Path.Combine(Dir, "panel_8_hud.png"), 2);
+            yield return new WaitForSecondsRealtime(0.6f);
+            UiTween.CloseTopPanel(); // a tutorial veil, if this level has one
+
+            yield return new WaitForSecondsRealtime(0.8f);
+            GameObject pause = GameObject.Find("SettingsButton");
+            if (pause != null)
+            {
+                pause.GetComponent<Button>().onClick.Invoke();
+                yield return new WaitForSecondsRealtime(1.4f);
+                ScreenCapture.CaptureScreenshot(Path.Combine(Dir, "panel_9_pause.png"), 2);
+                yield return new WaitForSecondsRealtime(0.6f);
             }
             Debug.Log("PROBE done");
         }

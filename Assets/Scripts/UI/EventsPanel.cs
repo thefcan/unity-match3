@@ -384,14 +384,22 @@ namespace Match3.UI
             row.Description.rectTransform.sizeDelta = new Vector2(520f, 60f);
             UiTheme.ApplyFont(row.Description, UiTheme.BodyFont);
 
-            row.Reward = CreateText("Reward", row.Root.transform, new Vector2(-90f, -32f), 26f, FontStyles.Normal);
+            // The reward line grows with the tier ("+2 SMASH +2 SWAP +2 MIX +1 SHIELD
+            // +1 PACK") and does not wrap, so it ran on under the Claim pill. It now
+            // ends 41px before Claim and shrinks to fit instead.
+            row.Reward = CreateText("Reward", row.Root.transform, new Vector2(-100f, -32f), 26f, FontStyles.Normal);
             row.Reward.alignment = TextAlignmentOptions.MidlineLeft;
-            row.Reward.rectTransform.sizeDelta = new Vector2(520f, 44f);
+            row.Reward.rectTransform.sizeDelta = new Vector2(500f, 44f);
+            row.Reward.enableAutoSizing = true;
+            row.Reward.fontSizeMin = 18f;
+            row.Reward.fontSizeMax = 26f;
             UiTheme.ApplyFont(row.Reward, UiTheme.BodyFont);
             row.Reward.color = UiTheme.TextDim;
 
             GameObject claimGo = CreateRect("Claim", row.Root.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(170f, 84f));
-            claimGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(-24f, 0f);
+            // Same inset as the daily-task rows: the 170px pill ends 19px inside the
+            // row. At -24 it reached 61px past the row and 21px past the card itself.
+            claimGo.GetComponent<RectTransform>().anchoredPosition = new Vector2(-104f, 0f);
             row.ClaimImage = claimGo.AddComponent<Image>();
             UiTheme.ApplySprite(row.ClaimImage, UiTheme.Pill, UiTheme.Cta);
             row.Claim = claimGo.AddComponent<Button>();

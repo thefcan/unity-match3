@@ -251,7 +251,9 @@ namespace Match3.UI
         /// </summary>
         private void BuildSectionHeader(Transform parent, string caption, float y)
         {
-            TMP_Text text = CreateText(caption + "Header", parent, new Vector2(-240f, Y(y)), 26f, FontStyles.Bold);
+            // Left edge flush with the rule's (-380). Centred at -240, the 400-wide box
+            // started at -440 — 10px outside an 860px card.
+            TMP_Text text = CreateText(caption + "Header", parent, new Vector2(-180f, Y(y)), 26f, FontStyles.Bold);
             UiTheme.ApplyFont(text, UiTheme.BodyFont);
             text.text = caption; // CreateText only names the object (the BuildRowLabel rule)
             text.color = UiTheme.Gold;

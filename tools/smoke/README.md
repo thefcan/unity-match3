@@ -40,6 +40,10 @@ tools/smoke/smoke.sh run fresh none menu
 printf '%s\n' {1..60}=1 > /tmp/mid.sav
 tools/smoke/smoke.sh run mid /tmp/mid.sav menu
 
+# every menu panel (daily, tasks, town, album, chest, event, settings), then a
+# level's HUD and pause panel - one PNG each, for a visual sweep
+tools/smoke/smoke.sh run sweep /tmp/mid.sav "panels 62" 60
+
 # record 11 seconds of level 108 on seed 7, then encode it
 tools/smoke/smoke.sh run take none "record 108 7 11" 90
 tools/smoke/smoke.sh gif take                    # -> gameplay.gif + sheet.png (contact sheet)
