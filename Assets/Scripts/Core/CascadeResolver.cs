@@ -168,13 +168,7 @@ namespace Match3.Core
                 {
                     // A pure morph step: the view plays the conversions before the
                     // detonation waves below sweep them all up.
-                    steps.Add(new CascadeStep(0,
-                        Array.Empty<ClearedTile>(), Array.Empty<TileFall>(), Array.Empty<TileSpawn>(),
-                        0, Array.Empty<int>(), conversions, Array.Empty<Detonation>(),
-                        Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
-                        Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>(),
-                        Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), Array.Empty<BombTick>(),
-                        Array.Empty<EggHatch>(), isFinale: true));
+                    steps.Add(CascadeStep.SideEffectsOnly(0, creations: conversions, isFinale: true));
                 }
             }
 
@@ -230,12 +224,7 @@ namespace Match3.Core
 
             return new ResolutionResult(new[]
             {
-                new CascadeStep(0,
-                    Array.Empty<ClearedTile>(), Array.Empty<TileFall>(), Array.Empty<TileSpawn>(),
-                    0, Array.Empty<int>(), Array.Empty<SpecialCreation>(), Array.Empty<Detonation>(),
-                    Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
-                    Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>(),
-                    Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), ticks),
+                CascadeStep.SideEffectsOnly(0, bombTicks: ticks),
             });
         }
 
@@ -711,8 +700,8 @@ namespace Match3.Core
 
                 steps.Add(new CascadeStep(cascadeIndex, cleared, falls, spawns, points, runLengths,
                                           creations, detonations, jellyHits, lockBreaks,
-                                          Array.Empty<ChocolateSpread>(), ingredientExits,
-                                          fishStrikes, frostingHits, Array.Empty<BombTick>(), eggHatches,
+                                          ingredientExits: ingredientExits, fishStrikes: fishStrikes,
+                                          frostingHits: frostingHits, eggHatches: eggHatches,
                                           isFinale: finale));
                 cascadeIndex++;
             }
@@ -724,12 +713,7 @@ namespace Match3.Core
             if (steps.Count > 0 && swapFrom.HasValue && countsAsMove && _factory != null && !chocolateDestroyed &&
                 TrySpreadChocolate(board) is { } spread)
             {
-                steps.Add(new CascadeStep(cascadeIndex,
-                                          Array.Empty<ClearedTile>(), Array.Empty<TileFall>(),
-                                          Array.Empty<TileSpawn>(), 0, Array.Empty<int>(),
-                                          Array.Empty<SpecialCreation>(), Array.Empty<Detonation>(),
-                                          Array.Empty<JellyHit>(), Array.Empty<LockBreak>(),
-                                          new[] { spread }, Array.Empty<IngredientExit>()));
+                steps.Add(CascadeStep.SideEffectsOnly(cascadeIndex, chocolateSpreads: new[] { spread }));
             }
 
             return new ResolutionResult(steps);

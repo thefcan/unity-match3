@@ -75,7 +75,7 @@ Each of these was a trade-off; the cost side is real and shows up elsewhere in t
 
 | Decision | Bought | Paid |
 |---|---|---|
-| The resolver returns a **recording** (`CascadeStep[]`), the view replays it | Rules are testable without timing; the view cannot drift from the logic | `CascadeStep` grows with every mechanic — it has six constructor overloads now |
+| The resolver returns a **recording** (`CascadeStep[]`), the view replays it | Rules are testable without timing; the view cannot drift from the logic | `CascadeStep` grows with every mechanic: fourteen lists today. It used to grow one telescoping constructor per mechanic too; now each mechanic is one optional named argument |
 | **UI built in code at runtime**, not in scenes or prefabs | Reviewable diffs, no YAML merge conflicts, nothing to wire | Layout bugs only exist at runtime — hence [`tools/smoke`](tools/smoke), which drives a real build and screenshots every panel; every visual defect fixed recently was found that way |
 | **All randomness injected** (`IRandom`) | Deterministic tests, a reproducible recorded take | Adding one random draw shifts every scripted test sequence after it |
 | **120 levels from a formula** ([`LevelCurve`](Assets/Scripts/Core/LevelCurve.cs)), not hand-authored | Campaign-wide invariants are testable (no blocker off the board, star bars in order, no level fades to grey) | Tuning one level means changing a curve; regenerating assets needs Unity |

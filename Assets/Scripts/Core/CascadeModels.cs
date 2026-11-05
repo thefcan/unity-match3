@@ -343,32 +343,13 @@ namespace Match3.Core
         /// </summary>
         public bool IsFinale { get; }
 
-        public CascadeStep(
-            int cascadeIndex,
-            IReadOnlyList<ClearedTile> cleared,
-            IReadOnlyList<TileFall> falls,
-            IReadOnlyList<TileSpawn> spawns,
-            int points,
-            IReadOnlyList<int> runLengths)
-            : this(cascadeIndex, cleared, falls, spawns, points, runLengths,
-                   Array.Empty<SpecialCreation>(), Array.Empty<Detonation>())
-        {
-        }
-
-        public CascadeStep(
-            int cascadeIndex,
-            IReadOnlyList<ClearedTile> cleared,
-            IReadOnlyList<TileFall> falls,
-            IReadOnlyList<TileSpawn> spawns,
-            int points,
-            IReadOnlyList<int> runLengths,
-            IReadOnlyList<SpecialCreation> creations,
-            IReadOnlyList<Detonation> detonations)
-            : this(cascadeIndex, cleared, falls, spawns, points, runLengths,
-                   creations, detonations, Array.Empty<JellyHit>())
-        {
-        }
-
+        /// <summary>
+        /// One constructor. The six required arguments are what every wave has; each
+        /// mechanic's list after them is optional and defaults to empty, so a call site
+        /// names only what its wave actually carries:
+        /// <c>new CascadeStep(0, cleared, falls, spawns, points, runs, bombTicks: ticks)</c>.
+        /// (This replaced six telescoping overloads, one added per mechanic.)
+        /// </summary>
         public CascadeStep(
             int cascadeIndex,
             IReadOnlyList<ClearedTile> cleared,
@@ -376,72 +357,16 @@ namespace Match3.Core
             IReadOnlyList<TileSpawn> spawns,
             int points,
             IReadOnlyList<int> runLengths,
-            IReadOnlyList<SpecialCreation> creations,
-            IReadOnlyList<Detonation> detonations,
-            IReadOnlyList<JellyHit> jellyHits)
-            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations, jellyHits,
-                   Array.Empty<LockBreak>(), Array.Empty<ChocolateSpread>(), Array.Empty<IngredientExit>())
-        {
-        }
-
-        public CascadeStep(
-            int cascadeIndex,
-            IReadOnlyList<ClearedTile> cleared,
-            IReadOnlyList<TileFall> falls,
-            IReadOnlyList<TileSpawn> spawns,
-            int points,
-            IReadOnlyList<int> runLengths,
-            IReadOnlyList<SpecialCreation> creations,
-            IReadOnlyList<Detonation> detonations,
-            IReadOnlyList<JellyHit> jellyHits,
-            IReadOnlyList<LockBreak> lockBreaks,
-            IReadOnlyList<ChocolateSpread> chocolateSpreads,
-            IReadOnlyList<IngredientExit> ingredientExits)
-            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations,
-                   jellyHits, lockBreaks, chocolateSpreads, ingredientExits,
-                   Array.Empty<FishStrike>(), Array.Empty<FrostingHit>(), Array.Empty<BombTick>())
-        {
-        }
-
-        public CascadeStep(
-            int cascadeIndex,
-            IReadOnlyList<ClearedTile> cleared,
-            IReadOnlyList<TileFall> falls,
-            IReadOnlyList<TileSpawn> spawns,
-            int points,
-            IReadOnlyList<int> runLengths,
-            IReadOnlyList<SpecialCreation> creations,
-            IReadOnlyList<Detonation> detonations,
-            IReadOnlyList<JellyHit> jellyHits,
-            IReadOnlyList<LockBreak> lockBreaks,
-            IReadOnlyList<ChocolateSpread> chocolateSpreads,
-            IReadOnlyList<IngredientExit> ingredientExits,
-            IReadOnlyList<FishStrike> fishStrikes,
-            IReadOnlyList<FrostingHit> frostingHits,
-            IReadOnlyList<BombTick> bombTicks)
-            : this(cascadeIndex, cleared, falls, spawns, points, runLengths, creations, detonations,
-                   jellyHits, lockBreaks, chocolateSpreads, ingredientExits,
-                   fishStrikes, frostingHits, bombTicks, Array.Empty<EggHatch>())
-        {
-        }
-
-        public CascadeStep(
-            int cascadeIndex,
-            IReadOnlyList<ClearedTile> cleared,
-            IReadOnlyList<TileFall> falls,
-            IReadOnlyList<TileSpawn> spawns,
-            int points,
-            IReadOnlyList<int> runLengths,
-            IReadOnlyList<SpecialCreation> creations,
-            IReadOnlyList<Detonation> detonations,
-            IReadOnlyList<JellyHit> jellyHits,
-            IReadOnlyList<LockBreak> lockBreaks,
-            IReadOnlyList<ChocolateSpread> chocolateSpreads,
-            IReadOnlyList<IngredientExit> ingredientExits,
-            IReadOnlyList<FishStrike> fishStrikes,
-            IReadOnlyList<FrostingHit> frostingHits,
-            IReadOnlyList<BombTick> bombTicks,
-            IReadOnlyList<EggHatch> eggHatches,
+            IReadOnlyList<SpecialCreation> creations = null,
+            IReadOnlyList<Detonation> detonations = null,
+            IReadOnlyList<JellyHit> jellyHits = null,
+            IReadOnlyList<LockBreak> lockBreaks = null,
+            IReadOnlyList<ChocolateSpread> chocolateSpreads = null,
+            IReadOnlyList<IngredientExit> ingredientExits = null,
+            IReadOnlyList<FishStrike> fishStrikes = null,
+            IReadOnlyList<FrostingHit> frostingHits = null,
+            IReadOnlyList<BombTick> bombTicks = null,
+            IReadOnlyList<EggHatch> eggHatches = null,
             bool isFinale = false)
         {
             CascadeIndex = cascadeIndex;
@@ -450,18 +375,33 @@ namespace Match3.Core
             Spawns = spawns ?? throw new ArgumentNullException(nameof(spawns));
             Points = points;
             RunLengths = runLengths ?? throw new ArgumentNullException(nameof(runLengths));
-            Creations = creations ?? throw new ArgumentNullException(nameof(creations));
-            Detonations = detonations ?? throw new ArgumentNullException(nameof(detonations));
-            JellyHits = jellyHits ?? throw new ArgumentNullException(nameof(jellyHits));
-            LockBreaks = lockBreaks ?? throw new ArgumentNullException(nameof(lockBreaks));
-            ChocolateSpreads = chocolateSpreads ?? throw new ArgumentNullException(nameof(chocolateSpreads));
-            IngredientExits = ingredientExits ?? throw new ArgumentNullException(nameof(ingredientExits));
-            FishStrikes = fishStrikes ?? throw new ArgumentNullException(nameof(fishStrikes));
-            FrostingHits = frostingHits ?? throw new ArgumentNullException(nameof(frostingHits));
-            BombTicks = bombTicks ?? throw new ArgumentNullException(nameof(bombTicks));
-            EggHatches = eggHatches ?? throw new ArgumentNullException(nameof(eggHatches));
+            Creations = creations ?? Array.Empty<SpecialCreation>();
+            Detonations = detonations ?? Array.Empty<Detonation>();
+            JellyHits = jellyHits ?? Array.Empty<JellyHit>();
+            LockBreaks = lockBreaks ?? Array.Empty<LockBreak>();
+            ChocolateSpreads = chocolateSpreads ?? Array.Empty<ChocolateSpread>();
+            IngredientExits = ingredientExits ?? Array.Empty<IngredientExit>();
+            FishStrikes = fishStrikes ?? Array.Empty<FishStrike>();
+            FrostingHits = frostingHits ?? Array.Empty<FrostingHit>();
+            BombTicks = bombTicks ?? Array.Empty<BombTick>();
+            EggHatches = eggHatches ?? Array.Empty<EggHatch>();
             IsFinale = isFinale;
         }
+
+        /// <summary>
+        /// A wave that clears, moves and scores nothing and exists only for its side
+        /// effect: the finale's morphs, a bomb countdown, the end-of-move chocolate creep.
+        /// </summary>
+        public static CascadeStep SideEffectsOnly(
+            int cascadeIndex,
+            IReadOnlyList<SpecialCreation> creations = null,
+            IReadOnlyList<ChocolateSpread> chocolateSpreads = null,
+            IReadOnlyList<BombTick> bombTicks = null,
+            bool isFinale = false) =>
+            new CascadeStep(cascadeIndex, Array.Empty<ClearedTile>(), Array.Empty<TileFall>(),
+                            Array.Empty<TileSpawn>(), 0, Array.Empty<int>(),
+                            creations: creations, chocolateSpreads: chocolateSpreads,
+                            bombTicks: bombTicks, isFinale: isFinale);
 
         /// <summary>How many runs in this wave were at least <paramref name="minLength"/> tiles long.</summary>
         public int BigMatchCount(int minLength) => RunLengths.Count(length => length >= minLength);
