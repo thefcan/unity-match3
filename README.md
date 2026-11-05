@@ -6,18 +6,13 @@
   <img src="docs/candy-set.png" alt="The procedurally generated candy set — five silhouettes plus striped, wrapped and colour-bomb specials" width="780">
 </p>
 
-A complete match-3 with **two modes**: a Candy-Crush-style **moves campaign** (120
-levels in six slowly-shifting chapters — objectives, special candies incl. the
-2×2 **jelly fish**, jelly, licorice locks, spreading chocolate + **fountains**,
-**layered frosting**, **countdown bombs**, beam-eating **swirls**, hatching
-**mystery eggs**, ingredient drops, the **Sugar Crush** finale, in-level **boosters**, win-streak head starts,
-star ratings, a **star chest** + **daily missions** economy, a buildable candy
-town, daily streak rewards, one-line **tutorial overlays**, a relaxed mode +
-accessibility switches, saved + cloud-synced progress, generative chapter music)
-and the original **endless time-attack** with an online leaderboard. Deliberately
-built so the focus stays on **code architecture** — an engine-free, unit-tested
-C# core, a thin MonoBehaviour view layer, and classic design patterns used where
-they pull their weight.
+A complete Candy-Crush-style match-3 for Unity — a **120-level campaign** in six
+chapters with more than a dozen blocker and special-candy mechanics, a meta economy, cloud
+save and an endless time-attack mode with an online leaderboard — built as an
+**architecture exercise first and a game second**. Every rule of the game lives in
+an engine-free C# assembly that the compiler forbids from touching `UnityEngine`;
+Unity only draws, animates and forwards input. That split is what lets **651 rule
+tests run in about four seconds with no Unity installed**, on every push.
 
 <p align="center">
   <img src="docs/gameplay.gif" alt="Eleven seconds of level 108: a match beside the clutch cracks the mystery eggs, one hatches striped and another wrapped, the wrapped one blasts, and the egg objective fills and rings gold" width="270">
@@ -25,6 +20,74 @@ they pull their weight.
   <img src="docs/screenshots/mystery-eggs.png" alt="Level 108 at rest — six mystery eggs over two rows of jelly, in chapter 6's candy-garden palette" width="270">
 </p>
 <p align="center"><sub><i>Chapter 6, recorded from a player build: the game playing itself through its real input path on a fixed seed — <a href="tools/smoke">tools/smoke</a> re-shoots it with one command whenever the art changes.</i></sub></p>
+
+## Why this exists
+
+Most Unity code puts the game's rules inside `MonoBehaviour`s. It works, until you
+want to test a rule: then you need a scene, Play mode and frame timing just to ask
+"does an L-shape make a wrapped candy?". Coming to Unity from a Java background —
+the source still carries `C# note for Java readers` comments — the question this
+project set out to answer was the opposite one: **can a real, shippable Unity game
+keep its rules in plain C# that does not know Unity exists?**
+
+A match-3 is a better test of that than it looks. Underneath the candy it is a
+cascade engine: matches feed detonations, detonations chain into other specials,
+gravity and refills create new matches, and every blocker added later (jelly,
+locks, chocolate, ingredients, frosting, bombs, swirls, eggs) interacts with all
+of the above. It also has to *look* instant while being strictly sequential, which
+is exactly where game logic usually leaks into animation code.
+
+And a prototype proves nothing about an architecture — the proof is whether the
+tenth mechanic goes in as cleanly as the first. So the game kept growing: six
+chapters, each one added without touching the levels before it (that is pinned by
+tests), until the interesting question stopped being "does it work" and became
+"does the boundary still hold". It does: `Match3.Core` is ~8,300 lines with zero
+engine references, the engine side is ~11,500, and the tests (~8,100 lines) are
+nearly as big as the code they test.
+
+## Start here — a 10-minute tour of the code
+
+Read these in order; each one is the next link in a single player move.
+
+1. **[`Match3.Core.asmdef`](Assets/Scripts/Core/Match3.Core.asmdef)** — one line,
+   `"noEngineReferences": true`. The whole architecture is enforced by this flag, not
+   by convention.
+2. **[`Board.cs`](Assets/Scripts/Core/Board.cs)** — the grid: matches, 2×2 squares,
+   gravity, refill, possible moves, and a shuffle that repairs instead of conceding.
+3. **[`CascadeResolver.cs`](Assets/Scripts/Core/CascadeResolver.cs)** — the wave
+   loop. Note what it returns: not events, a **recording** of every wave.
+4. **[`CascadeModels.cs`](Assets/Scripts/Core/CascadeModels.cs)** — `CascadeStep`, the
+   single contract between the rules and everything you see.
+5. **[`ResolvingState.cs`](Assets/Scripts/Game/States/ResolvingState.cs)** — the
+   engine side of one move: resolve first, then play the recording back wave by wave
+   with coroutines. State pattern, no `isBusy` flags.
+6. **[`BoardView.cs`](Assets/Scripts/View/BoardView.cs)** (`PlayStep`) — the view
+   obeying: it animates the recording and never recomputes a rule.
+7. **[`EggTests.cs`](Assets/Tests/EditMode/EggTests.cs)** — what testing a mechanic
+   looks like when the randomness is injected: boards written as letter grids
+   (`{ A, B, _ }`), every dice roll scripted.
+8. **[`tests/Match3.Core.Tests`](tests/Match3.Core.Tests)** — the proof of step 1:
+   the same sources compiled as a plain .NET project. `dotnet test tests/Match3.Core.Tests`.
+
+## Decisions worth arguing about
+
+Each of these was a trade-off; the cost side is real and shows up elsewhere in the repo.
+
+| Decision | Bought | Paid |
+|---|---|---|
+| The resolver returns a **recording** (`CascadeStep[]`), the view replays it | Rules are testable without timing; the view cannot drift from the logic | `CascadeStep` grows with every mechanic — it has six constructor overloads now |
+| **UI built in code at runtime**, not in scenes or prefabs | Reviewable diffs, no YAML merge conflicts, nothing to wire | Layout bugs only exist at runtime — hence [`tools/smoke`](tools/smoke), which drives a real build and screenshots every panel; every visual defect fixed recently was found that way |
+| **All randomness injected** (`IRandom`) | Deterministic tests, a reproducible recorded take | Adding one random draw shifts every scripted test sequence after it |
+| **120 levels from a formula** ([`LevelCurve`](Assets/Scripts/Core/LevelCurve.cs)), not hand-authored | Campaign-wide invariants are testable (no blocker off the board, star bars in order, no level fades to grey) | Tuning one level means changing a curve; regenerating assets needs Unity |
+| **Hand-rolled `key=value` saves**, not JSON | No dependency; tolerant of old and new fields | A truncated file looked like a valid smaller save — fixed with atomic writes and an end marker |
+| **No tween library** — coroutines and one shared vocabulary | Zero dependencies, consistent timing house-wide | More code to own ([`UiTween`](Assets/Scripts/UI/UiTween.cs)) |
+| **Everything generated** — candies, UI, icon, sound, music | The repo rebuilds every asset; nothing is a binary nobody can edit | Programmer art, honestly: shapes over illustration |
+
+**Contents:** [Gameplay](#gameplay) · [Architecture](#architecture) ·
+[Design patterns](#design-patterns-used-and-why) · [Game feel](#game-feel--the-juice-layer) ·
+[Generated assets](#generated-assets--no-art-or-audio-dependencies) ·
+[Testing](#testing) · [Project structure](#project-structure) · [Run it](#run-it) ·
+[Shipping it](#shipping-it) · [Scope cuts](#scope-cuts-deliberate)
 
 <p align="center">
   <img src="docs/screenshots/menu.png" alt="Main menu — level map, DAILY/TASKS/TOWN and RANKS/CHEST/EVENT openers" width="170">
@@ -72,6 +135,15 @@ their own nested canvases, pause/settings with persisted options, haptics, and a
 colorblind sprite mode.
 
 ## Gameplay
+
+Two modes: a Candy-Crush-style **moves campaign** — objectives, special candies
+including the 2×2 **jelly fish**, jelly, licorice locks, spreading chocolate and
+**fountains**, **layered frosting**, **countdown bombs**, beam-eating **swirls**,
+hatching **mystery eggs**, ingredient drops, the **Sugar Crush** finale, boosters,
+win streaks, a star chest + daily missions economy, a buildable candy town, a
+sticker album, a local event calendar, tutorial overlays, a relaxed mode and
+accessibility switches — and the original **endless time attack** with an online
+leaderboard.
 
 ### Moves campaign (Candy Crush style — the main mode)
 
